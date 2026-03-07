@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>vSAFEREP | 158th Fighter Wing</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/member-nav.js"></script>
+    <style>
+        body {
+            background: #12151a;
+            color: #e8e8e8;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .vsaferep-wrapper {
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 100px 20px 60px;
+        }
+
+        /* ── Menu card header ── */
+        .vsaferep-header {
+            background: #8a8f96;
+            border-radius: 10px 10px 0 0;
+            padding: 22px 28px 18px;
+            text-align: center;
+        }
+
+        .vsaferep-header h1 {
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: #fff;
+            margin: 0 0 6px;
+            letter-spacing: 0.5px;
+        }
+
+        .vsaferep-header p {
+            font-size: 0.9rem;
+            color: #f0f0f0;
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        /* ── Button list ── */
+        .vsaferep-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            border: 1px solid #3a3f45;
+            border-top: none;
+            border-radius: 0 0 10px 10px;
+            overflow: hidden;
+        }
+
+        .vsaferep-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px 28px;
+            background: #1f2632;
+            border: none;
+            border-bottom: 1px solid #3a3f45;
+            color: #e8e8e8;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .vsaferep-btn:last-child {
+            border-bottom: none;
+        }
+
+        .vsaferep-btn:hover {
+            background: #263040;
+            color: #fff;
+        }
+
+        .vsaferep-btn-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 0.3px;
+        }
+
+        .vsaferep-btn-sub {
+            font-size: 0.85rem;
+            color: #a0a8b4;
+            margin-top: 4px;
+        }
+
+        /* ── Footer note ── */
+        .vsaferep-footer-note {
+            text-align: center;
+            font-size: 0.72rem;
+            color: #555;
+            margin-top: 2rem;
+            letter-spacing: 0.03em;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="vsaferep-wrapper">
+
+        <!-- Header banner -->
+        <div class="vsaferep-header">
+            <h1>Welcome to the v158th FW main menu!</h1>
+            <p>Click on a button below for the type of report<br>you would like to make:</p>
+        </div>
+
+        <!-- Report type buttons -->
+        <div class="vsaferep-buttons">
+            <a href="vsaferep-hazard.html" class="vsaferep-btn">
+                <span class="vsaferep-btn-title">Identify a Hazard to Safety</span>
+            </a>
+            <a href="vsaferep-behavior.html" class="vsaferep-btn">
+                <span class="vsaferep-btn-title">Report a Member's Behavior</span>
+            </a>
+            <a href="vsaferep-aviation.html" class="vsaferep-btn">
+                <span class="vsaferep-btn-title">Make an Aviation Safety Report</span>
+                <span class="vsaferep-btn-sub">(ASAP - HATR - BASH - Unusual Occurrence or IFE)</span>
+            </a>
+        </div>
+
+        <p class="vsaferep-footer-note">vSAFEREP &bull; For virtual and record-keeping purposes only</p>
+
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 — Page Not Found | 158th Fighter Wing</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        body {
+            background: #12151a;
+            color: #e8e8e8;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .error-container {
+            text-align: center;
+            max-width: 480px;
+            padding: 40px 24px;
+        }
+        .error-code {
+            font-size: 6rem;
+            font-weight: 900;
+            color: #3a3f45;
+            letter-spacing: 8px;
+            line-height: 1;
+            margin-bottom: 12px;
+        }
+        .error-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 20px;
+        }
+        .error-divider {
+            width: 48px;
+            height: 2px;
+            background: #3a3f45;
+            margin: 0 auto 24px;
+        }
+        .error-message {
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 36px;
+        }
+        .error-links {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+        }
+        .error-btn {
+            display: inline-block;
+            padding: 10px 28px;
+            background: #1f2226;
+            border: 1px solid #3a3f45;
+            border-radius: 4px;
+            color: #aaa;
+            text-decoration: none;
+            font-size: 0.82rem;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+            width: 200px;
+        }
+        .error-btn:hover {
+            background: #2a2d32;
+            border-color: #555;
+            color: #e8e8e8;
+        }
+        .error-btn.primary {
+            background: #2a2d32;
+            border-color: #555;
+            color: #e8e8e8;
+        }
+        .error-btn.primary:hover {
+            background: #333740;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-code">404</div>
+        <div class="error-title">Page Not Found</div>
+        <div class="error-divider"></div>
+        <p class="error-message">
+            The page you're looking for doesn't exist or has been moved.<br>
+            Check your URL or return to base.
+        </p>
+        <div class="error-links">
+            <a href="index.html" class="error-btn primary">Return to Base</a>
+            <a href="airfield-status.html" class="error-btn">Member Portal</a>
+        </div>
+    </div>
+</body>
+</html>

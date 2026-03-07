@@ -1,0 +1,966 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aviation Safety Report | vSAFEREP | 158th Fighter Wing</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/member-nav.js"></script>
+    <style>
+        body {
+            background: #12151a;
+            color: #e8e8e8;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .hazard-wrapper {
+            max-width: 740px;
+            margin: 0 auto;
+            padding: 90px 20px 60px;
+        }
+
+        /* ── Step card ── */
+        .step-card {
+            background: #1f2226;
+            border: 1px solid #3a3f45;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        /* ── Progress bar ── */
+        .progress-bar-track {
+            height: 4px;
+            background: #2c3035;
+            width: 100%;
+        }
+        .progress-bar-fill {
+            height: 4px;
+            background: #7a8694;
+            transition: width 0.4s ease;
+        }
+
+        /* ── Step header ── */
+        .step-header {
+            padding: 28px 36px 20px;
+            border-bottom: 1px solid #3a3f45;
+            text-align: center;
+        }
+        .step-header h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #fff;
+            margin: 0;
+            letter-spacing: 0.3px;
+        }
+        .step-label {
+            font-size: 0.75rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        /* ── Step body ── */
+        .step-body {
+            padding: 28px 36px 24px;
+        }
+
+        .step-description {
+            font-size: 0.9rem;
+            color: #a0a8b4;
+            line-height: 1.65;
+            margin: 0 0 22px;
+        }
+        .step-description strong {
+            color: #c8cfd8;
+        }
+
+        /* ── Textarea ── */
+        .hazard-textarea {
+            width: 100%;
+            min-height: 200px;
+            background: #12151a;
+            border: 1px solid #3a3f45;
+            border-radius: 6px;
+            color: #e8e8e8;
+            font-family: inherit;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            padding: 14px 16px;
+            resize: vertical;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+        .hazard-textarea:focus {
+            outline: none;
+            border-color: #7a8694;
+        }
+        .hazard-textarea::placeholder {
+            color: #505660;
+        }
+        .hazard-textarea.short {
+            min-height: 100px;
+        }
+
+        /* ── Char counter ── */
+        .char-counter {
+            text-align: right;
+            font-size: 0.78rem;
+            color: #555;
+            margin-top: 6px;
+        }
+        .char-counter.over-limit {
+            color: #e85a4a;
+        }
+
+        /* ── Input row (label + input) ── */
+        .input-row {
+            margin-bottom: 18px;
+        }
+        .input-row label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 7px;
+        }
+        .input-row input,
+        .input-row select {
+            width: 100%;
+            background: #12151a;
+            border: 1px solid #3a3f45;
+            border-radius: 6px;
+            color: #e8e8e8;
+            font-family: inherit;
+            font-size: 0.9rem;
+            padding: 10px 14px;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+        .input-row input:focus,
+        .input-row select:focus {
+            outline: none;
+            border-color: #7a8694;
+        }
+        .input-row select option {
+            background: #1f2226;
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        /* ── Toggle row (yes/no questions) ── */
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #12151a;
+            border: 1px solid #3a3f45;
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+        }
+        .toggle-row-label {
+            font-size: 0.88rem;
+            color: #c8cfd8;
+        }
+        .toggle-btns {
+            display: flex;
+            gap: 8px;
+        }
+        .toggle-btns button {
+            padding: 5px 18px;
+            border-radius: 14px;
+            border: 1px solid #3a3f45;
+            background: transparent;
+            color: #888;
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+        }
+        .toggle-btns button.selected-yes {
+            background: #1a3a1a;
+            border-color: #4caf50;
+            color: #4caf50;
+        }
+        .toggle-btns button.selected-no {
+            background: #3a1a1a;
+            border-color: #e85a4a;
+            color: #e85a4a;
+        }
+
+        /* ── Review table ── */
+        .review-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+        }
+        .review-table tr {
+            border-bottom: 1px solid #2c3035;
+        }
+        .review-table tr:last-child {
+            border-bottom: none;
+        }
+        .review-table td:first-child {
+            color: #666;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            padding: 10px 0 10px 0;
+            width: 38%;
+            vertical-align: top;
+        }
+        .review-table td:last-child {
+            color: #e8e8e8;
+            padding: 10px 0;
+        }
+
+        /* ── Section divider ── */
+        .section-divider {
+            font-size: 0.72rem;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 1.4px;
+            margin: 24px 0 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #2c3035;
+        }
+
+        /* ── Confirmation banner ── */
+        .confirm-banner {
+            background: #1a2e1a;
+            border: 1px solid #4caf50;
+            border-radius: 8px;
+            padding: 20px 24px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .confirm-banner .check-icon {
+            font-size: 2.2rem;
+            color: #4caf50;
+            display: block;
+            margin-bottom: 10px;
+        }
+        .confirm-banner h2 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #4caf50;
+            margin: 0 0 6px;
+        }
+        .confirm-banner p {
+            font-size: 0.88rem;
+            color: #a8c8a8;
+            margin: 0;
+        }
+        .report-id-chip {
+            display: inline-block;
+            background: #12151a;
+            border: 1px solid #4caf50;
+            color: #4caf50;
+            border-radius: 4px;
+            padding: 4px 14px;
+            font-size: 0.8rem;
+            font-family: monospace;
+            letter-spacing: 1px;
+            margin-top: 10px;
+        }
+
+        /* ── Nav buttons ── */
+        .step-nav {
+            padding: 20px 36px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            border-top: 1px solid #3a3f45;
+        }
+        .btn-nav {
+            padding: 10px 32px;
+            border-radius: 20px;
+            border: none;
+            font-family: inherit;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, opacity 0.2s;
+            letter-spacing: 0.3px;
+        }
+        .btn-back {
+            background: #4a6fa5;
+            color: #fff;
+        }
+        .btn-back:hover { background: #3d5e8a; }
+        .btn-next {
+            background: #4a6fa5;
+            color: #fff;
+        }
+        .btn-next:hover { background: #3d5e8a; }
+        .btn-submit {
+            background: #2e7d32;
+            color: #fff;
+        }
+        .btn-submit:hover { background: #256427; }
+        .btn-new {
+            background: #3a3f45;
+            color: #e8e8e8;
+        }
+        .btn-new:hover { background: #4a5060; }
+        .btn-nav:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* ── Validation error ── */
+        .field-error {
+            font-size: 0.78rem;
+            color: #e85a4a;
+            margin-top: 5px;
+            display: none;
+        }
+        .field-error.visible { display: block; }
+
+        /* ── Hidden steps ── */
+        .step { display: none; }
+        .step.active { display: block; }
+
+        /* ── Footer note ── */
+        .page-footer-note {
+            text-align: center;
+            font-size: 0.72rem;
+            color: #444;
+            margin-top: 1.8rem;
+            letter-spacing: 0.03em;
+        }
+    </style>
+</head>
+<body>
+
+<div class="hazard-wrapper">
+    <div class="step-card">
+
+        <!-- Progress bar -->
+        <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="progressBar" style="width: 20%"></div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             STEP 1 — Occurrence Type
+        ═══════════════════════════════════════════════════════════════ -->
+        <div class="step active" id="step1">
+            <div class="step-header">
+                <span class="step-label">Step 1 of 5</span>
+                <h1>Type of Occurrence</h1>
+            </div>
+            <div class="step-body">
+                <p class="step-description">
+                    Select the type of aviation event you are reporting. This form covers <strong>Unusual Occurrences</strong>,
+                    <strong>In-Flight Emergencies (IFE)</strong>, and <strong>Aviation Hazards</strong> that are
+                    <strong>not</strong> HATR (Hazard Awareness Tracking Report) or BASH (Bird/Wildlife Aircraft Strike Hazard) events.
+                    <br><br>
+                    If you experienced a <strong>bird/wildlife strike</strong>, use the BASH reporting form.
+                    If injury or damage already occurred, this may be a mishap — contact your safety officer directly.
+                </p>
+
+                <div class="input-row">
+                    <label>Occurrence Type <span style="color:#e85a4a;">*</span></label>
+                    <select id="occurrenceType">
+                        <option value="">— Select type —</option>
+                        <option value="ife">In-Flight Emergency (IFE)</option>
+                        <option value="unusual_occurrence">Unusual Occurrence (Non-Emergency)</option>
+                        <option value="aviation_hazard">Aviation Hazard (Non-HATR / Non-BASH)</option>
+                        <option value="ground_emergency">Ground Emergency / Hung Ordnance</option>
+                        <option value="other">Other</option>
+                    </select>
+                    <div class="field-error" id="typeError">Please select an occurrence type.</div>
+                </div>
+
+                <!-- IFE info callout — shown only when IFE is selected -->
+                <div id="ifeCallout" style="display:none; background:#1e2023; border:1px solid #7a8694; border-radius:6px; padding:14px 16px; font-size:0.85rem; color:#a0a8b0; line-height:1.6; margin-top:4px;">
+                    <strong style="color:#7ab4e0;">IFE Reminder:</strong> An In-Flight Emergency is any emergency aboard an aircraft that requires immediate action.
+                    Examples: engine failure, hydraulic failure, flight control malfunction, uncontrolled fire, incapacitation of aircrew.
+                    Ensure all immediate actions and emergency procedures were completed per the applicable checklist before filing this report.
+                </div>
+
+                <div class="input-row" style="margin-top: 18px;">
+                    <label>Aircraft Type <span style="color:#e85a4a;">*</span></label>
+                    <input type="text" id="aircraftType" placeholder="e.g. F-35A Lightning II">
+                    <div class="field-error" id="aircraftError">Please enter the aircraft type.</div>
+                </div>
+
+                <div class="input-row">
+                    <label>Flight Callsign</label>
+                    <input type="text" id="flightCallsign" placeholder="e.g. MAPLE11">
+                </div>
+            </div>
+            <div class="step-nav">
+                <button class="btn-nav btn-back" onclick="window.location.href='vsaferep.html'">Back</button>
+                <button class="btn-nav btn-next" onclick="goToStep(2)">Next</button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             STEP 2 — Describe the Occurrence
+        ═══════════════════════════════════════════════════════════════ -->
+        <div class="step" id="step2">
+            <div class="step-header">
+                <span class="step-label">Step 2 of 5</span>
+                <h1>Describe the Occurrence</h1>
+            </div>
+            <div class="step-body">
+                <p class="step-description">
+                    Provide a full description of what occurred. Answer the <strong>"who, what, where, when, why, and how"</strong>
+                    as thoroughly as possible. Include sequence of events, crew actions taken, and any other relevant details.
+                    More information helps the safety staff assess and resolve the issue.
+                </p>
+                <textarea
+                    class="hazard-textarea"
+                    id="occurrenceDescription"
+                    maxlength="3900"
+                    placeholder='Describe what happened in as much detail as possible. Include: sequence of events, aircraft state, crew actions, ATC involvement, weather, and outcome. E.g. "During initial climb-out from KBTV, experienced IPP 2 Failure. Declared IFE with Boston Center, completed emergency procedures, Returned to KBTV..."'
+                ></textarea>
+                <div class="char-counter" id="descCounter">0/3900</div>
+                <div class="field-error" id="descError">Please describe the occurrence before continuing.</div>
+            </div>
+            <div class="step-nav">
+                <button class="btn-nav btn-back" onclick="goToStep(1)">Back</button>
+                <button class="btn-nav btn-next" onclick="goToStep(3)">Next</button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             STEP 3 — Flight Details
+        ═══════════════════════════════════════════════════════════════ -->
+        <div class="step" id="step3">
+            <div class="step-header">
+                <span class="step-label">Step 3 of 5</span>
+                <h1>Flight Details</h1>
+            </div>
+            <div class="step-body">
+                <p class="step-description">
+                    Provide details about the flight during which the occurrence took place.
+                </p>
+
+                <div class="input-grid">
+                    <div class="input-row">
+                        <label>Date of Occurrence <span style="color:#e85a4a;">*</span></label>
+                        <input type="date" id="incidentDate">
+                        <div class="field-error" id="dateError">Please enter the date.</div>
+                    </div>
+                    <div class="input-row">
+                        <label>Time (Zulu)</label>
+                        <input type="text" id="incidentTime" placeholder="e.g. 1432Z">
+                    </div>
+                </div>
+
+                <div class="input-row">
+                    <label>Departure Field</label>
+                    <input type="text" id="departureBase" placeholder="e.g. KBTV, Burlington ANGB...">
+                </div>
+
+                <div class="input-row">
+                    <label>Location / Area Where Occurrence Happened</label>
+                    <input type="text" id="incidentLocation" placeholder="e.g. Over Range 42, En route KGTB...">
+                </div>
+
+                <div class="input-row">
+                    <label>Phase of Flight</label>
+                    <select id="phaseOfFlight">
+                        <option value="">— Select phase —</option>
+                        <option value="preflight">Preflight / Ground Ops</option>
+                        <option value="taxi">Taxi</option>
+                        <option value="takeoff">Takeoff Roll</option>
+                        <option value="climb">Departure / Climb</option>
+                        <option value="cruise">En Route / Cruise</option>
+                        <option value="descent">Descent</option>
+                        <option value="approach">Approach</option>
+                        <option value="landing">Landing</option>
+                        <option value="post_landing">Post-Landing / Taxi In</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <div class="input-row">
+                    <label>Mission Type</label>
+                    <select id="missionType">
+                        <option value="">— Select mission —</option>
+                        <option value="training">Local Training / Proficiency</option>
+                        <option value="air_to_air">Air-to-Air (BFM / ACM)</option>
+                        <option value="air_to_ground">Air-to-Ground (Weapons / CAS)</option>
+                        <option value="sead_oca">SEAD / OCA</option>
+                        <option value="dca_cap">DCA / CAP</option>
+                        <option value="formation">Formation / Large Force Exercise</option>
+                        <option value="xc">Cross-Country</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+            </div>
+            <div class="step-nav">
+                <button class="btn-nav btn-back" onclick="goToStep(2)">Back</button>
+                <button class="btn-nav btn-next" onclick="goToStep(4)">Next</button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             STEP 4 — Specifics & Corrective Actions
+        ═══════════════════════════════════════════════════════════════ -->
+        <div class="step" id="step4">
+            <div class="step-header">
+                <span class="step-label">Step 4 of 5</span>
+                <h1>Specifics &amp; Corrective Actions</h1>
+            </div>
+            <div class="step-body">
+
+                <p class="step-description">
+                    Answer the questions below as they apply to your occurrence. Then describe any immediate corrective actions you took.
+                </p>
+
+                <div class="input-row">
+                    <label>Primary System / Area Affected</label>
+                    <select id="systemAffected">
+                        <option value="">— Select system —</option>
+                        <option value="engine_powerplant">Engine / Powerplant</option>
+                        <option value="hydraulics">Hydraulics</option>
+                        <option value="flight_controls">Flight Controls</option>
+                        <option value="electrical">Electrical / Avionics</option>
+                        <option value="fuel">Fuel System</option>
+                        <option value="landing_gear">Landing Gear / Brakes</option>
+                        <option value="ecs_oxygen">ECS / Oxygen / Pressure</option>
+                        <option value="weapons_ordnance">Weapons / Ordnance</option>
+                        <option value="nav_comms">Navigation / Comms</option>
+                        <option value="airframe_structure">Airframe / Structure</option>
+                        <option value="human_factors">Human Factors / Crew Error</option>
+                        <option value="wx_terrain">Weather / Terrain / Airspace</option>
+                        <option value="na">N/A — Non-system occurrence</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <div class="section-divider">Quick Questions</div>
+
+                <div class="toggle-row">
+                    <span class="toggle-row-label">Was a Landing / Ground Emergency declared?</span>
+                    <div class="toggle-btns">
+                        <button id="emergYes" onclick="toggleYesNo('emerg', true)">Yes</button>
+                        <button id="emergNo"  onclick="toggleYesNo('emerg', false)">No</button>
+                    </div>
+                </div>
+
+                <div class="toggle-row">
+                    <span class="toggle-row-label">Were there any crew injuries?</span>
+                    <div class="toggle-btns">
+                        <button id="injuryYes" onclick="toggleYesNo('injury', true)">Yes</button>
+                        <button id="injuryNo"  onclick="toggleYesNo('injury', false)">No</button>
+                    </div>
+                </div>
+
+                <div class="toggle-row">
+                    <span class="toggle-row-label">Was there any damage to the aircraft?</span>
+                    <div class="toggle-btns">
+                        <button id="damageYes" onclick="toggleYesNo('damage', true)">Yes</button>
+                        <button id="damageNo"  onclick="toggleYesNo('damage', false)">No</button>
+                    </div>
+                </div>
+
+                <div class="toggle-row" style="margin-bottom:20px;">
+                    <span class="toggle-row-label">Did the aircraft divert or land at an alternate field?</span>
+                    <div class="toggle-btns">
+                        <button id="divertYes" onclick="toggleYesNo('divert', true)">Yes</button>
+                        <button id="divertNo"  onclick="toggleYesNo('divert', false)">No</button>
+                    </div>
+                </div>
+
+                <div class="input-row">
+                    <label>Immediate Corrective Actions Taken <span style="color:#555; font-size:0.75rem; text-transform:none; letter-spacing:0">(optional)</span></label>
+                    <textarea
+                        class="hazard-textarea short"
+                        id="correctiveActions"
+                        maxlength="1200"
+                        placeholder="Describe any immediate actions taken by crew or maintenance. E.g. engine shutdown, emergency checklist completion, coordination with ATC, divert to alternate..."
+                    ></textarea>
+                    <div class="char-counter" id="actionsCounter">0/1200</div>
+                </div>
+
+            </div>
+            <div class="step-nav">
+                <button class="btn-nav btn-back" onclick="goToStep(3)">Back</button>
+                <button class="btn-nav btn-next" onclick="goToStep(5)">Next</button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             STEP 5 — Reporter Information
+        ═══════════════════════════════════════════════════════════════ -->
+        <div class="step" id="step5">
+            <div class="step-header">
+                <span class="step-label">Step 5 of 5</span>
+                <h1>Reporter Information</h1>
+            </div>
+            <div class="step-body">
+                <p class="step-description">
+                    Your report may be submitted anonymously. Providing your contact information allows the safety office to follow up if needed.
+                    All reports are <strong>admin-locked</strong> and visible only to the v158th FW Safety staff.
+                </p>
+
+                <div class="input-row">
+                    <label>Name / Callsign <span style="color:#555; font-size:0.75rem; text-transform:none; letter-spacing:0">(optional)</span></label>
+                    <input type="text" id="reporterName" placeholder="Your name or callsign">
+                </div>
+
+                <div class="input-row">
+                    <label>Email <span style="color:#555; font-size:0.75rem; text-transform:none; letter-spacing:0">(optional)</span></label>
+                    <input type="email" id="reporterEmail" placeholder="your@email.com">
+                    <div class="field-error" id="emailError">Please enter a valid email address.</div>
+                </div>
+
+                <div class="input-row">
+                    <label>Unit / Squadron</label>
+                    <input type="text" id="reporterUnit" placeholder="e.g. 134th FS, 315th FS...">
+                </div>
+
+                <div class="input-row">
+                    <label>Duty Position</label>
+                    <select id="reporterDuty">
+                        <option value="">— Select position —</option>
+                        <option value="pilot_f16">Instructor Pilot</option>
+                        <option value="pilot_other">Pilot</option>
+                        <option value="wizzo">MQT Student</option>
+                        <option value="mx">IQT Student</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <!-- Review summary before final step -->
+                <div style="background:#12151a; border:1px solid #2c3035; border-radius:6px; padding:14px 16px; font-size:0.82rem; color:#666; margin-top:8px;">
+                    Clicking <strong style="color:#888;">Next</strong> will take you to a final review before submitting.
+                    Your report will be securely logged and forwarded to the 158th FW Safety Office.
+                </div>
+            </div>
+            <div class="step-nav">
+                <button class="btn-nav btn-back" onclick="goToStep(4)">Back</button>
+                <button class="btn-nav btn-next" onclick="goToStep(6)">Next</button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             STEP 6 — Review & Submit
+        ═══════════════════════════════════════════════════════════════ -->
+        <div class="step" id="step6">
+            <div class="step-header">
+                <span class="step-label">Review &amp; Submit</span>
+                <h1>Confirm Your Report</h1>
+            </div>
+            <div class="step-body">
+                <p class="step-description">
+                    Review your report below before submitting. Once submitted, a copy will be securely logged
+                    and forwarded to the 158th FW Safety Office.
+                </p>
+
+                <table class="review-table" id="reviewTable">
+                    <tr><td>Type</td><td id="rv-type">—</td></tr>
+                    <tr><td>Aircraft</td><td id="rv-aircraft">—</td></tr>
+                    <tr><td>Callsign</td><td id="rv-callsign">—</td></tr>
+                    <tr><td>Description</td><td id="rv-desc" style="white-space:pre-wrap; word-break:break-word;">—</td></tr>
+                    <tr><td>Date / Time</td><td id="rv-datetime">—</td></tr>
+                    <tr><td>Location</td><td id="rv-loc">—</td></tr>
+                    <tr><td>Phase of Flight</td><td id="rv-phase">—</td></tr>
+                    <tr><td>Mission Type</td><td id="rv-mission">—</td></tr>
+                    <tr><td>System Affected</td><td id="rv-system">—</td></tr>
+                    <tr><td>Emergency Declared</td><td id="rv-emerg">—</td></tr>
+                    <tr><td>Injuries</td><td id="rv-injury">—</td></tr>
+                    <tr><td>Aircraft Damage</td><td id="rv-damage">—</td></tr>
+                    <tr><td>Diverted</td><td id="rv-divert">—</td></tr>
+                    <tr><td>Corrective Actions</td><td id="rv-actions">—</td></tr>
+                    <tr><td>Reporter</td><td id="rv-reporter">—</td></tr>
+                    <tr><td>Unit</td><td id="rv-unit">—</td></tr>
+                </table>
+
+                <div class="field-error" id="submitError" style="margin-top:14px;"></div>
+                <div id="submitSpinner" style="display:none; text-align:center; color:#888; font-size:0.85rem; margin-top:14px;">Submitting…</div>
+            </div>
+            <div class="step-nav">
+                <button class="btn-nav btn-back" id="backFromReview" onclick="goToStep(5)">Back</button>
+                <button class="btn-nav btn-submit" id="submitBtn" onclick="submitReport()">Submit Report</button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             STEP 7 — Confirmation
+        ═══════════════════════════════════════════════════════════════ -->
+        <div class="step" id="step7">
+            <div class="step-header">
+                <span class="step-label">Complete</span>
+                <h1>Report Submitted</h1>
+            </div>
+            <div class="step-body">
+                <div class="confirm-banner">
+                    <span class="check-icon">&#10003;</span>
+                    <h2>Aviation Safety Report Received</h2>
+                    <p>Your report has been submitted to the 158th FW Safety Office. Thank you for helping keep our wing safe.</p>
+                    <span class="report-id-chip" id="reportIdChip">AVN-000000</span>
+                </div>
+                <p class="step-description" style="text-align:center; margin:0;">
+                    A copy of this report has been securely logged. If you provided contact information,
+                    the safety staff may reach out with any follow-up questions.
+                </p>
+            </div>
+            <div class="step-nav">
+                <button class="btn-nav btn-new" onclick="resetForm()">Submit Another Report</button>
+                <button class="btn-nav btn-back" onclick="window.location.href='vsaferep.html'">Return to vSAFEREP</button>
+            </div>
+        </div>
+
+    </div><!-- /.step-card -->
+
+    <p class="page-footer-note">vSAFEREP &bull; For training and record-keeping purposes only</p>
+</div>
+
+<script>
+    // ── Supabase ──────────────────────────────────────────────────────────────
+    const SUPABASE_URL  = 'https://gcumgpfyfqtfwbskkngt.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdW1ncGZ5ZnF0Zndic2trbmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDczMTAsImV4cCI6MjA4ODM4MzMxMH0.OSY0XEPQp-WsFWuiGrUG5fcLIVMI3c8AxBEv2shFftg';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    // ── State ─────────────────────────────────────────────────────────────────
+    const PROGRESS = { 1:20, 2:40, 3:60, 4:80, 5:100, 6:100, 7:100 };
+    const toggleState = { emerg: null, injury: null, damage: null, divert: null };
+
+    // ── Char counters ─────────────────────────────────────────────────────────
+    document.getElementById('occurrenceDescription').addEventListener('input', function () {
+        const len = this.value.length;
+        const counter = document.getElementById('descCounter');
+        counter.textContent = len + '/3900';
+        counter.classList.toggle('over-limit', len >= 3900);
+    });
+
+    document.getElementById('correctiveActions').addEventListener('input', function () {
+        const len = this.value.length;
+        const counter = document.getElementById('actionsCounter');
+        counter.textContent = len + '/1200';
+        counter.classList.toggle('over-limit', len >= 1200);
+    });
+
+    // ── Show IFE callout ──────────────────────────────────────────────────────
+    document.getElementById('occurrenceType').addEventListener('change', function () {
+        document.getElementById('ifeCallout').style.display = this.value === 'ife' ? 'block' : 'none';
+    });
+
+    // ── Toggle Yes / No buttons ───────────────────────────────────────────────
+    function toggleYesNo(field, isYes) {
+        toggleState[field] = isYes;
+        const yesBtn = document.getElementById(field + 'Yes');
+        const noBtn  = document.getElementById(field + 'No');
+        yesBtn.className = isYes ? 'selected-yes' : '';
+        noBtn.className  = isYes ? '' : 'selected-no';
+    }
+
+    // ── Step navigation ───────────────────────────────────────────────────────
+    function goToStep(n) {
+        if (n === 2 && !validateStep1()) return;
+        if (n === 3 && !validateStep2()) return;
+        if (n === 4 && !validateStep3()) return;
+        if (n === 6) {
+            if (!validateStep5()) return;
+            populateReview();
+        }
+
+        document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+        document.getElementById('step' + n).classList.add('active');
+        document.getElementById('progressBar').style.width = PROGRESS[n] + '%';
+        document.querySelector('.step-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ── Validation ────────────────────────────────────────────────────────────
+    function validateStep1() {
+        let ok = true;
+
+        const type = document.getElementById('occurrenceType').value;
+        const typeErr = document.getElementById('typeError');
+        if (!type) { typeErr.classList.add('visible'); ok = false; }
+        else        { typeErr.classList.remove('visible'); }
+
+        const aircraft = document.getElementById('aircraftType').value.trim();
+        const aircraftErr = document.getElementById('aircraftError');
+        if (!aircraft) { aircraftErr.classList.add('visible'); ok = false; }
+        else           { aircraftErr.classList.remove('visible'); }
+
+        return ok;
+    }
+
+    function validateStep2() {
+        const desc = document.getElementById('occurrenceDescription').value.trim();
+        const err  = document.getElementById('descError');
+        if (!desc) { err.classList.add('visible'); return false; }
+        err.classList.remove('visible');
+        return true;
+    }
+
+    function validateStep3() {
+        const date = document.getElementById('incidentDate').value;
+        const err  = document.getElementById('dateError');
+        if (!date) { err.classList.add('visible'); return false; }
+        err.classList.remove('visible');
+        return true;
+    }
+
+    function validateStep5() {
+        const email = document.getElementById('reporterEmail').value.trim();
+        const err   = document.getElementById('emailError');
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            err.classList.add('visible');
+            return false;
+        }
+        err.classList.remove('visible');
+        return true;
+    }
+
+    // ── Helper: get select label ──────────────────────────────────────────────
+    function selLabel(id) {
+        const el = document.getElementById(id);
+        const opt = el.options[el.selectedIndex];
+        return (opt && opt.value) ? opt.text : '—';
+    }
+
+    function yesNoLabel(field) {
+        if (toggleState[field] === true)  return 'Yes';
+        if (toggleState[field] === false) return 'No';
+        return '—';
+    }
+
+    // ── Populate review ───────────────────────────────────────────────────────
+    function populateReview() {
+        document.getElementById('rv-type').textContent     = selLabel('occurrenceType');
+        document.getElementById('rv-aircraft').textContent = document.getElementById('aircraftType').value.trim() || '—';
+        document.getElementById('rv-callsign').textContent = document.getElementById('flightCallsign').value.trim() || '—';
+        document.getElementById('rv-desc').textContent     = document.getElementById('occurrenceDescription').value.trim() || '—';
+
+        const date = document.getElementById('incidentDate').value;
+        const time = document.getElementById('incidentTime').value.trim();
+        document.getElementById('rv-datetime').textContent = [date, time].filter(Boolean).join(' / ') || '—';
+
+        const departure = document.getElementById('departureBase').value.trim();
+        const location  = document.getElementById('incidentLocation').value.trim();
+        document.getElementById('rv-loc').textContent = [departure, location].filter(Boolean).join(' → ') || '—';
+
+        document.getElementById('rv-phase').textContent   = selLabel('phaseOfFlight');
+        document.getElementById('rv-mission').textContent = selLabel('missionType');
+        document.getElementById('rv-system').textContent  = selLabel('systemAffected');
+        document.getElementById('rv-emerg').textContent   = yesNoLabel('emerg');
+        document.getElementById('rv-injury').textContent  = yesNoLabel('injury');
+        document.getElementById('rv-damage').textContent  = yesNoLabel('damage');
+        document.getElementById('rv-divert').textContent  = yesNoLabel('divert');
+
+        const actions = document.getElementById('correctiveActions').value.trim();
+        document.getElementById('rv-actions').textContent = actions || '—';
+
+        const name  = document.getElementById('reporterName').value.trim();
+        const email = document.getElementById('reporterEmail').value.trim();
+        document.getElementById('rv-reporter').textContent = [name, email].filter(Boolean).join(' / ') || 'Anonymous';
+        document.getElementById('rv-unit').textContent     = document.getElementById('reporterUnit').value.trim() || '—';
+    }
+
+    // ── Submit ────────────────────────────────────────────────────────────────
+    async function submitReport() {
+        const btn     = document.getElementById('submitBtn');
+        const spinner = document.getElementById('submitSpinner');
+        const errEl   = document.getElementById('submitError');
+
+        btn.disabled          = true;
+        spinner.style.display = 'block';
+        errEl.classList.remove('visible');
+        errEl.textContent = '';
+
+        const reportId = crypto.randomUUID();
+        const shortId  = 'AVN-' + reportId.slice(0, 6).toUpperCase();
+
+        const payload = {
+            id                  : reportId,
+            report_type         : 'aviation',
+            occurrence_type     : document.getElementById('occurrenceType').value || null,
+            aircraft_type       : document.getElementById('aircraftType').value.trim() || null,
+            flight_callsign     : document.getElementById('flightCallsign').value.trim() || null,
+            description         : document.getElementById('occurrenceDescription').value.trim() || null,
+            incident_date       : document.getElementById('incidentDate').value || null,
+            incident_time       : document.getElementById('incidentTime').value.trim() || null,
+            departure_base      : document.getElementById('departureBase').value.trim() || null,
+            location            : document.getElementById('incidentLocation').value.trim() || null,
+            phase_of_flight     : document.getElementById('phaseOfFlight').value || null,
+            mission_type        : document.getElementById('missionType').value || null,
+            system_affected     : document.getElementById('systemAffected').value || null,
+            emergency_declared  : toggleState.emerg,
+            crew_injuries       : toggleState.injury,
+            aircraft_damage     : toggleState.damage,
+            diverted            : toggleState.divert,
+            corrective_actions  : document.getElementById('correctiveActions').value.trim() || null,
+            reporter_name       : document.getElementById('reporterName').value.trim() || null,
+            reporter_email      : document.getElementById('reporterEmail').value.trim() || null,
+            unit                : document.getElementById('reporterUnit').value.trim() || null,
+            duty_position       : document.getElementById('reporterDuty').value || null,
+            short_id            : shortId
+        };
+
+        try {
+            const { error } = await _supabase.from('vsaferep_reports').insert([payload]);
+            if (error) throw error;
+
+            document.getElementById('reportIdChip').textContent = shortId;
+            goToStep(7);
+        } catch (err) {
+            console.error('Submit error:', err);
+            errEl.textContent = 'Submission failed: ' + (err.message || 'Unknown error. Please try again.');
+            errEl.classList.add('visible');
+            btn.disabled          = false;
+            spinner.style.display = 'none';
+        }
+    }
+
+    // ── Reset ─────────────────────────────────────────────────────────────────
+    function resetForm() {
+        // Reset selects & inputs
+        ['occurrenceType','aircraftType','flightCallsign','incidentDate','incidentTime',
+         'departureBase','incidentLocation','phaseOfFlight','missionType','systemAffected',
+         'correctiveActions','occurrenceDescription','reporterName','reporterEmail',
+         'reporterUnit','reporterDuty'].forEach(id => {
+            const el = document.getElementById(id);
+            el.value = '';
+        });
+
+        // Reset toggles
+        ['emerg','injury','damage','divert'].forEach(f => {
+            toggleState[f] = null;
+            document.getElementById(f + 'Yes').className = '';
+            document.getElementById(f + 'No').className  = '';
+        });
+
+        // Reset counters
+        document.getElementById('descCounter').textContent    = '0/3900';
+        document.getElementById('actionsCounter').textContent = '0/1200';
+
+        // Reset IFE callout
+        document.getElementById('ifeCallout').style.display = 'none';
+
+        // Re-enable submit
+        document.getElementById('submitBtn').disabled = false;
+        document.getElementById('submitSpinner').style.display = 'none';
+
+        goToStep(1);
+    }
+</script>
+
+</body>
+</html>

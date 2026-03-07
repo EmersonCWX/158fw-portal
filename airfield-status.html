@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>158th FW Pilot Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/member-nav.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background: #222; color: #fff; margin: 0; padding: 0; }
+        .container { max-width: 1600px; margin: 20px auto; background: #333; border-radius: 10px; box-shadow: 0 0 10px #000; padding: 20px; }
+        h1 { text-align: center; margin-bottom: 10px; }
+        .grid { display: grid; grid-template-columns: 1.2fr 1.2fr 2fr; gap: 20px; }
+        .section { background: #222; border-radius: 8px; box-shadow: 0 2px 8px #111; padding: 16px; margin-bottom: 16px; }
+        .section-title { font-size: 1.1em; font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid #444; padding-bottom: 3px; }
+        .label { font-weight: bold; color: #aaf; }
+        .green { color: #0f0; }
+        .red { color: #f00; }
+        .yellow { color: #ff0; }
+        .gray { color: #aaa; }
+        .metar, .taf, .pireps { font-family: monospace; background: #111; padding: 8px; border-radius: 5px; margin: 6px 0; font-size: 1em; }
+        .row { display: flex; justify-content: space-between; margin: 3px 0; }
+        .small { font-size: 0.95em; }
+        .vcenter { display: flex; align-items: center; }
+        .table { width: 100%; border-collapse: collapse; margin: 6px 0; }
+        .table th, .table td { border: 1px solid #444; padding: 3px 6px; font-size: 0.95em; }
+
+
+        .table tr:nth-child(even) { background: #292929; }
+        .table tr:nth-child(odd) { background: #222; }
+        .ops-table { width: 100%; border-collapse: collapse; }
+        .ops-table th, .ops-table td { border: 1px solid #444; padding: 2px 4px; font-size: 0.95em; }
+        .ops-table th { background: #444; color: #fff; }
+        .ops-table tr:nth-child(even) { background: #292929; }
+        .ops-table tr:nth-child(odd) { background: #222; }
+        .flex-row { display: flex; gap: 10px; }
+        .flex-col { display: flex; flex-direction: column; gap: 8px; }
+        .center { text-align: center; }
+        .highlight { background: #444; color: #ff0; padding: 2px 6px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Airfield Status - KBTV</h1>
+        <div class="grid">
+            <!-- Left Column -->
+            <div class="flex-col">
+                <div class="section" id="scorpion-ops-section">
+                    <div class="section-title">Scorpion Ops</div>
+                    <div class="center">
+                        <span id="runway-display" class="highlight" style="font-size:2em;">--</span>
+                        <div>Departure</div>
+                        <div id="runway-vfr" class="highlight" style="margin:8px 0;">VFR</div>
+                    </div>
+                    <div class="row">
+                        <span id="scorpion-status" class="green">Active</span>
+                        <span class="gray" style="margin-left:auto; font-size:0.95em;">------ Status ------</span>
+                    </div>
+                    <div class="row">
+                        <span id="scorpion-rcr" class="green">Dry (23)</span>
+                        <span class="gray" style="margin-left:auto; font-size:0.95em;">------ RCR ------</span>
+                    </div>
+                    <div class="row">
+                        <span id="scorpion-birds" class="green">Low</span>
+                        <span class="gray" style="margin-left:auto; font-size:0.95em;">------ Birds ------</span>
+                    </div>
+                    <div class="row">
+                        <span id="scorpion-its" class="green">Normal</span>
+                        <span class="gray" style="margin-left:auto; font-size:0.95em;">------ ITS ------</span>
+                    </div>
+                </div>
+                <div class="section">
+                    <div class="section-title">METAR</div>
+                    <div id="metar" class="metar">Loading...</div>
+                </div>
+                <div class="section">
+                    <div class="section-title">TAF</div>
+                    <div id="taf" class="taf">Loading...</div>
+                </div>
+                <div class="section">
+                    <div class="section-title">ALTERNATE <span class="small">(Fuel)</span></div>
+                    <div class="green">None</div>
+                </div>
+                <div class="section">
+                    <div class="section-title">Current PIREPs</div>
+                    <div id="pireps" class="pireps">Loading...</div>
+                </div>
+            </div>
+            <!-- Center Column -->
+            <div class="flex-col">
+                <div class="section">
+                    <div class="section-title">TOLD</div>
+                    <div class="row"><span class="label">Takeoff</span> <span id="f35a-takeoff">--</span></div>
+                    <div class="row"><span class="label">Abort</span> <span id="f35a-abort">--</span></div>
+                    <div class="row"><span class="label">HWNF LDG</span> <span id="f35a-landing">--</span></div>
+                    <div class="row"><span class="label">Temp</span> <span id="temperature" class="highlight">--</span></div>
+                </div>
+                <div class="section">
+                    <div class="section-title">NAVAIDs</div>
+                    <div class="row"><span class="label">BTV VOR/DME</span> <span>117.50</span></div>
+                    <div class="row"><span class="label">DME</span> <span>117.50</span></div>
+                    <div class="row"><span class="label">ILS RWY 15</span> <span>110.3</span></div>
+                    <div class="row"><span class="label">ILS RWY 33</span> <span>111.7</span></div>
+                </div>
+                <div class="section">
+                    <div class="section-title">Special Interest Items</div>
+                    <div id="special-interest-items"><span class="gray">Loading...</span></div>
+                </div>
+                <div class="section">
+                    <div class="section-title">Ranges</div>
+                    <div class="row"><span id="range-yankee1" class="green">Yankee 1 MOA</span></div>
+                    <div class="row"><span id="range-adirondack" class="green">Adirondack MOA</span></div>
+                    <div class="row"><span id="range-condor1" class="green">Condor 1 MOA</span></div>
+                </div>
+            </div>
+            <!-- Right Column -->
+            <div class="flex-col">
+                <div class="section">
+                    <div class="section-title">FCIF</div>
+                    <div class="green">None</div>
+                    <div class="gray">--Notes--</div>
+                </div>
+                <div class="section">
+                    
+                    <div class="section-title">For Pubs Currency, See v158th FW PUBs Drive</div>
+                    <div class="row"><span>v158th FW IQT Syllabus</span> <span>Revision 0</span></div>
+                    <div class="row"><span>v158th FW MQT Syllabus</span> <span>Revision 0</span></div>
+                </div>
+                <div class="section">
+                    <div class="section-title">OUT FIELDS</div>
+                    <table class="table" id="outfields-table">
+                        <thead>
+                            <tr><th>Status</th><th>Field</th><th>METAR</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="green" id="of-kpbg-status">VFR</td><td>KPBG</td><td id="of-kpbg">Loading...</td></tr>
+                            <tr><td class="green" id="of-krme-status">VFR</td><td>KRME</td><td id="of-krme">Loading...</td></tr>
+                            <tr><td class="green" id="of-kgtb-status">VFR</td><td>KGTB</td><td id="of-kgtb">Loading...</td></tr>
+                            <tr><td class="green" id="of-kpsm-status">VFR</td><td>KPSM</td><td id="of-kpsm">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="section">
+                    <div class="section-title">OPS Notes</div>
+                    <table class="ops-table" id="ops-notes-table">
+                        <thead>
+                            <tr><th>OPS Notes</th><th>Date</th><th>Initials</th></tr>
+                        </thead>
+                        <tbody id="ops-notes-body">
+                            <tr><td colspan="3" style="color:#aaa;font-style:italic;">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+    const avwxToken = 'MEsA2QSGtIHWpgECLiOUBHwtka0EiiyoAfCRHOTG5QA';
+
+    // Helper to fetch METAR/TAF from NOAA (CORS-friendly)
+    function fetchTextData(url, callback) {
+        fetch(url)
+            .then(r => r.text())
+            .then(txt => callback(txt))
+            .catch(() => callback('Error loading data.'));
+    }
+    // KBTV METAR using AVWX REST API
+    fetch(`https://avwx.rest/api/metar/KBTV?token=${avwxToken}`)
+        .then(res => res.json())
+        .then(metarObj => {
+            let metar = metarObj && metarObj.raw ? metarObj.raw : 'No METAR data.';
+            document.getElementById('metar').textContent = metar;
+            // Extract temperature for TOLD
+            let tempMatch = metar.match(/ (M?\d{2})\/(M?\d{2})/);
+            let tempC = tempMatch ? (tempMatch[1].startsWith('M') ? -parseInt(tempMatch[1].slice(1),10) : parseInt(tempMatch[1],10)) : null;
+            let tempF = tempC !== null ? Math.round((tempC * 9/5) + 32) : null;
+            document.getElementById('temperature').textContent = tempF !== null ? tempF + '°F' : '--';
+            const runwayDisplay = document.getElementById('runway-display');
+            const runwayVfr = document.getElementById('runway-vfr');
+            const statusSpan = document.getElementById('scorpion-status');
+            const rcrSpan = document.getElementById('scorpion-rcr');
+            const birdsSpan = document.getElementById('scorpion-birds');
+            const itsSpan = document.getElementById('scorpion-its');
+            // Use DST-aware BTV local time for "terminated" logic
+            const now = new Date();
+            let estOffset = -5;
+            const startDST = new Date(now.getFullYear(), 2, 8 - (new Date(now.getFullYear(), 2, 1).getDay() || 7));
+            const endDST = new Date(now.getFullYear(), 10, 1 + (7 - new Date(now.getFullYear(), 10, 1).getDay()));
+            if (now >= startDST && now < endDST) estOffset = -4;
+            const btv = new Date(now.getTime() + (estOffset * 60 + now.getTimezoneOffset()) * 60000);
+            const hours = btv.getHours();
+            const minutes = btv.getMinutes();
+            const day = btv.getDay(); // 0=Sunday, 1=Monday, ...
+            // Terminated logic
+            let isTerminated = false;
+            if (day === 1) { // Monday
+                isTerminated = true;
+            } else if ((hours > 21 || (hours === 21 && minutes >= 30)) || (hours < 8 || (hours === 8 && minutes < 30))) {
+                isTerminated = true;
+            }
+            // Set VFR/IFR/MVFR/LIFR status and color
+            let fieldStatus = 'VFR';
+            let statusClass = 'green';
+            if (metarObj && metarObj.flight_rules) {
+                if (metarObj.flight_rules === 'LIFR') { fieldStatus = 'LIFR'; statusClass = 'red'; }
+                else if (metarObj.flight_rules === 'IFR') { fieldStatus = 'IFR'; statusClass = 'red'; }
+                else if (metarObj.flight_rules === 'MVFR') { fieldStatus = 'MVFR'; statusClass = 'yellow'; }
+                else if (metarObj.flight_rules === 'VFR') { fieldStatus = 'VFR'; statusClass = 'green'; }
+            }
+            runwayVfr.textContent = fieldStatus;
+            runwayVfr.className = `highlight ${statusClass}`;
+            // Status row logic
+            if (isTerminated) {
+                statusSpan.textContent = 'Terminated';
+                statusSpan.className = 'red';
+                runwayDisplay.textContent = '--';
+            } else {
+                statusSpan.textContent = 'Active';
+                statusSpan.className = 'green';
+                // Determine runway from wind or ATIS
+                let windMatch = metar.match(/ (\d{3}|VRB)(\d{2,3})G?(\d{2,3})?KT/);
+                let windDir = windMatch ? windMatch[1] : null;
+                let rwy = '--';
+                if (windDir && windDir !== 'VRB') {
+                    let windDeg = parseInt(windDir, 10);
+                    // Runway 15 = 150, Runway 33 = 330
+                    let diff15 = Math.abs(((windDeg - 150 + 180 + 360) % 360) - 180);
+                    let diff33 = Math.abs(((windDeg - 330 + 180 + 360) % 360) - 180);
+                    rwy = diff15 <= diff33 ? '15' : '33';
+                }
+                runwayDisplay.textContent = rwy;
+            }
+            // RCR, Birds, ITS (static for now, can be dynamic if needed)
+            rcrSpan.textContent = 'Dry (23)';
+            rcrSpan.className = 'green';
+            birdsSpan.textContent = 'Low';
+            birdsSpan.className = 'green';
+            itsSpan.textContent = 'Normal';
+            itsSpan.className = 'green';
+        })
+        .catch(() => {
+            document.getElementById('metar').textContent = 'Error loading METAR.';
+            document.getElementById('temperature').textContent = '--';
+            const terminatedSpan = document.getElementById('scorpion-terminated');
+            terminatedSpan.style.display = '';
+            document.getElementById('runway-display').textContent = '--';
+        });
+    // KBTV TAF using AVWX REST API
+    fetch(`https://avwx.rest/api/taf/KBTV?token=${avwxToken}`)
+        .then(res => res.json())
+        .then(tafObj => {
+            let taf = tafObj && tafObj.raw ? tafObj.raw : 'No TAF data.';
+            document.getElementById('taf').textContent = taf;
+        })
+        .catch(() => {
+            document.getElementById('taf').textContent = 'Error loading TAF.';
+        });
+    // Show loading spinner for PIREPs
+    const pirepsDiv = document.getElementById('pireps');
+    pirepsDiv.innerHTML = "<span class='gray'>Loading...</span>";
+    let pirepsLoaded = false;
+    // Fetch and display recent PIREPs within 150nm of KBTV using AVWX REST API
+    fetch(`https://avwx.rest/api/pirep/KBTV?radius=150&token=${avwxToken}`)
+        .then(res => res.json())
+        .then(data => {
+            pirepsLoaded = true;
+            if (Array.isArray(data) && data.length > 0) {
+                pirepsDiv.innerHTML = data.map(pirep => {
+                    // Show time, location, and a short summary if available
+                    const time = pirep.time ? pirep.time.dt : '';
+                    const loc = pirep.station || '';
+                    const summary = pirep.raw || '';
+                    return `<div><span class='yellow'>${time}</span> <span class='label'>${loc}</span> <span>${summary}</span></div>`;
+                }).join('');
+            } else {
+                pirepsDiv.textContent = 'No recent PIREPs.';
+            }
+        })
+        .catch(() => {
+            pirepsLoaded = true;
+            pirepsDiv.textContent = 'Error loading PIREPs.';
+        });
+    // Fallback: if not loaded in 10 seconds, show error
+    setTimeout(() => {
+        if (!pirepsLoaded) {
+            pirepsDiv.textContent = 'PIREP loading timed out.';
+        }
+    }, 10000);
+    // OUT FIELDS METARs (KPBG, KRME, KGTB, KPSM) using textData endpoint
+    const outfields = [
+        { code: 'KPBG', statusId: 'of-kpbg-status', metarId: 'of-kpbg' },
+        { code: 'KRME', statusId: 'of-krme-status', metarId: 'of-krme' },
+        { code: 'KGTB', statusId: 'of-kgtb-status', metarId: 'of-kgtb' },
+        { code: 'KPSM', statusId: 'of-kpsm-status', metarId: 'of-kpsm' }
+    ];
+    // Fetch each OUT FIELD METAR individually
+    outfields.forEach(fld => {
+        fetch(`https://avwx.rest/api/metar/${fld.code}?token=${avwxToken}`)
+            .then(res => res.json())
+            .then(metarObj => {
+                let metar = metarObj && metarObj.raw ? metarObj.raw : 'No METAR data.';
+                let el = document.getElementById(fld.metarId);
+                if (el) el.textContent = metar;
+                // Set status color based on flight rules
+                let status = 'VFR';
+                let statusClass = 'green';
+                if (metarObj && metarObj.flight_rules) {
+                    if (metarObj.flight_rules === 'LIFR') { status = 'LIFR'; statusClass = 'red'; }
+                    else if (metarObj.flight_rules === 'IFR') { status = 'IFR'; statusClass = 'red'; }
+                    else if (metarObj.flight_rules === 'MVFR') { status = 'MVFR'; statusClass = 'yellow'; }
+                    else if (metarObj.flight_rules === 'VFR') { status = 'VFR'; statusClass = 'green'; }
+                }
+                let statusEl = document.getElementById(fld.statusId);
+                if (statusEl) { statusEl.textContent = status; statusEl.className = statusClass; }
+            })
+            .catch(() => {
+                let el = document.getElementById(fld.metarId);
+                if (el) el.textContent = 'Error loading METAR.';
+                let statusEl = document.getElementById(fld.statusId);
+                if (statusEl) { statusEl.textContent = 'ERR'; statusEl.className = 'red'; }
+            });
+    });
+    // Fetch weather for MOAs using AVWX REST API (KMSS, KSLK, KBTV)
+    // MOA Ranges array
+    const moaRanges = [
+        { id: 'range-yankee1', wxid: 'range-yankee1-wx', station: 'KMSS', label: 'Yankee 1 MOA' },
+        { id: 'range-adirondack', wxid: 'range-adirondack-wx', station: 'KSLK', label: 'Adirondack MOA' },
+        { id: 'range-condor1', wxid: 'range-condor1-wx', station: 'KBTV', label: 'Condor 1 MOA' }
+    ]; // End moaRanges array
+
+    // Fetch each MOA METAR individually
+    moaRanges.forEach(rg => {
+        fetch(`https://avwx.rest/api/metar/${rg.station}?token=${avwxToken}`)
+            .then(res => res.json())
+            .then(metarObj => {
+                // Set color based on flight rules
+                let colorClass = 'green';
+                if (metarObj && metarObj.flight_rules) {
+                    if (metarObj.flight_rules === 'LIFR' || metarObj.flight_rules === 'IFR') colorClass = 'red';
+                    else if (metarObj.flight_rules === 'MVFR') colorClass = 'yellow';
+                    else if (metarObj.flight_rules === 'VFR') colorClass = 'green';
+                }
+                let rangeEl = document.getElementById(rg.id);
+                if (rangeEl) rangeEl.className = colorClass;
+            })
+            .catch(() => {
+                let rangeEl = document.getElementById(rg.id);
+                if (rangeEl) rangeEl.className = 'red';
+            });
+    });
+
+    // ── Load Airfield Ops from Supabase ────────────────────────────────────
+    (async function loadAirfieldOps() {
+        const SUPABASE_URL     = 'https://gcumgpfyfqtfwbskkngt.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdW1ncGZ5ZnF0Zndic2trbmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDczMTAsImV4cCI6MjA4ODM4MzMxMH0.OSY0XEPQp-WsFWuiGrUG5fcLIVMI3c8AxBEv2shFftg';
+        const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const { data, error } = await _sb
+            .from('airfield_ops')
+            .select('id, items');
+
+        if (error || !data) {
+            // Fall back to static placeholder
+            document.getElementById('special-interest-items').innerHTML =
+                '<div class="row"><span>VATSIM Focus</span></div><div class="row"><span>Drill Weekend</span></div><div class="row"><span>v158 Foundations and CT</span></div>';
+            document.getElementById('ops-notes-body').innerHTML =
+                '<tr><td>Drill Weekend Mar 7-8th</td><td>Mar 6th</td><td>EC</td></tr>';
+            return;
+        }
+
+        const siRow  = data.find(r => r.id === 'special_interest');
+        const opsRow = data.find(r => r.id === 'ops_notes');
+
+        // Render Special Interest Items
+        const siEl = document.getElementById('special-interest-items');
+        if (siRow && siRow.items && siRow.items.length) {
+            siEl.innerHTML = siRow.items
+                .map(e => `<div class="row"><span>${e.item || ''}</span></div>`)
+                .join('');
+        } else {
+            siEl.innerHTML = '<span class="gray">None</span>';
+        }
+
+        // Render OPS Notes
+        const opsBody = document.getElementById('ops-notes-body');
+        if (opsRow && opsRow.items && opsRow.items.length) {
+            opsBody.innerHTML = opsRow.items
+                .map(e => `<tr><td>${e.note || ''}</td><td>${e.date || ''}</td><td>${e.initials || ''}</td></tr>`)
+                .join('');
+        } else {
+            opsBody.innerHTML = '<tr><td colspan="3" style="color:#aaa;font-style:italic;">No OPS notes.</td></tr>';
+        }
+    })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,752 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mission Briefing | 158th Fighter Wing</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/member-nav.js"></script>
+    <style>
+        /* ── Page Layout ── */
+        .page-wrapper {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 28px 20px 60px;
+        }
+        .page-title-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #3a3f45;
+        }
+        .page-title-bar h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 0;
+        }
+        .page-title-bar p {
+            color: #888;
+            font-size: 0.82rem;
+            margin-top: 4px;
+            letter-spacing: 0.5px;
+        }
+        .page-legend {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+        .page-content {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+        /* ── Sidebar ── */
+        .pg-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            position: sticky;
+            top: 78px;
+        }
+        .sidebar-card {
+            background: #1f2226;
+            border: 1px solid #3a3f45;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .sidebar-card-header {
+            background: #2a2d32;
+            padding: 10px 14px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #888;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            border-bottom: 1px solid #3a3f45;
+        }
+        .sidebar-card-body {
+            padding: 12px 14px;
+        }
+        /* Step nav */
+        .step-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .step-nav a,
+        .step-nav span {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            border-radius: 3px;
+            text-decoration: none;
+            color: #aaa;
+            font-size: 0.82rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            transition: background 0.15s, color 0.15s;
+        }
+        .step-nav a:hover { background: rgba(255,255,255,0.05); color: #ddd; }
+        .step-nav .step-active {
+            background: rgba(160,170,180,0.08);
+            color: #a0aab4;
+            font-weight: 700;
+            border-left: 3px solid #a0aab4;
+        }
+        .step-num {
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            border: 1.5px solid #555;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.72rem; font-weight: 700;
+            flex-shrink: 0;
+            color: #777;
+        }
+        .step-active .step-num {
+            background: #a0aab4;
+            border-color: #a0aab4;
+            color: #fff;
+        }
+        /* Progress */
+        .progress-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .progress-label { font-size: 0.78rem; color: #aaa; }
+        .progress-pct { font-size: 0.8rem; font-weight: 700; color: #a0aab4; }
+        .progress-track {
+            background: #2a2d32;
+            border-radius: 10px;
+            height: 6px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #a0aab4, #808a94);
+            border-radius: 10px;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .btn-reset-sm {
+            margin-top: 10px;
+            width: 100%;
+            background: transparent;
+            border: 1px solid #3a3f45;
+            color: #888;
+            padding: 6px 10px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            font-family: inherit;
+            border-radius: 3px;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .btn-reset-sm:hover { border-color: #e85a4a; color: #e85a4a; }
+        /* Quick nav */
+        .quick-nav-list {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            max-height: 320px;
+            overflow-y: auto;
+        }
+        .quick-nav-list::-webkit-scrollbar { width: 4px; }
+        .quick-nav-list::-webkit-scrollbar-track { background: #1f2226; }
+        .quick-nav-list::-webkit-scrollbar-thumb { background: #3a3f45; border-radius: 2px; }
+        .quick-nav-item {
+            display: block;
+            padding: 4px 8px;
+            color: #888;
+            text-decoration: none;
+            font-size: 0.75rem;
+            border-radius: 3px;
+            transition: background 0.1s, color 0.1s;
+        }
+        .quick-nav-item:hover { background: rgba(160,170,180,0.06); color: #a0aab4; }
+        /* ── Main content ── */
+        .pg-main {}
+        /* Briefing sections */
+        .briefing-section {
+            background: #1f2226;
+            border: 1px solid #3a3f45;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            overflow: hidden;
+            transition: border-color 0.2s;
+        }
+        .briefing-section.section-complete {
+            border-color: rgba(76, 175, 80, 0.5);
+        }
+        .briefing-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            cursor: pointer;
+            background: #242730;
+            transition: background 0.15s;
+        }
+        .briefing-section.section-complete .briefing-section-header {
+            background: rgba(76,175,80,0.07);
+        }
+        .briefing-section-header:hover { background: #2a2d32; }
+        .briefing-section-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-num {
+            width: 26px; height: 26px;
+            border-radius: 50%;
+            border: 1.5px solid #555;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.72rem; font-weight: 700; color: #888;
+            flex-shrink: 0;
+        }
+        .section-num.num-complete {
+            background: #4caf50;
+            border-color: #4caf50;
+            color: #fff;
+        }
+        .section-title {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: #e8e8e8;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .std-badge {
+            background: rgba(90,143,196,0.15);
+            color: #7a8694;
+            border: 1px solid rgba(90,143,196,0.4);
+            font-size: 0.65rem;
+            font-weight: 800;
+            padding: 1px 6px;
+            border-radius: 2px;
+            letter-spacing: 1px;
+        }
+        .section-counter {
+            font-size: 0.75rem;
+            color: #666;
+        }
+        .briefing-section-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-check-all {
+            background: transparent;
+            border: 1px solid #3a3f45;
+            color: #888;
+            padding: 4px 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            cursor: pointer;
+            font-family: inherit;
+            border-radius: 2px;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .btn-check-all:hover { border-color: #4caf50; color: #4caf50; }
+        .btn-collapse {
+            background: transparent;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 2px 4px;
+            transition: transform 0.2s, color 0.15s;
+        }
+        .btn-collapse:hover { color: #aaa; }
+        .btn-collapse.rotated { transform: rotate(0deg); }
+        /* Items */
+        .briefing-items {
+            padding: 4px 0 8px;
+        }
+        .briefing-items.collapsed { display: none; }
+        .briefing-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: background 0.1s;
+            border-bottom: 1px solid rgba(58,63,69,0.4);
+        }
+        .briefing-item:last-child { border-bottom: none; }
+        .briefing-item:hover { background: rgba(255,255,255,0.03); }
+        .briefing-item.item-checked { opacity: 0.5; }
+        .item-checkbox {
+            width: 18px; height: 18px;
+            border: 1.5px solid #555;
+            border-radius: 2px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            font-size: 0.75rem;
+            color: transparent;
+            transition: background 0.15s, border-color 0.15s, color 0.15s;
+        }
+        .item-checkbox.checked {
+            background: #4caf50;
+            border-color: #4caf50;
+            color: #fff;
+        }
+        .item-letter {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #7a8694;
+            min-width: 16px;
+        }
+        .item-text {
+            font-size: 0.85rem;
+            color: #ccc;
+            line-height: 1.4;
+        }
+        .item-checked .item-text { text-decoration: line-through; color: #666; }
+        /* Reset row */
+        .briefing-reset-row {
+            display: flex;
+            justify-content: flex-end;
+            padding: 16px 0 0;
+        }
+        .btn-reset-briefing {
+            background: transparent;
+            border: 1px solid #3a3f45;
+            color: #888;
+            padding: 8px 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            font-family: inherit;
+            border-radius: 3px;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .btn-reset-briefing:hover { border-color: #e85a4a; color: #e85a4a; }
+    </style>
+</head>
+<body>
+
+
+    <div class="page-wrapper">
+        <div class="page-title-bar">
+            <div>
+                <h1>IFG Mission Briefing Guide</h1>
+                <p>Click items to mark complete &mdash; all progress is saved automatically</p>
+            </div>
+            <div class="page-legend">
+                <span class="std-badge">S</span> = Standard brief item
+            </div>
+        </div>
+
+        <div class="page-content">
+            <!-- Sidebar -->
+            <aside class="pg-sidebar">
+                <!-- Step navigation -->
+                <div class="sidebar-card">
+                    <div class="sidebar-card-header">Pre-Flight Steps</div>
+                    <div class="sidebar-card-body">
+                        <nav class="step-nav">
+                            <a href="pre-mission.html">
+                                <span class="step-num">1</span>Status &amp; Weather
+                            </a>
+                            <span class="step-active">
+                                <span class="step-num">2</span>Briefing
+                            </span>
+                            <a href="file.html">
+                                <span class="step-num">3</span>File Flight Plan
+                            </a>
+                        </nav>
+                    </div>
+                </div>
+
+                <!-- Progress -->
+                <div class="sidebar-card">
+                    <div class="sidebar-card-header">Briefing Progress</div>
+                    <div class="sidebar-card-body">
+                        <div class="progress-row">
+                            <span class="progress-label">Completed</span>
+                            <span class="progress-pct" id="progressPct">0%</span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill" id="progressBar"></div>
+                        </div>
+                        <button class="btn-reset-sm" id="resetAllSidebar">Reset All Checks</button>
+                    </div>
+                </div>
+
+                <!-- Quick nav -->
+                <div class="sidebar-card">
+                    <div class="sidebar-card-header">Quick Navigation</div>
+                    <div class="sidebar-card-body" style="padding: 8px 10px;">
+                        <div class="quick-nav-list" id="quickNavList"></div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main content -->
+            <main class="pg-main">
+                <div id="briefingSections"></div>
+                <div class="briefing-reset-row">
+                    <button class="btn-reset-briefing" id="resetAll">Reset All Checklists</button>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // ==========================================
+            // BRIEFING CHECKLIST DATA
+            // ==========================================
+            const sections = [
+                {
+                    num: 1, title: 'General', standard: false,
+                    items: [
+                        { letter: 'A', text: 'Time hack' },
+                        { letter: 'B', text: 'Crew rest/nutrition, opted for mission' },
+                        { letter: 'C', text: 'Mission objectives and requirements' },
+                        { letter: 'D', text: 'Mission overview/ORM score' },
+                        { letter: 'E', text: 'Mission data card/call sign/times' },
+                        { letter: 'F', text: 'Statuses (Airfields, NAVAIDs, Alternate)' },
+                        { letter: 'G', text: 'WX (Takeoff, Route/NTA, Recovery, Alternate)' },
+                        { letter: 'H', text: 'FCIF, Ops notes, NOTAMs, AHAS, TOLD' },
+                        { letter: 'I', text: 'Weight and Balance' }
+                    ]
+                },
+                {
+                    num: 2, title: 'Ground Operations', standard: true,
+                    items: [
+                        { letter: 'A', text: 'Engine Start' },
+                        { letter: 'B', text: 'Clearance/Taxi procedures and route' },
+                        { letter: 'C', text: 'End of runway procedures' },
+                        { letter: 'D', text: 'Spare aircraft procedures' }
+                    ]
+                },
+                {
+                    num: 3, title: 'Takeoff', standard: false,
+                    items: [
+                        { letter: '', text: 'Static, rolling, crosswinds' }
+                    ]
+                },
+                {
+                    num: 4, title: 'Departure', standard: false,
+                    items: [
+                        { letter: 'A', text: 'Routings, altitudes, airspeeds/"SID" review' },
+                        { letter: 'B', text: 'Transition level' }
+                    ]
+                },
+                {
+                    num: 5, title: 'Enroute and Cruise', standard: true,
+                    items: [
+                        { letter: 'A', text: 'Route of flight, altitudes, airspeeds' },
+                        { letter: 'B', text: 'Groundspeed check' },
+                        { letter: 'C', text: 'Checks/pacing/task management techniques' }
+                    ]
+                },
+                {
+                    num: 6, title: 'Area Work', standard: true,
+                    items: [
+                        { letter: 'A', text: 'G-Awareness exercise' },
+                        { letter: 'B', text: 'Specific area work and parameters' },
+                        { letter: 'C', text: 'Engine and G envelope' },
+                        { letter: 'D', text: 'Joker and Bingo fuels' }
+                    ]
+                },
+                {
+                    num: 7, title: 'Training Rules', standard: true,
+                    items: [
+                        { letter: '', text: 'Hazards, KIOs, Terminates, Go-Arounds' }
+                    ]
+                },
+                {
+                    num: 8, title: 'Recovery and Arrival', standard: false,
+                    items: [
+                        { letter: 'A', text: 'Checks' },
+                        { letter: 'B', text: 'Routing, altitudes, airspeeds/STAR review' },
+                        { letter: 'C', text: 'ATIS and Metro' },
+                        { letter: 'D', text: 'Instrument approach review' }
+                    ]
+                },
+                {
+                    num: 9, title: 'Instrument Approach Procedures', standard: true,
+                    items: [
+                        { letter: 'A', text: 'Holding' },
+                        { letter: 'B', text: 'Penetration and enroute descent' },
+                        { letter: 'C', text: 'Circling' },
+                        { letter: 'D', text: 'Transition to land' }
+                    ]
+                },
+                {
+                    num: 10, title: 'Landing', standard: true,
+                    items: [
+                        { letter: 'A', text: 'Visual illusions from different runways' },
+                        { letter: 'B', text: 'Barrier/arresting gear locations' }
+                    ]
+                },
+                {
+                    num: 11, title: 'Simulated Emergency Procedures', standard: true,
+                    items: [
+                        { letter: '', text: 'Limits and procedures' }
+                    ]
+                },
+                {
+                    num: 12, title: 'Alternate Mission or Alternate Profile', standard: false,
+                    items: [
+                        { letter: '', text: 'Brief appropriate items from applicable briefing guide' }
+                    ]
+                },
+                {
+                    num: 13, title: 'VFR Procedures', standard: false,
+                    items: [
+                        { letter: 'A', text: 'Turn points' },
+                        { letter: 'B', text: 'Headings' },
+                        { letter: 'C', text: 'Times' },
+                        { letter: 'D', text: 'Altitudes' },
+                        { letter: 'E', text: 'Prominent land and man made features' },
+                        { letter: 'F', text: 'Obstacles' },
+                        { letter: 'G', text: 'Flight following' },
+                        { letter: 'H', text: 'VFR arrival' }
+                    ]
+                },
+                {
+                    num: 14, title: 'IMC Procedures', standard: true,
+                    items: [
+                        { letter: 'A', text: 'Unusual attitudes' },
+                        { letter: 'B', text: 'Spatial disorientation' },
+                        { letter: 'C', text: 'Icing restrictions' }
+                    ]
+                },
+                {
+                    num: 15, title: 'Night Procedures', standard: true,
+                    items: [
+                        { letter: 'A', text: 'Personal equipment (flashlight and clear visor)' },
+                        { letter: 'B', text: 'Aircraft and cockpit lighting' },
+                        { letter: 'C', text: 'Taxi procedures' },
+                        { letter: 'D', text: 'Spatial disorientation' },
+                        { letter: 'E', text: 'Visual illusions' },
+                        { letter: 'F', text: 'Pattern procedures (entry, references, spacing, breakout)' },
+                        { letter: 'G', text: 'Night restrictions' }
+                    ]
+                },
+                {
+                    num: 16, title: 'Crew Coordination', standard: true,
+                    items: [
+                        { letter: 'A', text: 'Aircraft commander' },
+                        { letter: 'B', text: 'Transfer of aircraft control (with and without intercom)' },
+                        { letter: 'C', text: 'Clearing' },
+                        { letter: 'D', text: 'In-flight checks' },
+                        { letter: 'E', text: 'Radio/NAVAID procedures' },
+                        { letter: 'F', text: 'CRM' }
+                    ]
+                },
+                {
+                    num: 17, title: 'Emergency Procedures', standard: true,
+                    items: [
+                        { letter: '', text: 'Review applicable emergency procedures' }
+                    ]
+                },
+                {
+                    num: 18, title: 'Special Interest Items', standard: false,
+                    items: [
+                        { letter: '', text: 'Brief any special interest items applicable to this mission' }
+                    ]
+                },
+                {
+                    num: 19, title: 'Questions', standard: false,
+                    items: [
+                        { letter: '', text: 'Open floor for any questions from flight members' }
+                    ]
+                }
+            ];
+
+            // ==========================================
+            // STATE MANAGEMENT
+            // ==========================================
+            const STORAGE_KEY = 'briefing_checklist_state';
+
+            function loadState() {
+                try {
+                    const saved = localStorage.getItem(STORAGE_KEY);
+                    return saved ? JSON.parse(saved) : {};
+                } catch { return {}; }
+            }
+
+            function saveState(state) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            }
+
+            let checkState = loadState();
+
+            function getKey(sectionNum, itemIdx) {
+                return `s${sectionNum}_i${itemIdx}`;
+            }
+
+            function getSectionChecked(section) {
+                let count = 0;
+                section.items.forEach((_, i) => {
+                    if (checkState[getKey(section.num, i)]) count++;
+                });
+                return count;
+            }
+
+            // ==========================================
+            // RENDER
+            // ==========================================
+            const container = document.getElementById('briefingSections');
+
+            function render() {
+                let html = '';
+                sections.forEach(section => {
+                    const checked = getSectionChecked(section);
+                    const total = section.items.length;
+                    const allDone = checked === total;
+
+                    html += `
+                    <div class="briefing-section${allDone ? ' section-complete' : ''}" data-section="${section.num}" id="section-${section.num}">
+                        <div class="briefing-section-header">
+                            <div class="briefing-section-left">
+                                <span class="section-num${allDone ? ' num-complete' : ''}">${section.num}</span>
+                                <h3 class="section-title">${section.title}</h3>
+                                ${section.standard ? '<span class="std-badge">S</span>' : ''}
+                                <span class="section-counter">(${checked}/${total})</span>
+                            </div>
+                            <div class="briefing-section-right">
+                                <button class="btn-check-all" data-section="${section.num}">Check All</button>
+                                <button class="btn-collapse rotated" data-section="${section.num}">&#9660;</button>
+                            </div>
+                        </div>
+                        <div class="briefing-items collapsed" id="items-${section.num}">
+                    `;
+
+                    section.items.forEach((item, i) => {
+                        const key = getKey(section.num, i);
+                        const isDone = !!checkState[key];
+                        html += `
+                            <div class="briefing-item${isDone ? ' item-checked' : ''}" data-key="${key}">
+                                <div class="item-checkbox${isDone ? ' checked' : ''}">
+                                    ${isDone ? '&#10003;' : ''}
+                                </div>
+                                ${item.letter ? `<span class="item-letter">${item.letter}</span>` : ''}
+                                <span class="item-text">${item.text}</span>
+                            </div>
+                        `;
+                    });
+
+                    html += `
+                        </div>
+                    </div>`;
+                });
+
+                container.innerHTML = html;
+                bindEvents();
+                updateProgress();
+            }
+
+            // ==========================================
+            // EVENTS
+            // ==========================================
+            function bindEvents() {
+                // Check individual item
+                document.querySelectorAll('.briefing-item').forEach(el => {
+                    el.addEventListener('click', function() {
+                        const key = this.dataset.key;
+                        checkState[key] = !checkState[key];
+                        saveState(checkState);
+                        render();
+                    });
+                });
+
+                // Check All
+                document.querySelectorAll('.btn-check-all').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const sNum = parseInt(this.dataset.section);
+                        const section = sections.find(s => s.num === sNum);
+                        if (!section) return;
+                        const allChecked = getSectionChecked(section) === section.items.length;
+                        section.items.forEach((_, i) => {
+                            checkState[getKey(sNum, i)] = !allChecked;
+                        });
+                        saveState(checkState);
+                        render();
+                    });
+                });
+
+                // Collapse toggle
+                document.querySelectorAll('.btn-collapse').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const sNum = this.dataset.section;
+                        const items = document.getElementById('items-' + sNum);
+                        if (items) {
+                            items.classList.toggle('collapsed');
+                            this.classList.toggle('rotated');
+                        }
+                    });
+                });
+            }
+
+            // Reset all
+            document.getElementById('resetAll').addEventListener('click', function() {
+                if (confirm('Reset all checklists? This cannot be undone.')) {
+                    checkState = {};
+                    saveState(checkState);
+                    render();
+                }
+            });
+
+            // Sidebar reset
+            document.getElementById('resetAllSidebar').addEventListener('click', function() {
+                if (confirm('Reset all checklists? This cannot be undone.')) {
+                    checkState = {};
+                    saveState(checkState);
+                    render();
+                }
+            });
+
+            // Progress bar + quick nav
+            function updateProgress() {
+                let totalItems = 0, checkedItems = 0;
+                sections.forEach(s => {
+                    totalItems += s.items.length;
+                    checkedItems += getSectionChecked(s);
+                });
+                const pct = totalItems > 0 ? Math.round((checkedItems / totalItems) * 100) : 0;
+                document.getElementById('progressPct').textContent = pct + '%';
+                document.getElementById('progressBar').style.width = pct + '%';
+            }
+
+            // Build quick nav list
+            function buildQuickNav() {
+                const navList = document.getElementById('quickNavList');
+                let navHtml = '';
+                sections.forEach(s => {
+                    navHtml += `<a href="#section-${s.num}" class="quick-nav-item">${s.num}. ${s.title}</a>`;
+                });
+                navList.innerHTML = navHtml;
+            }
+            buildQuickNav();
+
+            // Initial render
+            render();
+        });
+    </script>
+</body>
+</html>

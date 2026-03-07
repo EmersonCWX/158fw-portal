@@ -1,0 +1,824 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICAO Flight Plan | 158th Fighter Wing</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/member-nav.js"></script>
+    <style>
+        /* ── Page Layout ── */
+        .page-wrapper {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 28px 20px 60px;
+        }
+        .page-title-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #3a3f45;
+        }
+        .page-title-bar h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 0;
+        }
+        .page-title-bar p { color: #888; font-size: 0.82rem; margin-top: 4px; }
+        .page-content {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+        /* ── Sidebar ── */
+        .pg-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            position: sticky;
+            top: 78px;
+        }
+        .sidebar-card {
+            background: #1f2226;
+            border: 1px solid #3a3f45;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .sidebar-card-header {
+            background: #2a2d32;
+            padding: 10px 14px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #888;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            border-bottom: 1px solid #3a3f45;
+        }
+        .sidebar-card-body { padding: 12px 14px; }
+        .step-nav { display: flex; flex-direction: column; gap: 4px; }
+        .step-nav a, .step-nav span {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 10px; border-radius: 3px;
+            text-decoration: none; color: #aaa;
+            font-size: 0.82rem; font-weight: 500; letter-spacing: 0.5px;
+            transition: background 0.15s, color 0.15s;
+        }
+        .step-nav a:hover { background: rgba(255,255,255,0.05); color: #ddd; }
+        .step-nav .step-active { background: rgba(160,170,180,0.08); color: #a0aab4; font-weight: 700; border-left: 3px solid #a0aab4; }
+        .step-num {
+            width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid #555;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.72rem; font-weight: 700; flex-shrink: 0; color: #777;
+        }
+        .step-active .step-num { background: #a0aab4; border-color: #a0aab4; color: #fff; }
+        /* ── Flight Plan Form ── */
+        .fp-section {
+            background: #1f2226;
+            border: 1px solid #3a3f45;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+        .fp-section-header {
+            background: #242730;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #3a3f45;
+        }
+        .fp-section-header h2 {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #e8e8e8;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin: 0;
+        }
+        .fp-section-icon {
+            font-size: 0.75rem;
+            flex-shrink: 0;
+        }
+        .fp-icon-blue  { color: #7a8694; }
+        .fp-icon-orange { color: #e8933a; }
+        .fp-icon-purple { color: #9b59b6; }
+        .fp-icon-red   { color: #e85a4a; }
+        .fp-section-body { padding: 16px 20px; }
+        /* rows */
+        .fp-row {
+            display: grid;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+        .fp-row:last-child { margin-bottom: 0; }
+        .fp-cols-1 { grid-template-columns: 1fr; }
+        .fp-cols-2 { grid-template-columns: repeat(2, 1fr); }
+        .fp-cols-3 { grid-template-columns: repeat(3, 1fr); }
+        .fp-cols-4 { grid-template-columns: repeat(4, 1fr); }
+        .fp-cols-5 { grid-template-columns: repeat(5, 1fr); }
+        /* Fields */
+        .fp-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .fp-field label {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: #888;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .fp-req { color: #e85a4a; }
+        .fp-field input,
+        .fp-field select,
+        .fp-field textarea {
+            background: #12151a;
+            border: 1px solid #3a3f45;
+            color: #e8e8e8;
+            padding: 8px 12px;
+            font-size: 0.88rem;
+            font-family: 'Segoe UI', sans-serif;
+            border-radius: 3px;
+            outline: none;
+            transition: border-color 0.2s;
+            width: 100%;
+        }
+        .fp-field input:focus,
+        .fp-field select:focus,
+        .fp-field textarea:focus { border-color: #a0aab4; }
+        .fp-field input::placeholder { color: #555; }
+        .fp-field select { cursor: pointer; }
+        .fp-field textarea { resize: vertical; min-height: 70px; }
+        .fp-disabled { opacity: 0.4; cursor: not-allowed; }
+        /* Formation toggle */
+        .fp-toggle-group {
+            display: flex;
+            gap: 0;
+        }
+        .fp-toggle {
+            flex: 1;
+            background: #12151a;
+            border: 1px solid #3a3f45;
+            color: #888;
+            padding: 7px 10px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+        }
+        .fp-toggle:first-child { border-radius: 3px 0 0 3px; }
+        .fp-toggle:last-child { border-radius: 0 3px 3px 0; }
+        .fp-toggle:not(:first-child) { border-left: none; }
+        .fp-toggle.active {
+            background: rgba(160,170,180,0.12);
+            color: #a0aab4;
+            border-color: #a0aab4;
+        }
+        /* MARSA */
+        .fp-marsa-toggle { display: flex; align-items: center; gap: 12px; }
+        .fp-switch {
+            position: relative; display: inline-block; width: 40px; height: 22px;
+        }
+        .fp-switch input { opacity: 0; width: 0; height: 0; }
+        .fp-slider {
+            position: absolute; cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #2a2d32; border: 1px solid #3a3f45; border-radius: 22px;
+            transition: 0.2s;
+        }
+        .fp-slider:before {
+            position: absolute; content: '';
+            height: 16px; width: 16px;
+            left: 2px; bottom: 2px;
+            background: #555; border-radius: 50%; transition: 0.2s;
+        }
+        .fp-switch input:checked + .fp-slider { background: rgba(160,170,180,0.15); border-color: #a0aab4; }
+        .fp-switch input:checked + .fp-slider:before { transform: translateX(18px); background: #a0aab4; }
+        .fp-marsa-text { font-size: 0.78rem; color: #888; }
+        /* Preset route dropdown styling */
+        .fp-field .fp-preset-select {
+            position: absolute;
+            top: 4px;
+            right: 0;
+            width: auto;
+            min-width: 160px;
+            padding: 4px 8px;
+            font-size: 0.72rem;
+        }
+        /* Action buttons */
+        .fp-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            padding: 16px 0 0;
+        }
+        .fp-btn {
+            padding: 10px 22px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            cursor: pointer;
+            font-family: inherit;
+            border-radius: 3px;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+        }
+        .fp-btn-secondary {
+            background: transparent;
+            border: 1px solid #3a3f45;
+            color: #888;
+        }
+        .fp-btn-secondary:hover { border-color: #e85a4a; color: #e85a4a; }
+        .fp-btn-primary {
+            background: transparent;
+            border: 1px solid #7a8694;
+            color: #7a8694;
+        }
+        .fp-btn-primary:hover { background: rgba(90,143,196,0.1); }
+        .fp-btn-submit {
+            background: #a0aab4;
+            border: 1px solid #a0aab4;
+            color: #fff;
+        }
+        .fp-btn-submit:hover { background: #8a9299; border-color: #8a9299; }
+    </style>
+</head>
+<body>
+
+    <div class="page-wrapper">
+        <div class="page-title-bar">
+            <div>
+                <h1>ICAO Flight Plan</h1>
+                <p>Complete and submit your ICAO flight plan for VATSIM</p>
+            </div>
+        </div>
+        <div class="page-content">
+            <aside class="pg-sidebar">
+                <div class="sidebar-card">
+                    <div class="sidebar-card-header">Pre-Flight Checklist</div>
+                    <div class="sidebar-card-body">
+                        <nav class="step-nav">
+                            <a href="pre-mission.html"><span class="step-num">1</span>Status</a>
+                            <a href="briefing.html"><span class="step-num">2</span>Briefing</a>
+                            <span class="step-active"><span class="step-num">3</span>File</span>
+                        </nav>
+                    </div>
+                </div>
+            </aside>
+            <main class="pg-main">
+                <form id="flightPlanForm" autocomplete="off">
+
+                        <!-- ===== UNIT SELECTION ===== -->
+                        <div class="fp-section">
+                            <div class="fp-section-header">
+                                <span class="fp-section-icon fp-icon-blue">&#9632;</span>
+                                <h2>UNIT SELECTION</h2>
+                            </div>
+
+                            <div class="fp-row fp-cols-1">
+                                <div class="fp-field">
+                                    <select id="unitSelect">
+                                        <option value="">-- Select Unit --</option>
+                                        <option value="134FS">134th FS</option>
+                                        <option value="315FS">315th FS</option>
+                                        <option value="other">&mdash; Other (Manual Entry) &mdash;</option>
+                                    </select>
+                                    <input type="text" id="unitCustom" placeholder="Enter unit name" style="display:none; margin-top:10px;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ===== FLIGHT INFORMATION ===== -->
+                        <div class="fp-section">
+                            <div class="fp-section-header">
+                                <span class="fp-section-icon fp-icon-orange">&#9650;</span>
+                                <h2>FLIGHT INFORMATION</h2>
+                            </div>
+
+                            <!-- Row 1 -->
+                            <div class="fp-row fp-cols-4">
+                                <div class="fp-field">
+                                    <label>CALLSIGN <span class="fp-req">*</span></label>
+                                    <input type="text" id="callsign" required>
+                                </div>
+                                <div class="fp-field">
+                                    <label>FLIGHT RULES</label>
+                                    <select id="flightRules">
+                                        <option value="I">I &ndash; IFR</option>
+                                        <option value="V">V &ndash; VFR</option>
+                                    </select>
+                                </div>
+                                <div class="fp-field">
+                                    <label>DATE OF FLIGHT</label>
+                                    <input type="date" id="dateOfFlight">
+                                </div>
+                                <div class="fp-field">
+                                    <label>RESERVED</label>
+                                    <input type="text" value="&mdash;" disabled class="fp-disabled">
+                                </div>
+                            </div>
+
+                            <!-- Row 2 -->
+                            <div class="fp-row fp-cols-4">
+                                <div class="fp-field">
+                                    <label>AIRCRAFT TYPE</label>
+                                    <input type="text" id="acType">
+                                </div>
+                                <div class="fp-field">
+                                    <label>WAKE CATEGORY</label>
+                                    <select id="wakeCat">
+                                        <option value="">Select</option>
+                                        <option value="L">L &ndash; Light</option>
+                                        <option value="M">M &ndash; Medium</option>
+                                        <option value="H">H &ndash; Heavy</option>
+                                        <option value="J">J &ndash; Super</option>
+                                    </select>
+                                </div>
+                                <div class="fp-field">
+                                    <label>EQUIPMENT</label>
+                                    <input type="text" id="equipment">
+                                </div>
+                                <div class="fp-field">
+                                    <label>TRANSPONDER</label>
+                                    <select id="transponder">
+                                        <option value="L">L &ndash; Mode S</option>
+                                        <option value="S">S &ndash; Mode S (Alt)</option>
+                                        <option value="C">C &ndash; Mode C</option>
+                                        <option value="A">A &ndash; Mode A</option>
+                                        <option value="N">N &ndash; None</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Row 3 -->
+                            <div class="fp-row fp-cols-4">
+                                <div class="fp-field">
+                                    <label>DEPARTURE ICAO</label>
+                                    <input type="text" id="depIcao" maxlength="4" style="text-transform:uppercase;">
+                                </div>
+                                <div class="fp-field">
+                                    <label>OFF BLOCK (UTC)</label>
+                                    <input type="text" id="offBlock" placeholder="HHMM">
+                                </div>
+                                <div class="fp-field">
+                                    <label>CRUISE SPEED (KTS)</label>
+                                    <input type="text" id="cruiseSpd">
+                                </div>
+                                <div class="fp-field">
+                                    <label>CRUISE ALT (FT)</label>
+                                    <input type="text" id="cruiseAlt">
+                                </div>
+                            </div>
+
+                            <!-- Row 4 - Route -->
+                            <div class="fp-row fp-cols-1">
+                                <div class="fp-field" style="position:relative;">
+                                    <label>ROUTE</label>
+                                    <select id="presetRoute" style="position:absolute; top:4px; right:20px; width:auto; min-width:150px; padding:3px 6px; font-size:0.75rem;">
+                                        <option value="">-- Select Preset Route --</option>
+                                        <option value="15 GMA1">15 GMA1</option>
+                                        <option value="33 GMA1">33 GMA1</option>
+                                    </select>
+                                    <input type="text" id="route">
+                                </div>
+                            </div>
+
+                            <!-- Row 5 -->
+                            <div class="fp-row fp-cols-4">
+                                <div class="fp-field">
+                                    <label>ARRIVAL ICAO</label>
+                                    <input type="text" id="arrIcao" maxlength="4" style="text-transform:uppercase;">
+                                </div>
+                                <div class="fp-field">
+                                    <label>ENROUTE TIME</label>
+                                    <input type="text" id="eet" placeholder="HHMM">
+                                </div>
+                                <div class="fp-field">
+                                    <label>ALTERNATE ICAO</label>
+                                    <input type="text" id="altIcao" maxlength="4" style="text-transform:uppercase;">
+                                </div>
+                                <div class="fp-field">
+                                    <label>FUEL ENDURANCE</label>
+                                    <input type="text" id="fuelEnd" placeholder="HHMM">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ===== FIELD 18 - OTHER INFORMATION ===== -->
+                        <div class="fp-section">
+                            <div class="fp-section-header">
+                                <span class="fp-section-icon fp-icon-purple">&#9632;</span>
+                                <h2>FIELD 18 &ndash; OTHER INFORMATION</h2>
+                            </div>
+
+                            <!-- Row 1 -->
+                            <div class="fp-row fp-cols-5">
+                                <div class="fp-field">
+                                    <label>PBN/</label>
+                                    <input type="text" id="pbn">
+                                </div>
+                                <div class="fp-field">
+                                    <label>CODE/</label>
+                                    <input type="text" id="code">
+                                </div>
+                                <div class="fp-field">
+                                    <label>RVR/</label>
+                                    <input type="text" id="rvr">
+                                </div>
+                                <div class="fp-field">
+                                    <label>PER/</label>
+                                    <select id="per">
+                                        <option value="">&mdash;</option>
+                                        <option value="A">A</option>
+                                        <option value="B">B</option>
+                                        <option value="C">C</option>
+                                        <option value="D">D</option>
+                                        <option value="E">E</option>
+                                    </select>
+                                </div>
+                                <div class="fp-field">
+                                    <label>SEL/</label>
+                                    <input type="text" id="sel">
+                                </div>
+                            </div>
+
+                            <!-- Row 2 -->
+                            <div class="fp-row fp-cols-3">
+                                <div class="fp-field">
+                                    <label>NAV/</label>
+                                    <input type="text" id="nav">
+                                </div>
+                                <div class="fp-field">
+                                    <label>DAT/</label>
+                                    <input type="text" id="dat">
+                                </div>
+                                <div class="fp-field">
+                                    <label>REG/</label>
+                                    <input type="text" id="reg">
+                                </div>
+                            </div>
+
+                            <!-- Row 3 -->
+                            <div class="fp-row fp-cols-3">
+                                <div class="fp-field">
+                                    <label>COM/</label>
+                                    <input type="text" id="com">
+                                </div>
+                                <div class="fp-field">
+                                    <label>OPR/</label>
+                                    <input type="text" id="opr">
+                                </div>
+                                <div class="fp-field">
+                                    <label>SUR/</label>
+                                    <input type="text" id="sur">
+                                </div>
+                            </div>
+
+                            <!-- Row 4 -->
+                            <div class="fp-row fp-cols-3">
+                                <div class="fp-field">
+                                    <label>ORGN/</label>
+                                    <input type="text" id="orgn">
+                                </div>
+                                <div class="fp-field">
+                                    <label>RALT/</label>
+                                    <input type="text" id="ralt">
+                                </div>
+                                <div class="fp-field">
+                                    <label>TALT/</label>
+                                    <input type="text" id="talt">
+                                </div>
+                            </div>
+
+                            <!-- Row 5 - EET -->
+                            <div class="fp-row fp-cols-1">
+                                <div class="fp-field">
+                                    <label>EET/</label>
+                                    <input type="text" id="eetField">
+                                </div>
+                            </div>
+
+                            <!-- Row 6 - Remarks -->
+                            <div class="fp-row fp-cols-1">
+                                <div class="fp-field">
+                                    <label>RMK/ (ADDITIONAL REMARKS)</label>
+                                    <textarea id="rmk" rows="3"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ===== FORMATION FLIGHT ===== -->
+                        <div class="fp-section">
+                            <div class="fp-section-header">
+                                <span class="fp-section-icon fp-icon-red">&#9733;</span>
+                                <h2>FORMATION FLIGHT</h2>
+                            </div>
+
+                            <div class="fp-row fp-cols-2">
+                                <div class="fp-field">
+                                    <label>FORMATION TYPE</label>
+                                    <div class="fp-toggle-group" id="formationToggle">
+                                        <button type="button" class="fp-toggle active" data-val="none">None</button>
+                                        <button type="button" class="fp-toggle" data-val="std">STD</button>
+                                        <button type="button" class="fp-toggle" data-val="nonstd">NONSTD</button>
+                                    </div>
+                                </div>
+                                <div class="fp-field">
+                                    <label>FORMATION CALLSIGNS</label>
+                                    <input type="text" id="formCallsigns" placeholder="E.G., VIPER02, VIPER03">
+                                </div>
+                            </div>
+
+                            <!-- MARSA - shows when NONSTD selected -->
+                            <div class="fp-row fp-cols-1 fp-marsa-row" id="marsaRow" style="display:none;">
+                                <div class="fp-field">
+                                    <label>MARSA</label>
+                                    <div class="fp-marsa-toggle">
+                                        <label class="fp-switch">
+                                            <input type="checkbox" id="marsaCheck">
+                                            <span class="fp-slider"></span>
+                                        </label>
+                                        <span class="fp-marsa-text">Military Authority Assumes Responsibility for Separation of Aircraft</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="fp-actions">
+                            <button type="button" class="fp-btn fp-btn-secondary" id="clearForm">Clear Form</button>
+                            <button type="button" class="fp-btn fp-btn-primary" id="copyPlan">Copy Flight Plan</button>
+                            <button type="submit" class="fp-btn fp-btn-submit">File Flight Plan</button>
+                        </div>
+
+                    </form>
+                </main>
+        </div>
+    </div>
+
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // ==========================================
+            // AUTO-BUILD RMK FIELD
+            // ==========================================
+            function updateRmk() {
+                const unit = document.getElementById('unitSelect').value;
+                if (unit !== '134FS' && unit !== '315FS') return;
+                let rmk = 'PBN/B2C2D2S2 NAV/RNVD1E2A VOR/ILS COM/U SUR/260B OPR/DOD ORGN/EKODFFLX PER/E';
+                // Append formation type
+                const activeToggle = document.querySelector('#formationToggle .fp-toggle.active');
+                if (activeToggle) {
+                    const val = activeToggle.dataset.val;
+                    if (val === 'std') rmk += ' STD FORM';
+                    else if (val === 'nonstd') rmk += ' NONSTD FORM';
+                }
+                // Append formation callsigns
+                const cs = document.getElementById('formCallsigns').value.trim();
+                if (cs) rmk += ' ' + cs;
+                document.getElementById('rmk').value = rmk;
+            }
+
+            // ==========================================
+            // UNIT SELECTION
+            // ==========================================
+            const unitSelect = document.getElementById('unitSelect');
+            const unitCustom = document.getElementById('unitCustom');
+            unitSelect.addEventListener('change', function() {
+                unitCustom.style.display = this.value === 'other' ? '' : 'none';
+                if (this.value !== 'other') unitCustom.value = '';
+                // Auto-fill fields for 134th FS or 315th FS
+                if (this.value === '134FS' || this.value === '315FS') {
+                    document.getElementById('acType').value = 'F-35';
+                    document.getElementById('wakeCat').value = 'M';
+                    document.getElementById('equipment').value = 'GRB1DFGHIJS';
+                    document.getElementById('pbn').value = 'B2C2D2O2S2';
+                    document.getElementById('nav').value = 'RNVD1E2A';
+                    document.getElementById('com').value = 'U';
+                    document.getElementById('opr').value = 'DOD';
+                    document.getElementById('orgn').value = 'EKODFFLX';
+                    document.getElementById('sur').value = '260B';
+                }
+                updateRmk();
+                saveForm();
+            });
+            unitCustom.addEventListener('input', saveForm);
+
+            // ==========================================
+            // FORMATION TOGGLE
+            // ==========================================
+            const toggleBtns = document.querySelectorAll('#formationToggle .fp-toggle');
+            const marsaRow = document.getElementById('marsaRow');
+
+            toggleBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    toggleBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    marsaRow.style.display = this.dataset.val === 'nonstd' ? '' : 'none';
+                    updateRmk();
+                });
+            });
+
+            // Update RMK when formation callsigns change
+            document.getElementById('formCallsigns').addEventListener('input', function() {
+                updateRmk();
+                saveForm();
+            });
+
+            // ==========================================
+            // PRESET ROUTE DROPDOWN
+            // ==========================================
+            document.getElementById('presetRoute').addEventListener('change', function() {
+                const routeInput = document.getElementById('route');
+                const depIcao = document.getElementById('depIcao');
+                if (this.value) {
+                    depIcao.value = 'KBTV';
+                    routeInput.value = 'KBTV LAGGS D/+0xx';
+                }
+                saveForm();
+            });
+
+            // ==========================================
+            // FORM PERSISTENCE (localStorage)
+            // ==========================================
+            const FP_KEY = 'icao_flight_plan';
+            const formFields = [
+                'unitSelect','unitCustom',
+                'callsign','flightRules','dateOfFlight','acType','wakeCat','equipment','transponder',
+                'presetRoute','depIcao','offBlock','cruiseSpd','cruiseAlt','route','arrIcao','eet','altIcao','fuelEnd',
+                'pbn','code','rvr','per','sel','nav','dat','reg','com','opr','sur',
+                'orgn','ralt','talt','eetField','rmk','formCallsigns','marsaCheck'
+            ];
+
+            function saveForm() {
+                const data = {};
+                formFields.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    if (el.type === 'checkbox') data[id] = el.checked;
+                    else data[id] = el.value;
+                });
+                // Save formation toggle state
+                const activeToggle = document.querySelector('#formationToggle .fp-toggle.active');
+                data._formationType = activeToggle ? activeToggle.dataset.val : 'none';
+                localStorage.setItem(FP_KEY, JSON.stringify(data));
+            }
+
+            function loadForm() {
+                try {
+                    const saved = localStorage.getItem(FP_KEY);
+                    if (!saved) return;
+                    const data = JSON.parse(saved);
+                    formFields.forEach(id => {
+                        const el = document.getElementById(id);
+                        if (!el || data[id] === undefined) return;
+                        if (el.type === 'checkbox') el.checked = data[id];
+                        else el.value = data[id];
+                    });
+                    // Restore formation toggle
+                    if (data._formationType) {
+                        toggleBtns.forEach(b => {
+                            b.classList.toggle('active', b.dataset.val === data._formationType);
+                        });
+                        marsaRow.style.display = data._formationType === 'nonstd' ? '' : 'none';
+                    }
+                    // Restore unit custom input visibility
+                    if (data.unitSelect === 'other') unitCustom.style.display = '';
+                } catch(e) {}
+            }
+
+            // Auto-save on input
+            document.getElementById('flightPlanForm').addEventListener('input', saveForm);
+            document.getElementById('flightPlanForm').addEventListener('change', saveForm);
+            toggleBtns.forEach(b => b.addEventListener('click', () => setTimeout(saveForm, 50)));
+
+            // Clear saved data on page load so form always starts fresh
+            localStorage.removeItem(FP_KEY);
+
+            // ==========================================
+            // CLEAR FORM
+            // ==========================================
+            document.getElementById('clearForm').addEventListener('click', function() {
+                if (confirm('Clear all fields?')) {
+                    document.getElementById('flightPlanForm').reset();
+                    toggleBtns.forEach(b => b.classList.remove('active'));
+                    toggleBtns[0].classList.add('active');
+                    marsaRow.style.display = 'none';
+                    localStorage.removeItem(FP_KEY);
+                }
+            });
+
+            // ==========================================
+            // COPY FLIGHT PLAN
+            // ==========================================
+            document.getElementById('copyPlan').addEventListener('click', function() {
+                const g = id => (document.getElementById(id) || {}).value || '';
+                let text = '=== ICAO FLIGHT PLAN ===\n';
+                text += `Callsign: ${g('callsign')}\n`;
+                text += `Flight Rules: ${g('flightRules')}\n`;
+                text += `Date: ${g('dateOfFlight')}\n`;
+                text += `A/C Type: ${g('acType')}  Wake: ${g('wakeCat')}  Equip: ${g('equipment')}  XPDR: ${g('transponder')}\n`;
+                text += `DEP: ${g('depIcao')}  Off Block: ${g('offBlock')}Z\n`;
+                text += `Speed: ${g('cruiseSpd')}kts  Alt: ${g('cruiseAlt')}ft\n`;
+                text += `Route: ${g('route')}\n`;
+                text += `ARR: ${g('arrIcao')}  EET: ${g('eet')}  ALT: ${g('altIcao')}  Fuel: ${g('fuelEnd')}\n`;
+                text += '\n--- Field 18 ---\n';
+                ['pbn','code','rvr','per','sel','nav','dat','reg','com','opr','sur','orgn','ralt','talt','eetField'].forEach(id => {
+                    const v = g(id);
+                    if (v) text += `${id.toUpperCase()}/: ${v}\n`;
+                });
+                const rmk = g('rmk');
+                if (rmk) text += `RMK/: ${rmk}\n`;
+                text += '\n--- Formation ---\n';
+                const ft = document.querySelector('#formationToggle .fp-toggle.active');
+                text += `Type: ${ft ? ft.textContent : 'None'}\n`;
+                text += `Callsigns: ${g('formCallsigns')}\n`;
+                if (document.getElementById('marsaCheck').checked) text += 'MARSA: YES\n';
+
+                navigator.clipboard.writeText(text).then(() => {
+                    this.textContent = 'Copied!';
+                    setTimeout(() => this.textContent = 'Copy Flight Plan', 1500);
+                });
+            });
+
+            // ==========================================
+            // FILE FLIGHT PLAN → opens VATSIM prefile with query params
+            // ==========================================
+            document.getElementById('flightPlanForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                // Read ALL values fresh at submit time (captures typed-in data)
+                function val(id) {
+                    const el = document.getElementById(id);
+                    if (!el) return '';
+                    return el.value.trim();
+                }
+
+                const cs = val('callsign');
+                if (!cs) { alert('Callsign is required.'); return; }
+
+                // Build remarks string from Field 18 values
+                let remarks = '';
+                const f18 = {
+                    PBN: val('pbn'), CODE: val('code'), RVR: val('rvr'),
+                    PER: val('per'), SEL: val('sel'), NAV: val('nav'),
+                    DAT: val('dat'), REG: val('reg'), COM: val('com'),
+                    OPR: val('opr'), SUR: val('sur'), ORGN: val('orgn'),
+                    RALT: val('ralt'), TALT: val('talt'), EET: val('eetField')
+                };
+                Object.entries(f18).forEach(([k, v]) => {
+                    if (v) remarks += `${k}/${v} `;
+                });
+                const rmk = val('rmk');
+                if (rmk) remarks += `RMK/${rmk}`;
+                remarks = remarks.trim();
+
+                // Build query string with all fields
+                const params = new URLSearchParams();
+                params.set('callsign', cs);
+                params.set('flight_rules', val('flightRules'));
+                params.set('aircraft_type_designator', val('acType'));
+                params.set('wake_turbulence_cat', val('wakeCat'));
+                params.set('equipment', val('equipment'));
+                params.set('transponder', val('transponder'));
+                params.set('departure', val('depIcao'));
+                params.set('arrival', val('arrIcao'));
+                params.set('alternate', val('altIcao'));
+                params.set('route', val('route'));
+                params.set('cruise_tas', val('cruiseSpd'));
+                params.set('altitude', val('cruiseAlt'));
+                params.set('enroute_time', val('eet'));
+                params.set('fuel_endurance', val('fuelEnd'));
+                params.set('remarks', remarks);
+                // Also send Field 18 fields individually in case VATSIM reads them separately
+                if (val('pbn')) params.set('pbn', val('pbn'));
+                if (val('nav')) params.set('nav', val('nav'));
+                if (val('rmk')) params.set('rmk', val('rmk'));
+                if (val('com')) params.set('com', val('com'));
+                if (val('opr')) params.set('opr', val('opr'));
+                if (val('sur')) params.set('sur', val('sur'));
+                if (val('orgn')) params.set('orgn', val('orgn'));
+                if (val('per')) params.set('per', val('per'));
+                if (val('code')) params.set('code', val('code'));
+                if (val('reg')) params.set('reg', val('reg'));
+                params.set('voice_type', '/v/');
+
+                const url = 'https://my.vatsim.net/pilots/flightplan?' + params.toString();
+                window.open(url, '_blank');
+            });
+        });
+    </script>
+</body>
+</html>

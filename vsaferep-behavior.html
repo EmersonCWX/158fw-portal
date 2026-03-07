@@ -1,0 +1,698 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Member Behavior Report | vSAFEREP | v158th Fighter Wing</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/member-nav.js"></script>
+    <style>
+        body {
+            background: #12151a;
+            color: #e8e8e8;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .hazard-wrapper {
+            max-width: 740px;
+            margin: 0 auto;
+            padding: 90px 20px 60px;
+        }
+
+        /* ── Step card ── */
+        .step-card {
+            background: #1f2226;
+            border: 1px solid #3a3f45;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        /* ── Progress bar ── */
+        .progress-bar-track {
+            height: 4px;
+            background: #2c3035;
+            width: 100%;
+        }
+        .progress-bar-fill {
+            height: 4px;
+            background: #7a8694;
+            transition: width 0.4s ease;
+        }
+
+        /* ── Step header ── */
+        .step-header {
+            padding: 28px 36px 20px;
+            border-bottom: 1px solid #3a3f45;
+            text-align: center;
+        }
+        .step-header h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #fff;
+            margin: 0;
+            letter-spacing: 0.3px;
+        }
+        .step-label {
+            font-size: 0.75rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        /* ── Step body ── */
+        .step-body {
+            padding: 28px 36px 24px;
+        }
+
+        .step-description {
+            font-size: 0.9rem;
+            color: #a0a8b4;
+            line-height: 1.65;
+            margin: 0 0 22px;
+        }
+        .step-description strong {
+            color: #c8cfd8;
+        }
+
+        /* ── Textarea ── */
+        .hazard-textarea {
+            width: 100%;
+            min-height: 200px;
+            background: #12151a;
+            border: 1px solid #3a3f45;
+            border-radius: 6px;
+            color: #e8e8e8;
+            font-family: inherit;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            padding: 14px 16px;
+            resize: vertical;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+        .hazard-textarea:focus {
+            outline: none;
+            border-color: #7a8694;
+        }
+        .hazard-textarea::placeholder {
+            color: #505660;
+        }
+
+        /* ── Char counter ── */
+        .char-counter {
+            text-align: right;
+            font-size: 0.78rem;
+            color: #555;
+            margin-top: 6px;
+        }
+        .char-counter.over-limit { color: #e85a4a; }
+
+        /* ── Input row ── */
+        .input-row {
+            margin-bottom: 18px;
+        }
+        .input-row label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 7px;
+        }
+        .input-row input,
+        .input-row select {
+            width: 100%;
+            background: #12151a;
+            border: 1px solid #3a3f45;
+            border-radius: 6px;
+            color: #e8e8e8;
+            font-family: inherit;
+            font-size: 0.9rem;
+            padding: 10px 14px;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+        .input-row input:focus,
+        .input-row select:focus {
+            outline: none;
+            border-color: #7a8694;
+        }
+        .input-row select option { background: #1f2226; }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        /* ── Checkbox row ── */
+        .check-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 14px;
+            cursor: pointer;
+        }
+        .check-row input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            margin-top: 2px;
+            flex-shrink: 0;
+            accent-color: #7a8694;
+            cursor: pointer;
+        }
+        .check-row span {
+            font-size: 0.88rem;
+            color: #a0a8b4;
+            line-height: 1.5;
+        }
+
+        /* ── Review table ── */
+        .review-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+        }
+        .review-table tr { border-bottom: 1px solid #2c3035; }
+        .review-table tr:last-child { border-bottom: none; }
+        .review-table td:first-child {
+            color: #666;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            padding: 10px 0;
+            width: 38%;
+            vertical-align: top;
+        }
+        .review-table td:last-child {
+            color: #e8e8e8;
+            padding: 10px 0;
+        }
+
+        /* ── Confirmation banner ── */
+        .confirm-banner {
+            background: #1a2e1a;
+            border: 1px solid #4caf50;
+            border-radius: 8px;
+            padding: 20px 24px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .confirm-banner .check-icon {
+            font-size: 2.2rem;
+            color: #4caf50;
+            display: block;
+            margin-bottom: 10px;
+        }
+        .confirm-banner h2 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #4caf50;
+            margin: 0 0 6px;
+        }
+        .confirm-banner p {
+            font-size: 0.88rem;
+            color: #a8c8a8;
+            margin: 0;
+        }
+        .report-id-chip {
+            display: inline-block;
+            background: #12151a;
+            border: 1px solid #4caf50;
+            color: #4caf50;
+            border-radius: 4px;
+            padding: 4px 14px;
+            font-size: 0.8rem;
+            font-family: monospace;
+            letter-spacing: 1px;
+            margin-top: 10px;
+        }
+
+        /* ── Notice box ── */
+        .notice-box {
+            background: #1a1f2e;
+            border: 1px solid #3a4a6a;
+            border-radius: 6px;
+            padding: 14px 18px;
+            font-size: 0.85rem;
+            color: #8aafcc;
+            line-height: 1.55;
+            margin-bottom: 22px;
+        }
+        .notice-box strong { color: #a0c4e0; }
+
+        /* ── Nav buttons ── */
+        .step-nav {
+            padding: 20px 36px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            border-top: 1px solid #3a3f45;
+        }
+        .btn-nav {
+            padding: 10px 32px;
+            border-radius: 20px;
+            border: none;
+            font-family: inherit;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, opacity 0.2s;
+            letter-spacing: 0.3px;
+        }
+        .btn-back    { background: #4a6fa5; color: #fff; }
+        .btn-back:hover { background: #3d5e8a; }
+        .btn-next    { background: #4a6fa5; color: #fff; }
+        .btn-next:hover { background: #3d5e8a; }
+        .btn-submit  { background: #2e7d32; color: #fff; }
+        .btn-submit:hover { background: #256427; }
+        .btn-new     { background: #3a3f45; color: #e8e8e8; }
+        .btn-new:hover { background: #4a5060; }
+        .btn-nav:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* ── Validation error ── */
+        .field-error {
+            font-size: 0.78rem;
+            color: #e85a4a;
+            margin-top: 5px;
+            display: none;
+        }
+        .field-error.visible { display: block; }
+
+        /* ── Hidden steps ── */
+        .step { display: none; }
+        .step.active { display: block; }
+
+        /* ── Footer note ── */
+        .page-footer-note {
+            text-align: center;
+            font-size: 0.72rem;
+            color: #444;
+            margin-top: 1.8rem;
+            letter-spacing: 0.03em;
+        }
+    </style>
+</head>
+<body>
+
+<div class="hazard-wrapper">
+    <div class="step-card">
+
+        <!-- Progress bar -->
+        <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="progressBar" style="width: 25%"></div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             STEP 1 — Describe the Behavior
+        ═══════════════════════════════════════════════════════════════ -->
+        <div class="step active" id="step1">
+            <div class="step-header">
+                <span class="step-label">Step 1 of 4</span>
+                <h1>Describe the behavior:</h1>
+            </div>
+            <div class="step-body">
+                <div class="notice-box">
+                    <strong>The Virtual 158th FW strives to remain a safe space for everyone regardless of race, religion, sexual orientation, gender identity. This form is for reporting conduct concerns only</strong> — including harassment, misconduct, homophobia/transphobia, or violations of wing standards. Reports are reviewed exclusively by wing leadership and kept strictly confidential. False or malicious reports is a violation of wing policy.
+                </div>
+                <p class="step-description">
+                    Provide a factual account of what occurred, answering <strong>"who, what, where, when, and how"</strong> as best you can. Avoid opinions — stick to what you directly observed or experienced.
+                </p>
+                <textarea
+                    class="hazard-textarea"
+                    id="behaviorDescription"
+                    maxlength="3900"
+                    placeholder='Describe the behavior you are reporting. Be specific: what was said or done, the context, and any other relevant details.'
+                ></textarea>
+                <div class="char-counter" id="descCounter">0/3900</div>
+                <div class="field-error" id="descError">Please describe the behavior before continuing.</div>
+            </div>
+            <div class="step-nav">
+                <button class="btn-nav btn-back" onclick="window.location.href='vsaferep.html'">Back</button>
+                <button class="btn-nav btn-next" onclick="goToStep(2)">Next</button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             STEP 2 — Incident Details
+        ═══════════════════════════════════════════════════════════════ -->
+        <div class="step" id="step2">
+            <div class="step-header">
+                <span class="step-label">Step 2 of 4</span>
+                <h1>Incident Details</h1>
+            </div>
+            <div class="step-body">
+                <p class="step-description">
+                    Provide details about when and where the incident occurred and the nature of the behavior.
+                </p>
+
+                <div class="input-grid">
+                    <div class="input-row">
+                        <label>Date of Incident</label>
+                        <input type="date" id="incidentDate">
+                    </div>
+                    <div class="input-row">
+                        <label>Approximate Time</label>
+                        <input type="text" id="incidentTime" placeholder="e.g. 2100Z, after debrief">
+                    </div>
+                </div>
+
+                <div class="input-row">
+                    <label>Platform / Location</label>
+                    <input type="text" id="incidentLocation" placeholder="e.g. Discord #general, VATSIM, during flight, etc.">
+                </div>
+
+                <div class="input-row">
+                    <label>Member Being Reported (Callsign / Name)</label>
+                    <input type="text" id="reportedMember" placeholder="Callsign or display name">
+                    <div class="field-error" id="memberError">Please provide the callsign or name of the member being reported.</div>
+                </div>
+
+                <div class="input-row">
+                    <label>Behavior Category</label>
+                    <select id="behaviorCategory">
+                        <option value="">— Select category —</option>
+                        <option value="harassment">Harassment / Bullying</option>
+                        <option value="discrimination">Discrimination</option>
+                        <option value="insubordination">Insubordination</option>
+                        <option value="unsportsmanlike">Unsportsmanlike Conduct</option>
+                        <option value="cheating">Cheating / Exploiting</option>
+                        <option value="conduct">General Conduct Violation</option>
+                        <option value="regs">Violation of Wing Regulations</option>
+                        <option value="other">Other</option>
+                    </select>
+                    <div class="field-error" id="categoryError">Please select a behavior category.</div>
+                </div>
+
+                <div class="input-row">
+                    <label>Were there witnesses?</label>
+                    <select id="witnesses">
+                        <option value="">— Select —</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                        <option value="unknown">Unknown</option>
+                    </select>
+                </div>
+
+                <div class="input-row" id="witnessNamesRow">
+                    <label>Witness Callsigns / Names <span style="color:#555; font-size:0.75rem; text-transform:none; letter-spacing:0">(if known)</span></label>
+                    <input type="text" id="witnessNames" placeholder="Separate multiple names with commas">
+                </div>
+            </div>
+            <div class="step-nav">
+                <button class="btn-nav btn-back" onclick="goToStep(1)">Back</button>
+                <button class="btn-nav btn-next" onclick="goToStep(3)">Next</button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             STEP 3 — Your Information
+        ═══════════════════════════════════════════════════════════════ -->
+        <div class="step" id="step3">
+            <div class="step-header">
+                <span class="step-label">Step 3 of 4</span>
+                <h1>Your Information</h1>
+            </div>
+            <div class="step-body">
+                <p class="step-description">
+                    Your identity will be kept confidential and shared only with wing leadership on a need-to-know basis. Anonymous reports are accepted but providing contact information allows leadership to follow up.
+                </p>
+
+                <div class="input-row">
+                    <label>Your Name / Callsign <span style="color:#555; font-size:0.75rem; text-transform:none; letter-spacing:0">(optional)</span></label>
+                    <input type="text" id="reporterName" placeholder="Your callsign or name">
+                </div>
+
+                <div class="input-row">
+                    <label>Your Email <span style="color:#555; font-size:0.75rem; text-transform:none; letter-spacing:0">(optional)</span></label>
+                    <input type="email" id="reporterEmail" placeholder="your@email.com">
+                    <div class="field-error" id="emailError">Please enter a valid email address.</div>
+                </div>
+
+                <div class="input-row">
+                    <label>Your Unit / Squadron</label>
+                    <input type="text" id="reporterUnit" placeholder="e.g. 134th FS, 158th MXG...">
+                </div>
+
+                <div class="input-row" style="margin-top:10px;">
+                    <label style="margin-bottom:12px;">Involvement</label>
+                    <label class="check-row">
+                        <input type="checkbox" id="involveDirect">
+                        <span>I was directly targeted or involved in this incident.</span>
+                    </label>
+                    <label class="check-row">
+                        <input type="checkbox" id="involveWitness">
+                        <span>I witnessed this behavior directed at another member.</span>
+                    </label>
+                    <label class="check-row">
+                        <input type="checkbox" id="involveThirdParty">
+                        <span>I was informed of this incident by someone else.</span>
+                    </label>
+                </div>
+
+                <div class="input-row">
+                    <label>Has this happened before?</label>
+                    <select id="repeatOffense">
+                        <option value="">— Select —</option>
+                        <option value="yes-known">Yes — I have witnessed this before</option>
+                        <option value="yes-reported">Yes — it has been previously reported</option>
+                        <option value="no">No — this is the first time</option>
+                        <option value="unknown">Unknown</option>
+                    </select>
+                </div>
+            </div>
+            <div class="step-nav">
+                <button class="btn-nav btn-back" onclick="goToStep(2)">Back</button>
+                <button class="btn-nav btn-next" onclick="goToStep(4)">Next</button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             STEP 4 — Review & Submit
+        ═══════════════════════════════════════════════════════════════ -->
+        <div class="step" id="step4">
+            <div class="step-header">
+                <span class="step-label">Step 4 of 4</span>
+                <h1>Review &amp; Submit</h1>
+            </div>
+            <div class="step-body">
+                <p class="step-description">
+                    Review your report before submitting. Once submitted, this report will be forwarded to wing leadership only and kept confidential.
+                </p>
+
+                <table class="review-table">
+                    <tr><td>Description</td><td id="rv-desc">—</td></tr>
+                    <tr><td>Date / Time</td><td id="rv-datetime">—</td></tr>
+                    <tr><td>Platform / Location</td><td id="rv-loc">—</td></tr>
+                    <tr><td>Reported Member</td><td id="rv-member">—</td></tr>
+                    <tr><td>Category</td><td id="rv-cat">—</td></tr>
+                    <tr><td>Witnesses</td><td id="rv-witnesses">—</td></tr>
+                    <tr><td>Reporter</td><td id="rv-reporter">—</td></tr>
+                    <tr><td>Unit</td><td id="rv-unit">—</td></tr>
+                    <tr><td>Prior Incidents</td><td id="rv-repeat">—</td></tr>
+                </table>
+
+                <div class="field-error" id="submitError" style="margin-top:14px;"></div>
+                <div id="submitSpinner" style="display:none; text-align:center; color:#888; font-size:0.85rem; margin-top:14px;">Submitting…</div>
+            </div>
+            <div class="step-nav">
+                <button class="btn-nav btn-back" onclick="goToStep(3)">Back</button>
+                <button class="btn-nav btn-submit" id="submitBtn" onclick="submitReport()">Submit Report</button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             STEP 5 — Confirmation
+        ═══════════════════════════════════════════════════════════════ -->
+        <div class="step" id="step5">
+            <div class="step-header">
+                <span class="step-label">Complete</span>
+                <h1>Report Submitted</h1>
+            </div>
+            <div class="step-body">
+                <div class="confirm-banner">
+                    <span class="check-icon">&#10003;</span>
+                    <h2>Behavior Report Received</h2>
+                    <p>Your report has been submitted to wing admins. It will be reviewed in accordance with 158th FW conduct standards.</p>
+                    <span class="report-id-chip" id="reportIdChip">BHV-000000</span>
+                </div>
+                <p class="step-description" style="text-align:center; margin:0;">
+                    This report is strictly confidential. Wing leadership will review and take appropriate action. You may be contacted if additional information is required.
+                </p>
+            </div>
+            <div class="step-nav">
+                <button class="btn-nav btn-new" onclick="resetForm()">Submit Another Report</button>
+                <button class="btn-nav btn-back" onclick="window.location.href='vsaferep.html'">Return to vSAFEREP</button>
+            </div>
+        </div>
+
+    </div><!-- /.step-card -->
+
+    <p class="page-footer-note">vSAFEREP &bull; For virtual and record-keeping purposes only</p>
+</div>
+
+<script>
+    // ── Supabase ─────────────────────────────────────────────────────────────
+    const SUPABASE_URL  = 'https://gcumgpfyfqtfwbskkngt.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdW1ncGZ5ZnF0Zndic2trbmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDczMTAsImV4cCI6MjA4ODM4MzMxMH0.OSY0XEPQp-WsFWuiGrUG5fcLIVMI3c8AxBEv2shFftg';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    const PROGRESS = { 1: 25, 2: 50, 3: 75, 4: 100, 5: 100 };
+
+    // ── Char counter ──────────────────────────────────────────────────────────
+    document.getElementById('behaviorDescription').addEventListener('input', function () {
+        const len = this.value.length;
+        const counter = document.getElementById('descCounter');
+        counter.textContent = len + '/3900';
+        counter.classList.toggle('over-limit', len >= 3900);
+    });
+
+    // ── Step navigation ──────────────────────────────────────────────────────
+    function goToStep(n) {
+        if (n === 2 && !validateStep1()) return;
+        if (n === 4 && !validateStep2()) return;
+        if (n === 4 && !validateStep3()) return;
+        if (n === 4) populateReview();
+
+        document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+        document.getElementById('step' + n).classList.add('active');
+        document.getElementById('progressBar').style.width = PROGRESS[n] + '%';
+        document.querySelector('.step-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ── Validation ───────────────────────────────────────────────────────────
+    function validateStep1() {
+        const val = document.getElementById('behaviorDescription').value.trim();
+        const err = document.getElementById('descError');
+        if (!val) { err.classList.add('visible'); return false; }
+        err.classList.remove('visible');
+        return true;
+    }
+
+    function validateStep2() {
+        let ok = true;
+        const member = document.getElementById('reportedMember').value.trim();
+        const memberErr = document.getElementById('memberError');
+        if (!member) { memberErr.classList.add('visible'); ok = false; }
+        else memberErr.classList.remove('visible');
+
+        const cat = document.getElementById('behaviorCategory').value;
+        const catErr = document.getElementById('categoryError');
+        if (!cat) { catErr.classList.add('visible'); ok = false; }
+        else catErr.classList.remove('visible');
+
+        return ok;
+    }
+
+    function validateStep3() {
+        const email = document.getElementById('reporterEmail').value.trim();
+        const err   = document.getElementById('emailError');
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            err.classList.add('visible'); return false;
+        }
+        err.classList.remove('visible');
+        return true;
+    }
+
+    // ── Populate review ──────────────────────────────────────────────────────
+    function populateReview() {
+        const catEl      = document.getElementById('behaviorCategory');
+        const repeatEl   = document.getElementById('repeatOffense');
+        const witnessEl  = document.getElementById('witnesses');
+        const name       = document.getElementById('reporterName').value.trim();
+        const email      = document.getElementById('reporterEmail').value.trim();
+        const witnessNames = document.getElementById('witnessNames').value.trim();
+        const wStatus    = witnessEl.options[witnessEl.selectedIndex].text;
+
+        document.getElementById('rv-desc').textContent      = document.getElementById('behaviorDescription').value.trim() || '—';
+        document.getElementById('rv-datetime').textContent  = [document.getElementById('incidentDate').value, document.getElementById('incidentTime').value.trim()].filter(Boolean).join(' / ') || '—';
+        document.getElementById('rv-loc').textContent       = document.getElementById('incidentLocation').value.trim() || '—';
+        document.getElementById('rv-member').textContent    = document.getElementById('reportedMember').value.trim() || '—';
+        document.getElementById('rv-cat').textContent       = catEl.value ? catEl.options[catEl.selectedIndex].text : '—';
+        document.getElementById('rv-witnesses').textContent = witnessEl.value ? (wStatus + (witnessNames ? ': ' + witnessNames : '')) : '—';
+        document.getElementById('rv-reporter').textContent  = [name, email].filter(Boolean).join(' / ') || 'Anonymous';
+        document.getElementById('rv-unit').textContent      = document.getElementById('reporterUnit').value.trim() || '—';
+        document.getElementById('rv-repeat').textContent    = repeatEl.value ? repeatEl.options[repeatEl.selectedIndex].text : '—';
+    }
+
+    // ── Submit ───────────────────────────────────────────────────────────────
+    async function submitReport() {
+        const btn     = document.getElementById('submitBtn');
+        const spinner = document.getElementById('submitSpinner');
+        const errEl   = document.getElementById('submitError');
+
+        btn.disabled = true;
+        spinner.style.display = 'block';
+        errEl.classList.remove('visible');
+        errEl.textContent = '';
+
+        const reportId = crypto.randomUUID();
+        const shortId  = 'BHV-' + reportId.slice(0, 6).toUpperCase();
+
+        const involvement = [
+            document.getElementById('involveDirect').checked    ? 'Direct target'     : null,
+            document.getElementById('involveWitness').checked   ? 'Witness'           : null,
+            document.getElementById('involveThirdParty').checked ? 'Third-party report': null,
+        ].filter(Boolean).join(', ') || null;
+
+        const payload = {
+            id               : reportId,
+            report_type      : 'behavior',
+            description      : document.getElementById('behaviorDescription').value.trim(),
+            incident_date    : document.getElementById('incidentDate').value || null,
+            incident_time    : document.getElementById('incidentTime').value.trim() || null,
+            location         : document.getElementById('incidentLocation').value.trim() || null,
+            reported_member  : document.getElementById('reportedMember').value.trim() || null,
+            category         : document.getElementById('behaviorCategory').value || null,
+            witnesses        : document.getElementById('witnesses').value || null,
+            witness_names    : document.getElementById('witnessNames').value.trim() || null,
+            reporter_name    : document.getElementById('reporterName').value.trim() || null,
+            reporter_email   : document.getElementById('reporterEmail').value.trim() || null,
+            unit             : document.getElementById('reporterUnit').value.trim() || null,
+            involvement      : involvement,
+            repeat_offense   : document.getElementById('repeatOffense').value || null,
+        };
+
+        try {
+            const { error } = await _supabase
+                .from('vsaferep_reports')
+                .insert([payload]);
+
+            spinner.style.display = 'none';
+            if (error) throw error;
+
+            document.getElementById('reportIdChip').textContent = shortId;
+            goToStep(5);
+        } catch (err) {
+            spinner.style.display = 'none';
+            btn.disabled = false;
+            errEl.textContent = 'Submission failed: ' + (err.message || 'unknown error') + '. Please try again.';
+            errEl.classList.add('visible');
+        }
+    }
+
+    // ── Reset ────────────────────────────────────────────────────────────────
+    function resetForm() {
+        document.getElementById('behaviorDescription').value = '';
+        document.getElementById('descCounter').textContent = '0/3900';
+        ['incidentDate','incidentTime','incidentLocation','reportedMember',
+         'reporterName','reporterEmail','reporterUnit','witnessNames'].forEach(id => {
+            document.getElementById(id).value = '';
+        });
+        ['behaviorCategory','witnesses','repeatOffense'].forEach(id => {
+            document.getElementById(id).selectedIndex = 0;
+        });
+        ['involveDirect','involveWitness','involveThirdParty'].forEach(id => {
+            document.getElementById(id).checked = false;
+        });
+        goToStep(1);
+    }
+</script>
+
+</body>
+</html>

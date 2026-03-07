@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post Mission | 158th Fighter Wing</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/member-nav.js"></script>
+    <style>
+        /* ── Page Layout ── */
+        .page-wrapper {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 28px 20px 60px;
+        }
+        .page-title-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #3a3f45;
+        }
+        .page-title-bar h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 0;
+        }
+        .page-title-bar p { color: #888; font-size: 0.82rem; margin-top: 4px; }
+        .page-content {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+        /* ── Sidebar ── */
+        .pg-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            position: sticky;
+            top: 78px;
+        }
+        .sidebar-card {
+            background: #1f2226;
+            border: 1px solid #3a3f45;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .sidebar-card-header {
+            background: #2a2d32;
+            padding: 10px 14px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #888;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            border-bottom: 1px solid #3a3f45;
+        }
+        .sidebar-card-body { padding: 12px 14px; }
+        /* ── Checklist sidebar ── */
+        .chk-list { display: flex; flex-direction: column; gap: 2px; }
+        .chk-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 10px; border-radius: 3px;
+            font-size: 0.82rem; color: #aaa; font-weight: 500;
+            cursor: pointer; transition: background 0.15s, color 0.15s;
+            border-left: 3px solid transparent;
+            user-select: none;
+        }
+        .chk-item:hover { background: rgba(255,255,255,0.04); color: #ddd; }
+        .chk-item.done { color: #666; text-decoration: line-through; border-left-color: #4caf50; background: rgba(76,175,80,0.04); }
+        .chk-item input[type="checkbox"] { display: none; }
+        .chk-box {
+            width: 16px; height: 16px; border-radius: 2px; flex-shrink: 0;
+            border: 1.5px solid #555;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .chk-item.done .chk-box { background: #4caf50; border-color: #4caf50; }
+        .chk-item.done .chk-box::after { content: '✓'; font-size: 0.65rem; color: #fff; font-weight: 700; }
+        .chk-progress-row {
+            padding: 10px 14px 12px;
+            border-top: 1px solid #2a2d32;
+        }
+        .chk-progress-label {
+            display: flex; justify-content: space-between;
+            font-size: 0.7rem; color: #666; letter-spacing: 0.5px; margin-bottom: 6px;
+        }
+        .chk-progress-bar { height: 4px; background: #2a2d32; border-radius: 2px; overflow: hidden; }
+        .chk-progress-fill { height: 100%; background: #4caf50; border-radius: 2px; transition: width 0.3s; }
+        /* ── Main content ── */
+        .pg-main { display: flex; flex-direction: column; gap: 14px; }
+        .debrief-card {
+            background: #1f2226;
+            border: 1px solid #3a3f45;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .debrief-card-header {
+            background: #242730;
+            padding: 12px 16px;
+            display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid #3a3f45;
+        }
+        .debrief-card-header h2 {
+            font-size: 0.85rem; font-weight: 700; color: #e8e8e8;
+            letter-spacing: 1.5px; text-transform: uppercase; margin: 0;
+        }
+        .debrief-card-body { padding: 16px; }
+        /* ── Summary grid ── */
+        .summary-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+        }
+        .summary-field { display: flex; flex-direction: column; gap: 5px; }
+        .summary-label {
+            font-size: 0.65rem; font-weight: 700; color: #666;
+            letter-spacing: 1px; text-transform: uppercase;
+        }
+        .summary-value { font-size: 0.9rem; font-weight: 600; color: #e8e8e8; }
+        .summary-input {
+            background: #12151a; border: 1px solid #3a3f45;
+            color: #e8e8e8; padding: 8px 10px; font-size: 0.85rem;
+            font-family: 'Segoe UI', sans-serif; border-radius: 3px;
+            outline: none; transition: border-color 0.2s;
+        }
+        .summary-input:focus { border-color: #a0aab4; }
+        .summary-input::placeholder { color: #555; }
+        /* ── Objectives table ── */
+        .obj-table { width: 100%; border-collapse: collapse; }
+        .obj-table th {
+            font-size: 0.65rem; font-weight: 700; color: #666;
+            letter-spacing: 1px; text-transform: uppercase;
+            padding: 8px 12px; border-bottom: 1px solid #2a2d32; text-align: left;
+        }
+        .obj-table td {
+            padding: 10px 12px; border-bottom: 1px solid #2a2d32;
+            font-size: 0.85rem; color: #ccc; vertical-align: middle;
+        }
+        .obj-table tr:last-child td { border-bottom: none; }
+        .result-select {
+            background: #12151a; border: 1px solid #3a3f45; color: #e8e8e8;
+            padding: 5px 8px; font-size: 0.78rem; font-family: 'Segoe UI', sans-serif;
+            border-radius: 2px; outline: none; cursor: pointer;
+        }
+        .result-select:focus { border-color: #a0aab4; }
+        .inline-input {
+            width: 100%; background: #12151a; border: 1px solid #3a3f45; color: #ccc;
+            padding: 6px 10px; font-size: 0.82rem; font-family: 'Segoe UI', sans-serif;
+            border-radius: 2px; outline: none; transition: border-color 0.2s; box-sizing: border-box;
+        }
+        .inline-input:focus { border-color: #a0aab4; }
+        .inline-input::placeholder { color: #555; }
+        /* ── Debrief notes textarea ── */
+        .debrief-textarea {
+            width: 100%; background: #12151a; border: 1px solid #3a3f45;
+            color: #ccc; padding: 12px 14px; font-size: 0.88rem;
+            font-family: 'Segoe UI', sans-serif; border-radius: 3px;
+            outline: none; resize: vertical; min-height: 150px;
+            transition: border-color 0.2s; box-sizing: border-box; line-height: 1.6;
+        }
+        .debrief-textarea:focus { border-color: #a0aab4; }
+        .debrief-textarea::placeholder { color: #555; }
+        /* ── Action buttons ── */
+        .action-row { display: flex; gap: 10px; align-items: center; }
+        .btn-save {
+            background: #a0aab4; color: #fff; border: none;
+            padding: 10px 22px; font-size: 0.82rem; font-weight: 700;
+            letter-spacing: 1.5px; text-transform: uppercase;
+            cursor: pointer; font-family: inherit; border-radius: 3px;
+            transition: background 0.15s;
+        }
+        .btn-save:hover { background: #8a9299; }
+        .btn-clear {
+            background: transparent; border: 1px solid #3a3f45; color: #888;
+            padding: 10px 18px; font-size: 0.78rem; font-weight: 600;
+            letter-spacing: 1px; text-transform: uppercase;
+            cursor: pointer; font-family: inherit; border-radius: 3px;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .btn-clear:hover { border-color: #e85a4a; color: #e85a4a; }
+        .save-status { font-size: 0.78rem; display: none; }
+        /* ── Flight Log Sections ── */
+        .fl-section-header {
+            background: #242730;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #3a3f45;
+        }
+        .fl-section-num {
+            background: rgba(76,175,80,0.15);
+            color: #4caf50;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            padding: 3px 9px;
+            border-radius: 2px;
+            font-family: monospace;
+            flex-shrink: 0;
+        }
+        .fl-section-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #e8e8e8;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin: 0;
+        }
+        .fl-section-req {
+            font-size: 0.75rem;
+            color: #ffc107;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .fl-fields-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+        }
+        .fl-field { display: flex; flex-direction: column; gap: 6px; }
+        .fl-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: #666;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .fl-label .req-star { color: #ffc107; margin-left: 2px; }
+        .fl-input {
+            width: 100%;
+            background: #12151a;
+            border: 1px solid #3a3f45;
+            color: #e8e8e8;
+            padding: 9px 12px;
+            font-size: 0.88rem;
+            font-family: 'Segoe UI', sans-serif;
+            border-radius: 3px;
+            outline: none;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+        }
+        .fl-input:focus { border-color: #a0aab4; }
+        .fl-input::placeholder { color: #555; }
+        .fl-input[readonly] { color: #4caf50; cursor: default; font-family: monospace; letter-spacing: 2px; }
+        .mode-toggle {
+            display: flex;
+            background: #12151a;
+            border: 1px solid #3a3f45;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .mode-btn {
+            padding: 4px 14px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            background: transparent;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.15s, color 0.15s;
+        }
+        .mode-btn.active { background: #4caf50; color: #fff; }
+        .cert-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 16px;
+            background: rgba(0,0,0,0.2);
+            border-top: 1px solid #3a3f45;
+        }
+        .cert-checkbox { width: 16px; height: 16px; accent-color: #4caf50; flex-shrink: 0; margin-top: 3px; cursor: pointer; }
+        .cert-text { font-size: 0.82rem; color: #aaa; line-height: 1.6; }
+        .cert-text .req-star { color: #ffc107; }
+    </style>
+</head>
+<body>
+
+    <div class="page-wrapper">
+        <div class="page-title-bar">
+            <div>
+                <h1>Post Mission Debrief</h1>
+                <p>Complete the debrief report and post-flight checklist after landing</p>
+            </div>
+        </div>
+
+        <div class="page-content">
+            <!-- Sidebar -->
+            <aside class="pg-sidebar">
+                <div class="sidebar-card">
+                    <div class="sidebar-card-header">Post-Flight Checklist</div>
+                    <div class="sidebar-card-body" style="padding: 8px 6px;">
+                        <div class="chk-list">
+                            <label class="chk-item" id="chkItem1">
+                                <input type="checkbox" id="chk1">
+                                <span class="chk-box"></span>
+                                <span>Mission Reconstruction</span>
+                            </label>
+                            <label class="chk-item" id="chkItem2">
+                                <input type="checkbox" id="chk2">
+                                <span class="chk-box"></span>
+                                <span>Debrief focus points</span>
+                            </label>
+                            <label class="chk-item" id="chkItem3">
+                                <input type="checkbox" id="chk3">
+                                <span class="chk-box"></span>
+                                <span>Poirtable memory device assessment</span>
+                            </label>
+                            <label class="chk-item" id="chkItem4">
+                                <input type="checkbox" id="chk4">
+                                <span class="chk-box"></span>
+                                <span>Objective analysis</span>
+                            </label>
+                            <label class="chk-item" id="chkItem5">
+                                <input type="checkbox" id="chk5">
+                                <span class="chk-box"></span>
+                                <span>Instructional Fixes</span>
+                            </label>
+                            <label class="chk-item" id="chkItem6">
+                                <input type="checkbox" id="chk6">
+                                <span class="chk-box"></span>
+                                <span>Flight logging</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="chk-progress-row">
+                        <div class="chk-progress-label">
+                            <span>Progress</span>
+                            <span id="chkProgressText">0 / 6</span>
+                        </div>
+                        <div class="chk-progress-bar">
+                            <div class="chk-progress-fill" id="chkProgressFill" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main content -->
+            <main class="pg-main">
+
+                <!-- Mission Summary -->
+                <div class="debrief-card">
+                    <div class="debrief-card-header">
+                        <h2>Mission Summary</h2>
+                    </div>
+                    <div class="debrief-card-body">
+                        <div class="summary-grid">
+                            <div class="summary-field">
+                                <span class="summary-label">Mission Date</span>
+                                <span class="summary-value" id="missionDate">—</span>
+                            </div>
+                            <div class="summary-field">
+                                <span class="summary-label">Pilot</span>
+                                <span class="summary-value" id="pilotName">—</span>
+                            </div>
+                            <div class="summary-field">
+                                <span class="summary-label">Mission Type</span>
+                                <input type="text" class="summary-input" id="missionType" placeholder="e.g. CAS, SEAD, DCA…">
+                            </div>
+                            <div class="summary-field">
+                                <span class="summary-label">Callsign</span>
+                                <input type="text" class="summary-input" id="missionCallsign" placeholder="e.g. MAPLE11">
+                            </div>
+                            <div class="summary-field">
+                                <span class="summary-label">Aircraft</span>
+                                <input type="text" class="summary-input" id="missionAcft" placeholder="e.g. F-35A">
+                            </div>
+                            <div class="summary-field">
+                                <span class="summary-label">Tail #</span>
+                                <input type="text" class="summary-input" id="missionTail" placeholder="e.g. 18-5265">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Objectives Assessment -->
+                <div class="debrief-card">
+                    <div class="debrief-card-header">
+                        <h2>Objectives Assessment</h2>
+                    </div>
+                    <div class="debrief-card-body" style="padding: 0;">
+                        <table class="obj-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40%;">Objective</th>
+                                    <th style="width: 18%;">Result</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Primary Mission Objective</td>
+                                    <td>
+                                        <select class="result-select" id="obj1">
+                                            <option value="">—</option>
+                                            <option value="COMPLETE">COMPLETE</option>
+                                            <option value="PARTIAL">PARTIAL</option>
+                                            <option value="FAILED">FAILED</option>
+                                            <option value="N/A">N/A</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" class="inline-input" id="obj1notes" placeholder="Notes…"></td>
+                                </tr>
+                                <tr>
+                                    <td>Secondary Objective</td>
+                                    <td>
+                                        <select class="result-select" id="obj2">
+                                            <option value="">—</option>
+                                            <option value="COMPLETE">COMPLETE</option>
+                                            <option value="PARTIAL">PARTIAL</option>
+                                            <option value="FAILED">FAILED</option>
+                                            <option value="N/A">N/A</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" class="inline-input" id="obj2notes" placeholder="Notes…"></td>
+                                </tr>
+                                <tr>
+                                    <td>Tertiary Objective</td>
+                                    <td>
+                                        <select class="result-select" id="obj3">
+                                            <option value="">—</option>
+                                            <option value="COMPLETE">COMPLETE</option>
+                                            <option value="PARTIAL">PARTIAL</option>
+                                            <option value="FAILED">FAILED</option>
+                                            <option value="N/A">N/A</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" class="inline-input" id="obj3notes" placeholder="Notes…"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- II Flight Times -->
+                <div class="debrief-card">
+                    <div class="fl-section-header" style="justify-content: space-between;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <span class="fl-section-num">II</span>
+                            <h2 class="fl-section-title">FLIGHT TIMES (24HR)</h2>
+                            <span class="fl-section-req">(Required)</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span style="font-size:0.7rem;color:#666;letter-spacing:0.5px;">Input Mode:</span>
+                            <div class="mode-toggle">
+                                <button class="mode-btn active" id="modeZulu">ZULU</button>
+                                <button class="mode-btn" id="modeLocal">LOCAL</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="debrief-card-body">
+                        <div class="fl-fields-grid">
+                            <div class="fl-field">
+                                <label class="fl-label" for="flDepIcao">6. DEP ICAO <span class="req-star">*</span></label>
+                                <input type="text" class="fl-input" id="flDepIcao" placeholder="KBTV" maxlength="6" style="text-transform:uppercase;">
+                            </div>
+                            <div class="fl-field">
+                                <label class="fl-label" id="lblToTime" for="flToTime">7. T/O TIME (Z) <span class="req-star">*</span></label>
+                                <input type="text" class="fl-input" id="flToTime" placeholder="HH:MM" maxlength="5">
+                            </div>
+                            <div class="fl-field">
+                                <label class="fl-label" for="flArrIcao">8. ARR ICAO <span class="req-star">*</span></label>
+                                <input type="text" class="fl-input" id="flArrIcao" placeholder="KBTV" maxlength="6" style="text-transform:uppercase;">
+                            </div>
+                            <div class="fl-field">
+                                <label class="fl-label" id="lblLandTime" for="flLandTime">9. LAND TIME (Z) <span class="req-star">*</span></label>
+                                <input type="text" class="fl-input" id="flLandTime" placeholder="HH:MM" maxlength="5">
+                            </div>
+                        </div>
+                        <div style="margin-top:14px;max-width:200px;">
+                            <div class="fl-field">
+                                <label class="fl-label">10. TOTAL FLIGHT TIME</label>
+                                <input type="text" class="fl-input" id="flTotal" readonly value="--:--">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VI Route of Flight -->
+                <div class="debrief-card">
+                    <div class="fl-section-header">
+                        <span class="fl-section-num">VI</span>
+                        <h2 class="fl-section-title">FLIGHT PLAN / ROUTE OF FLIGHT</h2>
+                        <span class="fl-section-req">(Required)</span>
+                    </div>
+                    <div class="debrief-card-body">
+                        <div class="fl-field">
+                            <label class="fl-label" for="flRoute">14. ROUTE (WAYPOINTS, AIRWAYS, FIXES) <span class="req-star">*</span></label>
+                            <textarea class="debrief-textarea" id="flRoute" placeholder="e.g. KBTV BTV LAGGS TUPPER SOUTH/D0+45 KBTV&#10;(INCLUDE SUA/MOA IF APPLICABLE)" style="min-height:80px;text-transform:uppercase;"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Debrief Notes -->
+                <div class="debrief-card">
+                    <div class="debrief-card-header">
+                        <h2>Debrief Notes</h2>
+                    </div>
+                    <div class="debrief-card-body">
+                        <textarea class="debrief-textarea" id="debriefNotes" placeholder="Enter debrief notes, lessons learned, and observations here…"></textarea>
+                    </div>
+                </div>
+
+                <!-- VIII Pilot Certification -->
+                <div class="debrief-card">
+                    <div class="fl-section-header">
+                        <span class="fl-section-num">VIII</span>
+                        <h2 class="fl-section-title">PILOT CERTIFICATION</h2>
+                        <span class="fl-section-req">(Required)</span>
+                    </div>
+                    <div class="debrief-card-body">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                            <div class="fl-field">
+                                <label class="fl-label" for="flPilotEmail">16. PILOT EMAIL</label>
+                                <input type="text" class="fl-input" id="flPilotEmail" readonly placeholder="Loading…">
+                            </div>
+                            <div class="fl-field">
+                                <label class="fl-label" for="flVatsimCid">17. VATSIM CID</label>
+                                <input type="text" class="fl-input" id="flVatsimCid" placeholder="e.g. 1627852" maxlength="12">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cert-row">
+                        <input type="checkbox" class="cert-checkbox" id="flCertCheck">
+                        <label for="flCertCheck" class="cert-text">
+                            <span class="req-star">*</span> I certify that the information provided is accurate to the best of my knowledge. This flight was conducted in accordance with v158th FW regulations and VATSIM Code of Conduct.
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="debrief-card">
+                    <div class="debrief-card-body">
+                        <div class="action-row">
+                            <button class="btn-save" id="btnSave">Save Debrief</button>
+                            <button class="btn-clear" id="btnClear">Clear Form</button>
+                            <span class="save-status" id="saveStatusInline"></span>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <div style="text-align:center;padding:28px 0 18px;font-size:0.7rem;color:#444;letter-spacing:0.8px;">
+        v158th Fighter Wing Form 781-V (Virtual) &bull; For training and record-keeping purposes only
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://gcumgpfyfqtfwbskkngt.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdW1ncGZ5ZnF0Zndic2trbmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDczMTAsImV4cCI6MjA4ODM4MzMxMH0.OSY0XEPQp-WsFWuiGrUG5fcLIVMI3c8AxBEv2shFftg';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Set mission date
+        document.getElementById('missionDate').textContent = new Date().toISOString().slice(0, 10);
+
+        // Session reference — populated once on load
+        let _session = null;
+        let currentMode = 'ZULU';
+
+        // Populate pilot name and email from session
+        _supabase.auth.getSession().then(({ data: { session } }) => {
+            _session = session;
+            if (session) {
+                const user = session.user;
+                const label = (user.user_metadata && user.user_metadata.callsign)
+                    ? user.user_metadata.callsign.toUpperCase()
+                    : user.email.split('@')[0].toUpperCase();
+                document.getElementById('pilotName').textContent = label;
+                document.getElementById('flPilotEmail').value = user.email;
+            }
+        });
+
+        // ── Mode Toggle ──
+        document.getElementById('modeZulu').addEventListener('click', () => {
+            currentMode = 'ZULU';
+            document.getElementById('modeZulu').classList.add('active');
+            document.getElementById('modeLocal').classList.remove('active');
+            document.getElementById('lblToTime').textContent = '7. T/O TIME (Z) ';
+            document.getElementById('lblLandTime').textContent = '9. LAND TIME (Z) ';
+        });
+        document.getElementById('modeLocal').addEventListener('click', () => {
+            currentMode = 'LOCAL';
+            document.getElementById('modeLocal').classList.add('active');
+            document.getElementById('modeZulu').classList.remove('active');
+            document.getElementById('lblToTime').textContent = '7. T/O TIME (L) ';
+            document.getElementById('lblLandTime').textContent = '9. LAND TIME (L) ';
+        });
+
+        // ── Flight Time Auto-Calculation ──
+        function calcFlightTime() {
+            const parse = t => {
+                const parts = t.trim().split(':');
+                if (parts.length !== 2) return null;
+                const h = parseInt(parts[0], 10), m = parseInt(parts[1], 10);
+                if (isNaN(h) || isNaN(m) || h > 23 || m > 59) return null;
+                return h * 60 + m;
+            };
+            const to = parse(document.getElementById('flToTime').value);
+            const land = parse(document.getElementById('flLandTime').value);
+            if (to === null || land === null) {
+                document.getElementById('flTotal').value = '--:--';
+                return;
+            }
+            let diff = land - to;
+            if (diff < 0) diff += 1440; // midnight crossing
+            document.getElementById('flTotal').value =
+                `${String(Math.floor(diff / 60)).padStart(2, '0')}:${String(diff % 60).padStart(2, '0')}`;
+        }
+        document.getElementById('flToTime').addEventListener('input', calcFlightTime);
+        document.getElementById('flLandTime').addEventListener('input', calcFlightTime);
+
+        // ── Checklist ──
+        const CHKTOTAL = 6;
+        function updateChecklist() {
+            let done = 0;
+            document.querySelectorAll('.chk-item').forEach(item => {
+                const cb = item.querySelector('input[type="checkbox"]');
+                if (cb.checked) { item.classList.add('done'); done++; }
+                else { item.classList.remove('done'); }
+            });
+            document.getElementById('chkProgressText').textContent = `${done} / ${CHKTOTAL}`;
+            document.getElementById('chkProgressFill').style.width = `${(done / CHKTOTAL) * 100}%`;
+        }
+        document.querySelectorAll('.chk-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const cb = item.querySelector('input[type="checkbox"]');
+                cb.checked = !cb.checked;
+                updateChecklist();
+            });
+        });
+
+        // ── Status Helper ──
+        function showStatus(msg, color) {
+            const el = document.getElementById('saveStatusInline');
+            el.textContent = msg;
+            el.style.color = color || '#4caf50';
+            el.style.display = 'inline';
+            setTimeout(() => { el.style.display = 'none'; }, 3500);
+        }
+
+        // ── Save → Supabase ──
+        document.getElementById('btnSave').addEventListener('click', async () => {
+            if (!document.getElementById('flCertCheck').checked) {
+                alert('Please check the certification statement before submitting.');
+                return;
+            }
+            const { data: { session } } = await _supabase.auth.getSession();
+            if (!session) {
+                alert('Session expired. Please log in again.');
+                window.location.replace('index.html');
+                return;
+            }
+
+            const record = {
+                user_email:        session.user.email,
+                pilot_callsign:    document.getElementById('pilotName').textContent || null,
+                mission_date:      document.getElementById('missionDate').textContent || null,
+                mission_type:      document.getElementById('missionType').value || null,
+                callsign:          document.getElementById('missionCallsign').value || null,
+                aircraft:          document.getElementById('missionAcft').value || null,
+                tail_number:       document.getElementById('missionTail').value || null,
+                dep_icao:          document.getElementById('flDepIcao').value.toUpperCase() || null,
+                takeoff_time:      document.getElementById('flToTime').value || null,
+                arr_icao:          document.getElementById('flArrIcao').value.toUpperCase() || null,
+                land_time:         document.getElementById('flLandTime').value || null,
+                total_flight_time: document.getElementById('flTotal').value !== '--:--'
+                                     ? document.getElementById('flTotal').value : null,
+                time_mode:         currentMode,
+                route:             document.getElementById('flRoute').value.toUpperCase() || null,
+                obj1_result:       document.getElementById('obj1').value || null,
+                obj1_notes:        document.getElementById('obj1notes').value || null,
+                obj2_result:       document.getElementById('obj2').value || null,
+                obj2_notes:        document.getElementById('obj2notes').value || null,
+                obj3_result:       document.getElementById('obj3').value || null,
+                obj3_notes:        document.getElementById('obj3notes').value || null,
+                debrief_notes:     document.getElementById('debriefNotes').value || null,
+                vatsim_cid:        document.getElementById('flVatsimCid').value || null,
+                certified:         true
+            };
+
+            const { error } = await _supabase.from('flight_records').insert([record]);
+            if (error) {
+                console.error(error);
+                showStatus('✗ Save failed: ' + error.message, '#e85a4a');
+                return;
+            }
+            showStatus('✓ Record Saved', '#4caf50');
+        });
+
+        // ── Clear ──
+        document.getElementById('btnClear').addEventListener('click', () => {
+            if (!confirm('Clear all debrief data?')) return;
+            ['missionType','missionCallsign','missionAcft','missionTail','debriefNotes',
+             'flDepIcao','flToTime','flArrIcao','flLandTime','flRoute','flVatsimCid',
+             'obj1notes','obj2notes','obj3notes'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            document.getElementById('flTotal').value = '--:--';
+            document.getElementById('flCertCheck').checked = false;
+            ['obj1','obj2','obj3'].forEach(id => { document.getElementById(id).value = ''; });
+            document.querySelectorAll('.chk-item').forEach(item => {
+                item.querySelector('input[type="checkbox"]').checked = false;
+                item.classList.remove('done');
+            });
+            updateChecklist();
+        });
+    </script>
+</body>
+</html>

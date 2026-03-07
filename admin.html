@@ -1,0 +1,1292 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel | 158th Fighter Wing</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/member-nav.js"></script>
+    <style>
+        body {
+            background: #12151a url('assets/20241212183414_1.jpg') no-repeat center / cover fixed;
+            color: #e8e8e8;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: rgba(12, 15, 20, 0.88);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        #adminAccessDenied,
+        #adminContent {
+            position: relative;
+            z-index: 1;
+        }
+
+        .admin-wrapper {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 80px 24px 60px;
+        }
+
+        /* ── Page header ── */
+        .admin-page-header {
+            background: #1f2226;
+            border: 1px solid #3a3f45;
+            border-radius: 10px;
+            padding: 24px 30px;
+            margin-bottom: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .admin-page-header h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #e8e8e8;
+            margin: 0 0 4px;
+            letter-spacing: 0.5px;
+        }
+
+        .admin-page-header p {
+            font-size: 0.85rem;
+            color: #888;
+            margin: 0;
+        }
+
+        .admin-badge {
+            background: #e85a4a22;
+            border: 1px solid #e85a4a55;
+            color: #e85a4a;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            padding: 5px 14px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* ── Access denied overlay ── */
+        #adminAccessDenied {
+            display: none;
+            text-align: center;
+            padding: 80px 20px;
+        }
+
+        #adminAccessDenied h2 {
+            color: #e85a4a;
+            font-size: 1.4rem;
+            margin: 0 0 10px;
+        }
+
+        #adminAccessDenied p {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        /* ── Main content (hidden until admin confirmed) ── */
+        #adminContent {
+            display: none;
+        }
+
+        /* ── Stat cards row ── */
+        .admin-stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .admin-stat-card {
+            background: #1f2226;
+            border: 1px solid #3a3f45;
+            border-radius: 8px;
+            padding: 18px 20px;
+            text-align: center;
+        }
+
+        .admin-stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #7a8694;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        .admin-stat-label {
+            font-size: 0.75rem;
+            color: #888;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* ── Section card ── */
+        .admin-section {
+            background: #1f2226;
+            border: 1px solid #3a3f45;
+            border-radius: 10px;
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+
+        .admin-section-header {
+            background: #242730;
+            padding: 14px 22px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            border-bottom: 1px solid #3a3f45;
+        }
+
+        .admin-section-title {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: #e8e8e8;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin: 0;
+        }
+
+        .admin-section-body {
+            padding: 18px 22px;
+        }
+
+        /* ── Filter bar ── */
+        .admin-filter-bar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .admin-filter-select,
+        .admin-filter-input {
+            background: #12151a;
+            border: 1px solid #3a3f45;
+            border-radius: 5px;
+            color: #e8e8e8;
+            padding: 6px 12px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 0.83rem;
+        }
+
+        .admin-filter-select:focus,
+        .admin-filter-input:focus {
+            outline: none;
+            border-color: #7a8694;
+        }
+
+        .admin-btn {
+            padding: 6px 16px;
+            border-radius: 5px;
+            border: none;
+            font-size: 0.82rem;
+            font-weight: 600;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+            transition: background 0.2s;
+        }
+
+        .admin-btn-primary {
+            background: #7a8694;
+            color: #fff;
+        }
+
+        .admin-btn-primary:hover {
+            background: #696f7a;
+        }
+
+        .admin-btn-danger {
+            background: #e85a4a22;
+            color: #e85a4a;
+            border: 1px solid #e85a4a55;
+        }
+
+        .admin-btn-danger:hover {
+            background: #e85a4a33;
+        }
+
+        /* ── Reports table ── */
+        .admin-table-wrap {
+            overflow-x: auto;
+            margin-top: 14px;
+        }
+
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.83rem;
+        }
+
+        .admin-table th {
+            background: #242730;
+            color: #888;
+            font-weight: 600;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            padding: 10px 14px;
+            text-align: left;
+            border-bottom: 1px solid #3a3f45;
+            white-space: nowrap;
+        }
+
+        .admin-table td {
+            padding: 10px 14px;
+            border-bottom: 1px solid #2a2d33;
+            color: #ccc;
+            vertical-align: top;
+        }
+
+        .admin-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .admin-table tr:hover td {
+            background: #242730;
+        }
+
+        .admin-table .no-data {
+            text-align: center;
+            color: #666;
+            padding: 32px 14px;
+            font-style: italic;
+        }
+
+        /* ── Report type badges ── */
+        .report-badge {
+            display: inline-block;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            padding: 2px 8px;
+            border-radius: 3px;
+        }
+
+        .badge-hazard    { background: #ffc10722; color: #ffc107; border: 1px solid #ffc10755; }
+        .badge-behavior  { background: #e85a4a22; color: #e85a4a; border: 1px solid #e85a4a55; }
+        .badge-aviation  { background: #7a869422; color: #7a8694; border: 1px solid #7a869455; }
+        .badge-nearmiss  { background: #4caf5022; color: #4caf50; border: 1px solid #4caf5055; }
+
+        /* ── Modal ── */
+        .admin-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            z-index: 99998;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .admin-modal-overlay.open {
+            display: flex;
+        }
+
+        .admin-modal {
+            background: #1f2226;
+            border: 1px solid #3a3f45;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 640px;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 28px 30px;
+            position: relative;
+        }
+
+        .admin-modal h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #e8e8e8;
+            margin: 0 0 18px;
+            padding-right: 30px;
+        }
+
+        .admin-modal-close {
+            position: absolute;
+            top: 16px;
+            right: 18px;
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.3rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .admin-modal-close:hover {
+            color: #e8e8e8;
+        }
+
+        .admin-modal-field {
+            margin-bottom: 14px;
+        }
+
+        .admin-modal-field-label {
+            font-size: 0.72rem;
+            color: #888;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .admin-modal-field-value {
+            font-size: 0.88rem;
+            color: #e8e8e8;
+            background: #12151a;
+            border: 1px solid #2a2d33;
+            border-radius: 5px;
+            padding: 8px 12px;
+            line-height: 1.55;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .admin-modal-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        /* ── Admin users section ── */
+        .admin-user-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #2a2d33;
+            gap: 12px;
+        }
+
+        .admin-user-row:last-child {
+            border-bottom: none;
+        }
+
+        .admin-user-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .admin-user-email {
+            font-size: 0.85rem;
+            color: #e8e8e8;
+        }
+
+        .admin-user-meta {
+            font-size: 0.75rem;
+            color: #666;
+        }
+
+        /* ── Loading spinner ── */
+        .admin-spinner {
+            text-align: center;
+            padding: 32px;
+            color: #666;
+            font-style: italic;
+            font-size: 0.85rem;
+        }
+
+        /* ── Add admin form ── */
+        .admin-add-form {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            padding-top: 14px;
+            border-top: 1px solid #2a2d33;
+            margin-top: 14px;
+        }
+
+        .admin-add-form input {
+            flex: 1;
+            min-width: 200px;
+            background: #12151a;
+            border: 1px solid #3a3f45;
+            border-radius: 5px;
+            color: #e8e8e8;
+            padding: 7px 12px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 0.83rem;
+        }
+
+        .admin-add-form input:focus {
+            outline: none;
+            border-color: #7a8694;
+        }
+
+        .admin-toast {
+            position: fixed;
+            bottom: 28px;
+            right: 28px;
+            background: #1f2226;
+            border: 1px solid #3a3f45;
+            border-radius: 8px;
+            padding: 12px 20px;
+            font-size: 0.85rem;
+            color: #e8e8e8;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+            z-index: 99999;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity 0.25s, transform 0.25s;
+            pointer-events: none;
+        }
+
+        .admin-toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .admin-toast.toast-success { border-color: #4caf5055; color: #4caf50; }
+        .admin-toast.toast-error   { border-color: #e85a4a55; color: #e85a4a; }
+
+        /* ── Applicant status badges ── */
+        .badge-approved { background: #4caf5022; color: #4caf50; border: 1px solid #4caf5055; }
+        .badge-denied   { background: #e85a4a22; color: #e85a4a; border: 1px solid #e85a4a55; }
+        .badge-pending  { background: #ffc10722; color: #ffc107; border: 1px solid #ffc10755; }
+
+        /* ── Airfield ops inline editor ── */
+        .ops-edit-row {
+            display: grid;
+            grid-template-columns: 1fr 80px 54px auto;
+            gap: 6px;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .ops-edit-row.si-row {
+            grid-template-columns: 1fr auto;
+        }
+
+        .ops-edit-input {
+            background: #12151a;
+            border: 1px solid #3a3f45;
+            border-radius: 4px;
+            color: #e8e8e8;
+            padding: 5px 8px;
+            font-size: 0.8rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .ops-edit-input:focus {
+            outline: none;
+            border-color: #7a8694;
+        }
+
+        .ops-edit-remove {
+            background: none;
+            border: 1px solid #e85a4a55;
+            color: #e85a4a;
+            border-radius: 4px;
+            padding: 3px 8px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .ops-edit-remove:hover { background: #e85a4a22; }
+
+        .admin-btn-success {
+            background: #4caf5022;
+            color: #4caf50;
+            border: 1px solid #4caf5055;
+        }
+        .admin-btn-success:hover { background: #4caf5033; }
+    </style>
+</head>
+<body>
+    <!-- Access Denied (shown if not admin) -->
+    <div id="adminAccessDenied" class="admin-wrapper">
+        <h2>Access Denied</h2>
+        <p>You do not have administrator privileges to view this page.</p>
+        <br>
+        <a href="airfield-status.html" style="color:#7a8694; font-size:0.88rem;">Return to Dashboard</a>
+    </div>
+
+    <!-- Admin Content -->
+    <div id="adminContent" class="admin-wrapper">
+
+        <!-- Page Header -->
+        <div class="admin-page-header">
+            <div>
+                <h1>Admin Panel</h1>
+                <p>Manage reports, users, and site data for the 158th Fighter Wing.</p>
+            </div>
+            <span class="admin-badge">Admin Access</span>
+        </div>
+
+        <!-- Stat Cards -->
+        <div class="admin-stats-row">
+            <div class="admin-stat-card">
+                <div class="admin-stat-value" id="statTotalReports">—</div>
+                <div class="admin-stat-label">Total Reports</div>
+            </div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-value" id="statHazard">—</div>
+                <div class="admin-stat-label">Hazard Reports</div>
+            </div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-value" id="statAviation">—</div>
+                <div class="admin-stat-label">Aviation Reports</div>
+            </div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-value" id="statBehavior">—</div>
+                <div class="admin-stat-label">Behavior Reports</div>
+            </div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-value" id="statNearMiss">—</div>
+                <div class="admin-stat-label">Near Miss Reports</div>
+            </div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-value" id="statPendingApplicants">—</div>
+                <div class="admin-stat-label">Pending Applicants</div>
+            </div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-value" id="statTotalFlights">—</div>
+                <div class="admin-stat-label">Total Flights</div>
+            </div>
+        </div>
+
+        <!-- vSAFEREP Reports -->
+        <div class="admin-section">
+            <div class="admin-section-header">
+                <h2 class="admin-section-title">vSAFEREP Submissions</h2>
+                <button class="admin-btn admin-btn-primary" onclick="loadReports()">&#8635; Refresh</button>
+            </div>
+            <div class="admin-section-body">
+                <div class="admin-filter-bar">
+                    <select class="admin-filter-select" id="filterType" onchange="applyFilters()">
+                        <option value="">All Types</option>
+                        <option value="hazard">Hazard</option>
+                        <option value="aviation">Aviation</option>
+                        <option value="behavior">Behavior</option>
+                        <option value="nearmiss">Near Miss</option>
+                    </select>
+                    <input class="admin-filter-input" id="filterSearch" type="text" placeholder="Search callsign / description..." oninput="applyFilters()">
+                </div>
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Reporter</th>
+                                <th>Incident Date</th>
+                                <th>Severity</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reportsTableBody">
+                            <tr><td colspan="7" class="no-data">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Pilot Applicants -->
+        <div class="admin-section">
+            <div class="admin-section-header">
+                <h2 class="admin-section-title">New Pilot Applicants</h2>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <select class="admin-filter-select" id="filterApplicantStatus" onchange="applyApplicantFilters()">
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="denied">Denied</option>
+                        <option value="">All</option>
+                    </select>
+                    <button class="admin-btn admin-btn-primary" onclick="loadApplicants()">&#8635; Refresh</button>
+                </div>
+            </div>
+            <div class="admin-section-body">
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Applied</th>
+                                <th>Callsign</th>
+                                <th>Real Name</th>
+                                <th>Email</th>
+                                <th>VATSIM ID</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="applicantsTableBody">
+                            <tr><td colspan="7" class="no-data">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Unit Flight History -->
+        <div class="admin-section">
+            <div class="admin-section-header">
+                <h2 class="admin-section-title">Unit Flight History</h2>
+                <button class="admin-btn admin-btn-primary" onclick="loadFlightHistory()">&#8635; Refresh</button>
+            </div>
+            <div class="admin-section-body">
+                <div class="admin-stats-row" style="margin-bottom:16px;">
+                    <div class="admin-stat-card">
+                        <div class="admin-stat-value" id="statFlightCount">—</div>
+                        <div class="admin-stat-label">Total Flights</div>
+                    </div>
+                    <div class="admin-stat-card">
+                        <div class="admin-stat-value" id="statFlightHours">—</div>
+                        <div class="admin-stat-label">Total Hours</div>
+                    </div>
+                    <div class="admin-stat-card">
+                        <div class="admin-stat-value" id="statFlightPilots">—</div>
+                        <div class="admin-stat-label">Unique Pilots</div>
+                    </div>
+                </div>
+                <div class="admin-filter-bar" style="margin-bottom:12px;">
+                    <input class="admin-filter-input" id="filterFlightPilot" type="text" placeholder="Filter by callsign..." oninput="applyFlightFilters()">
+                    <select class="admin-filter-select" id="filterFlightMission" onchange="applyFlightFilters()">
+                        <option value="">All Mission Types</option>
+                        <option value="IQT">IQT</option>
+                        <option value="MQT">MQT</option>
+                        <option value="CT">CT</option>
+                        <option value="SEAD">SEAD</option>
+                        <option value="DCA">DCA</option>
+                        <option value="OCA">OCA</option>
+                        <option value="CAS">CAS</option>
+                        <option value="Proficiency">Proficiency</option>
+                    </select>
+                </div>
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Pilot</th>
+                                <th>Aircraft</th>
+                                <th>From</th>
+                                <th>To</th>
+                                <th>Duration</th>
+                                <th>Mission</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="flightHistoryTableBody">
+                            <tr><td colspan="8" class="no-data">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Airfield Status Editor -->
+        <div class="admin-section">
+            <div class="admin-section-header">
+                <h2 class="admin-section-title">Airfield Status Editor</h2>
+                <span style="font-size:0.75rem; color:#888;">Changes reflect live on Airfield Status page</span>
+            </div>
+            <div class="admin-section-body">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:28px;">
+                    <!-- OPS Notes -->
+                    <div>
+                        <div style="font-size:0.78rem; font-weight:700; color:#888; letter-spacing:1px; text-transform:uppercase; margin-bottom:10px;">OPS Notes</div>
+                        <div id="opsNotesList"><div class="admin-spinner">Loading...</div></div>
+                        <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+                            <button class="admin-btn admin-btn-primary" onclick="addOpsNote()" style="font-size:0.78rem;">+ Add Row</button>
+                            <button class="admin-btn admin-btn-success" onclick="saveOpsNotes()" style="font-size:0.78rem;">&#10003; Save OPS Notes</button>
+                        </div>
+                    </div>
+                    <!-- Special Interest Items -->
+                    <div>
+                        <div style="font-size:0.78rem; font-weight:700; color:#888; letter-spacing:1px; text-transform:uppercase; margin-bottom:10px;">Special Interest Items</div>
+                        <div id="specialInterestList"><div class="admin-spinner">Loading...</div></div>
+                        <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+                            <button class="admin-btn admin-btn-primary" onclick="addSpecialInterest()" style="font-size:0.78rem;">+ Add Item</button>
+                            <button class="admin-btn admin-btn-success" onclick="saveSpecialInterest()" style="font-size:0.78rem;">&#10003; Save Items</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Users Management -->
+        <div class="admin-section">
+            <div class="admin-section-header">
+                <h2 class="admin-section-title">Admin Users</h2>
+            </div>
+            <div class="admin-section-body">
+                <div id="adminUsersList">
+                    <div class="admin-spinner">Loading...</div>
+                </div>
+                <div class="admin-add-form">
+                    <input type="email" id="addAdminEmail" placeholder="User email address to grant admin access...">
+                    <button class="admin-btn admin-btn-primary" onclick="addAdminUser()">Grant Admin</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Report Detail Modal -->
+    <div class="admin-modal-overlay" id="reportModal">
+        <div class="admin-modal">
+            <button class="admin-modal-close" onclick="closeModal()">&#10005;</button>
+            <h3 id="modalTitle">Report Details</h3>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="admin-toast" id="adminToast"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://gcumgpfyfqtfwbskkngt.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdW1ncGZ5ZnF0Zndic2trbmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDczMTAsImV4cCI6MjA4ODM4MzMxMH0.OSY0XEPQp-WsFWuiGrUG5fcLIVMI3c8AxBEv2shFftg';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let allReports = [];
+        let currentUser = null;
+
+        // ── Toast ──────────────────────────────────────────────────────────
+        function showToast(msg, type = 'success') {
+            const t = document.getElementById('adminToast');
+            t.textContent = msg;
+            t.className = `admin-toast toast-${type} show`;
+            setTimeout(() => { t.className = 'admin-toast'; }, 3200);
+        }
+
+        // ── Admin guard ────────────────────────────────────────────────────
+        async function initAdmin() {
+            const { data: { session } } = await _supabase.auth.getSession();
+            if (!session) {
+                window.location.replace('index.html');
+                return;
+            }
+            currentUser = session.user;
+
+            const { data: adminRow } = await _supabase
+                .from('vsaferep_admins')
+                .select('email')
+                .eq('email', currentUser.email)
+                .maybeSingle();
+
+            if (!adminRow) {
+                document.getElementById('adminAccessDenied').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('adminContent').style.display = 'block';
+            loadReports();
+            loadAdminUsers();
+            loadApplicants();
+            loadFlightHistory();
+            loadAirfieldOps();
+        }
+
+        // ── Load reports ───────────────────────────────────────────────────
+        async function loadReports() {
+            document.getElementById('reportsTableBody').innerHTML =
+                '<tr><td colspan="7" class="no-data">Loading...</td></tr>';
+
+            const { data, error } = await _supabase
+                .from('vsaferep_reports')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                document.getElementById('reportsTableBody').innerHTML =
+                    `<tr><td colspan="7" class="no-data" style="color:#e85a4a;">Error loading reports: ${error.message}</td></tr>`;
+                return;
+            }
+
+            allReports = data || [];
+            updateStats(allReports);
+            applyFilters();
+        }
+
+        // ── Stats ──────────────────────────────────────────────────────────
+        function updateStats(reports) {
+            const count = type => reports.filter(r => r.report_type === type).length;
+            document.getElementById('statTotalReports').textContent = reports.length;
+            document.getElementById('statHazard').textContent    = count('hazard');
+            document.getElementById('statAviation').textContent  = count('aviation');
+            document.getElementById('statBehavior').textContent  = count('behavior');
+            document.getElementById('statNearMiss').textContent  = count('nearmiss');
+        }
+
+        // ── Filter ─────────────────────────────────────────────────────────
+        function applyFilters() {
+            const typeFilter   = document.getElementById('filterType').value;
+            const searchFilter = document.getElementById('filterSearch').value.toLowerCase().trim();
+
+            let filtered = allReports;
+            if (typeFilter)   filtered = filtered.filter(r => r.report_type === typeFilter);
+            if (searchFilter) filtered = filtered.filter(r =>
+                (r.reporter_callsign || '').toLowerCase().includes(searchFilter) ||
+                (r.reporter_email    || '').toLowerCase().includes(searchFilter) ||
+                (r.description       || '').toLowerCase().includes(searchFilter)
+            );
+
+            renderReports(filtered);
+        }
+
+        // ── Render table ───────────────────────────────────────────────────
+        function renderReports(reports) {
+            const tbody = document.getElementById('reportsTableBody');
+            if (!reports.length) {
+                tbody.innerHTML = '<tr><td colspan="7" class="no-data">No reports found.</td></tr>';
+                return;
+            }
+
+            const badgeClass = {
+                hazard:   'badge-hazard',
+                aviation: 'badge-aviation',
+                behavior: 'badge-behavior',
+                nearmiss: 'badge-nearmiss'
+            };
+
+            tbody.innerHTML = reports.map(r => {
+                const submitted = r.created_at
+                    ? new Date(r.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                    : '—';
+                const incidentDate = r.date_of_incident || '—';
+                const reporter = r.reporter_callsign || r.reporter_email || 'Anonymous';
+                const severity = r.severity || '—';
+                const desc = r.description
+                    ? (r.description.length > 80 ? r.description.substring(0, 80) + '…' : r.description)
+                    : '—';
+                const badge = badgeClass[r.report_type] || '';
+                const typeName = (r.report_type || 'unknown').charAt(0).toUpperCase() + (r.report_type || '').slice(1);
+
+                return `<tr>
+                    <td>${submitted}</td>
+                    <td><span class="report-badge ${badge}">${typeName}</span></td>
+                    <td>${escHtml(reporter)}</td>
+                    <td>${escHtml(incidentDate)}</td>
+                    <td>${escHtml(severity)}</td>
+                    <td>${escHtml(desc)}</td>
+                    <td><button class="admin-btn admin-btn-primary" style="font-size:0.75rem; padding:4px 10px;" onclick="viewReport('${r.id}')">View</button></td>
+                </tr>`;
+            }).join('');
+        }
+
+        // ── View report modal ──────────────────────────────────────────────
+        function viewReport(id) {
+            const r = allReports.find(x => x.id === id);
+            if (!r) return;
+
+            const typeName = (r.report_type || 'unknown').charAt(0).toUpperCase() + (r.report_type || '').slice(1);
+            document.getElementById('modalTitle').textContent = `${typeName} Report`;
+
+            const submitted = r.created_at
+                ? new Date(r.created_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+                : '—';
+
+            let html = `<div class="admin-modal-grid">
+                <div class="admin-modal-field">
+                    <div class="admin-modal-field-label">Report Type</div>
+                    <div class="admin-modal-field-value">${escHtml(r.report_type || '—')}</div>
+                </div>
+                <div class="admin-modal-field">
+                    <div class="admin-modal-field-label">Submitted</div>
+                    <div class="admin-modal-field-value">${escHtml(submitted)}</div>
+                </div>
+                <div class="admin-modal-field">
+                    <div class="admin-modal-field-label">Reporter Callsign</div>
+                    <div class="admin-modal-field-value">${escHtml(r.reporter_callsign || 'Anonymous')}</div>
+                </div>
+                <div class="admin-modal-field">
+                    <div class="admin-modal-field-label">Reporter Email</div>
+                    <div class="admin-modal-field-value">${escHtml(r.reporter_email || '—')}</div>
+                </div>
+                <div class="admin-modal-field">
+                    <div class="admin-modal-field-label">Incident Date</div>
+                    <div class="admin-modal-field-value">${escHtml(r.date_of_incident || '—')}</div>
+                </div>
+                <div class="admin-modal-field">
+                    <div class="admin-modal-field-label">Severity</div>
+                    <div class="admin-modal-field-value">${escHtml(r.severity || '—')}</div>
+                </div>
+            </div>
+            <div class="admin-modal-field">
+                <div class="admin-modal-field-label">Location</div>
+                <div class="admin-modal-field-value">${escHtml(r.location || '—')}</div>
+            </div>
+            <div class="admin-modal-field">
+                <div class="admin-modal-field-label">Description</div>
+                <div class="admin-modal-field-value">${escHtml(r.description || '—')}</div>
+            </div>`;
+
+            if (r.additional_fields && Object.keys(r.additional_fields).length > 0) {
+                html += `<div class="admin-modal-field">
+                    <div class="admin-modal-field-label">Additional Fields</div>
+                    <div class="admin-modal-field-value">${escHtml(JSON.stringify(r.additional_fields, null, 2))}</div>
+                </div>`;
+            }
+
+            html += `<div style="margin-top:18px; padding-top:14px; border-top:1px solid #2a2d33; display:flex; justify-content:flex-end; gap:10px;">
+                <button class="admin-btn admin-btn-danger" onclick="deleteReport('${r.id}')">Delete Report</button>
+                <button class="admin-btn admin-btn-primary" onclick="closeModal()">Close</button>
+            </div>`;
+
+            document.getElementById('modalBody').innerHTML = html;
+            document.getElementById('reportModal').classList.add('open');
+        }
+
+        function closeModal() {
+            document.getElementById('reportModal').classList.remove('open');
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // ── Delete report ──────────────────────────────────────────────────
+        async function deleteReport(id) {
+            if (!confirm('Permanently delete this report? This cannot be undone.')) return;
+            const { error } = await _supabase.from('vsaferep_reports').delete().eq('id', id);
+            if (error) {
+                showToast('Error deleting report: ' + error.message, 'error');
+                return;
+            }
+            closeModal();
+            showToast('Report deleted.', 'success');
+            loadReports();
+        }
+
+        // ── Admin users ────────────────────────────────────────────────────
+        async function loadAdminUsers() {
+            const { data, error } = await _supabase
+                .from('vsaferep_admins')
+                .select('email')
+                .order('email', { ascending: true });
+
+            const container = document.getElementById('adminUsersList');
+            if (error) {
+                container.innerHTML = `<p style="color:#e85a4a; font-size:0.85rem;">Error loading admin users: ${error.message}</p>`;
+                return;
+            }
+
+            if (!data || !data.length) {
+                container.innerHTML = `<p style="color:#666; font-size:0.85rem; font-style:italic;">No admin users found.</p>`;
+                return;
+            }
+
+            container.innerHTML = data.map(u => `
+                <div class="admin-user-row">
+                    <div class="admin-user-info">
+                        <span class="admin-user-email">${escHtml(u.email)}</span>
+                    </div>
+                    ${u.email !== currentUser.email
+                        ? `<button class="admin-btn admin-btn-danger" style="font-size:0.75rem; padding:4px 10px;" onclick="removeAdminUser('${escHtml(u.email)}')">${'Revoke'}</button>`
+                        : `<span style="font-size:0.75rem; color:#888;">(You)</span>`}
+                </div>
+            `).join('');
+        }
+
+        async function addAdminUser() {
+            const email = document.getElementById('addAdminEmail').value.trim();
+            if (!email) { showToast('Enter an email address.', 'error'); return; }
+
+            const { error } = await _supabase.from('vsaferep_admins').insert({ email });
+            if (error) {
+                showToast('Error: ' + error.message, 'error');
+                return;
+            }
+            document.getElementById('addAdminEmail').value = '';
+            showToast('Admin access granted.', 'success');
+            loadAdminUsers();
+        }
+
+        async function removeAdminUser(email) {
+            if (!confirm(`Revoke admin access for ${email}?`)) return;
+            const { error } = await _supabase.from('vsaferep_admins').delete().eq('email', email);
+            if (error) { showToast('Error: ' + error.message, 'error'); return; }
+            showToast('Admin access revoked.', 'success');
+            loadAdminUsers();
+        }
+
+        // ── Applicants ─────────────────────────────────────────────────────
+        let allApplicants = [];
+
+        async function loadApplicants() {
+            document.getElementById('applicantsTableBody').innerHTML =
+                '<tr><td colspan="7" class="no-data">Loading...</td></tr>';
+            const { data, error } = await _supabase
+                .from('pilot_applications')
+                .select('*')
+                .order('created_at', { ascending: false });
+            if (error) {
+                document.getElementById('applicantsTableBody').innerHTML =
+                    `<tr><td colspan="7" class="no-data" style="color:#e85a4a;">Error: ${error.message}</td></tr>`;
+                document.getElementById('statPendingApplicants').textContent = 'Err';
+                return;
+            }
+            allApplicants = data || [];
+            document.getElementById('statPendingApplicants').textContent =
+                allApplicants.filter(a => (a.status || 'pending') === 'pending').length;
+            applyApplicantFilters();
+        }
+
+        function applyApplicantFilters() {
+            const statusFilter = document.getElementById('filterApplicantStatus').value;
+            let filtered = allApplicants;
+            if (statusFilter) filtered = filtered.filter(a => (a.status || 'pending') === statusFilter);
+            renderApplicants(filtered);
+        }
+
+        function renderApplicants(applicants) {
+            const tbody = document.getElementById('applicantsTableBody');
+            if (!applicants.length) {
+                tbody.innerHTML = '<tr><td colspan="7" class="no-data">No applicants found.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = applicants.map(a => {
+                const applied = a.created_at
+                    ? new Date(a.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                    : '—';
+                const status = a.status || 'pending';
+                const badgeClass = status === 'approved' ? 'badge-approved' : status === 'denied' ? 'badge-denied' : 'badge-pending';
+                const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+                return `<tr>
+                    <td>${applied}</td>
+                    <td><strong>${escHtml(a.callsign || '—')}</strong></td>
+                    <td>${escHtml(a.real_name || '—')}</td>
+                    <td>${escHtml(a.email || '—')}</td>
+                    <td>${escHtml(a.vatsim_id || '—')}</td>
+                    <td><span class="report-badge ${badgeClass}">${statusLabel}</span></td>
+                    <td style="white-space:nowrap;">
+                        ${status === 'pending'
+                            ? `<button class="admin-btn" style="font-size:0.72rem;padding:3px 8px;margin-right:4px;background:#4caf5022;color:#4caf50;border:1px solid #4caf5055;" onclick="updateApplicant('${a.id}','approved')">Approve</button><button class="admin-btn admin-btn-danger" style="font-size:0.72rem;padding:3px 8px;" onclick="updateApplicant('${a.id}','denied')">Deny</button>`
+                            : `<button class="admin-btn" style="font-size:0.72rem;padding:3px 8px;background:#242730;color:#888;border:1px solid #3a3f45;" onclick="updateApplicant('${a.id}','pending')">Reset</button>`
+                        }
+                        <button class="admin-btn" style="font-size:0.72rem;padding:3px 8px;margin-left:4px;background:#242730;color:#888;border:1px solid #3a3f45;" onclick="viewApplicant('${a.id}')">View</button>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        async function updateApplicant(id, status) {
+            const action = status === 'approved' ? 'approve' : status === 'denied' ? 'deny' : 'reset';
+            if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} this applicant?`)) return;
+            const { error } = await _supabase
+                .from('pilot_applications')
+                .update({ status, reviewed_by: currentUser.email, reviewed_at: new Date().toISOString() })
+                .eq('id', id);
+            if (error) { showToast('Error: ' + error.message, 'error'); return; }
+            showToast(`Applicant ${action}d.`, 'success');
+            loadApplicants();
+        }
+
+        function viewApplicant(id) {
+            const a = allApplicants.find(x => x.id === id);
+            if (!a) return;
+            const status = a.status || 'pending';
+            document.getElementById('modalTitle').textContent = 'Pilot Application — ' + escHtml(a.callsign || 'Unknown');
+            const applied = a.created_at
+                ? new Date(a.created_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+                : '—';
+            let html = `<div class="admin-modal-grid">
+                <div class="admin-modal-field"><div class="admin-modal-field-label">Callsign</div><div class="admin-modal-field-value">${escHtml(a.callsign || '—')}</div></div>
+                <div class="admin-modal-field"><div class="admin-modal-field-label">Real Name</div><div class="admin-modal-field-value">${escHtml(a.real_name || '—')}</div></div>
+                <div class="admin-modal-field"><div class="admin-modal-field-label">Email</div><div class="admin-modal-field-value">${escHtml(a.email || '—')}</div></div>
+                <div class="admin-modal-field"><div class="admin-modal-field-label">VATSIM ID</div><div class="admin-modal-field-value">${escHtml(a.vatsim_id || '—')}</div></div>
+                <div class="admin-modal-field"><div class="admin-modal-field-label">Applied</div><div class="admin-modal-field-value">${escHtml(applied)}</div></div>
+                <div class="admin-modal-field"><div class="admin-modal-field-label">Status</div><div class="admin-modal-field-value">${escHtml(status)}</div></div>
+            </div>
+            <div class="admin-modal-field"><div class="admin-modal-field-label">Flight Experience</div><div class="admin-modal-field-value">${escHtml(a.experience || '—')}</div></div>
+            <div class="admin-modal-field"><div class="admin-modal-field-label">Motivation / Statement</div><div class="admin-modal-field-value">${escHtml(a.motivation || '—')}</div></div>
+            <div style="margin-top:18px;padding-top:14px;border-top:1px solid #2a2d33;display:flex;justify-content:flex-end;gap:10px;">
+                ${status === 'pending'
+                    ? `<button class="admin-btn admin-btn-danger" onclick="closeModal();updateApplicant('${a.id}','denied')">Deny</button>
+                       <button class="admin-btn" style="background:#4caf5022;color:#4caf50;border:1px solid #4caf5055;" onclick="closeModal();updateApplicant('${a.id}','approved')">Approve</button>`
+                    : ''}
+                <button class="admin-btn admin-btn-primary" onclick="closeModal()">Close</button>
+            </div>`;
+            document.getElementById('modalBody').innerHTML = html;
+            document.getElementById('reportModal').classList.add('open');
+        }
+
+        // ── Flight History ─────────────────────────────────────────────────
+        let allFlights = [];
+
+        async function loadFlightHistory() {
+            document.getElementById('flightHistoryTableBody').innerHTML =
+                '<tr><td colspan="8" class="no-data">Loading...</td></tr>';
+            const { data, error } = await _supabase
+                .from('flight_logs')
+                .select('*')
+                .order('flight_date', { ascending: false });
+            if (error) {
+                document.getElementById('flightHistoryTableBody').innerHTML =
+                    `<tr><td colspan="8" class="no-data" style="color:#e85a4a;">Error: ${error.message}</td></tr>`;
+                return;
+            }
+            allFlights = data || [];
+            const totalMins   = allFlights.reduce((sum, f) => sum + (f.duration_minutes || 0), 0);
+            const uniquePilots = new Set(allFlights.map(f => f.pilot_callsign)).size;
+            document.getElementById('statTotalFlights').textContent  = allFlights.length;
+            document.getElementById('statFlightCount').textContent   = allFlights.length;
+            document.getElementById('statFlightHours').textContent   = (totalMins / 60).toFixed(1);
+            document.getElementById('statFlightPilots').textContent  = uniquePilots;
+            applyFlightFilters();
+        }
+
+        function applyFlightFilters() {
+            const pilotFilter   = (document.getElementById('filterFlightPilot').value || '').toLowerCase().trim();
+            const missionFilter = document.getElementById('filterFlightMission').value;
+            let filtered = allFlights;
+            if (pilotFilter)   filtered = filtered.filter(f => (f.pilot_callsign || '').toLowerCase().includes(pilotFilter));
+            if (missionFilter) filtered = filtered.filter(f => f.mission_type === missionFilter);
+            renderFlights(filtered);
+        }
+
+        function renderFlights(flights) {
+            const tbody = document.getElementById('flightHistoryTableBody');
+            if (!flights.length) {
+                tbody.innerHTML = '<tr><td colspan="8" class="no-data">No flights logged yet.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = flights.map(f => {
+                const date = f.flight_date
+                    ? new Date(f.flight_date + 'T12:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                    : '—';
+                const dur = f.duration_minutes
+                    ? `${Math.floor(f.duration_minutes / 60)}h ${f.duration_minutes % 60}m`
+                    : '—';
+                return `<tr>
+                    <td>${date}</td>
+                    <td><strong>${escHtml(f.pilot_callsign || '—')}</strong></td>
+                    <td>${escHtml(f.aircraft || 'F-35A')}</td>
+                    <td>${escHtml(f.departure || '—')}</td>
+                    <td>${escHtml(f.arrival || '—')}</td>
+                    <td>${dur}</td>
+                    <td>${escHtml(f.mission_type || '—')}</td>
+                    <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(f.notes || '')}">${escHtml(f.notes || '—')}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        // ── Airfield Ops Editor ────────────────────────────────────────────
+        let opsNotesData = [];
+        let specialInterestData = [];
+
+        async function loadAirfieldOps() {
+            const { data, error } = await _supabase
+                .from('airfield_ops')
+                .select('id, items');
+            if (error) {
+                showToast('Could not load airfield ops data.', 'error');
+                document.getElementById('opsNotesList').innerHTML =
+                    '<div style="color:#e85a4a;font-size:0.83rem;">Error loading data.</div>';
+                document.getElementById('specialInterestList').innerHTML =
+                    '<div style="color:#e85a4a;font-size:0.83rem;">Error loading data.</div>';
+                return;
+            }
+            if (data) {
+                const opsRow = data.find(r => r.id === 'ops_notes');
+                const siRow  = data.find(r => r.id === 'special_interest');
+                opsNotesData        = opsRow ? (opsRow.items  || []) : [];
+                specialInterestData = siRow  ? (siRow.items   || []) : [];
+            }
+            renderOpsNotes();
+            renderSpecialInterest();
+        }
+
+        function renderOpsNotes() {
+            const container = document.getElementById('opsNotesList');
+            if (!opsNotesData.length) {
+                container.innerHTML = '<div style="color:#666;font-size:0.8rem;font-style:italic;margin-bottom:6px;">No entries. Click + Add Row.</div>';
+                return;
+            }
+            container.innerHTML = opsNotesData.map((entry, i) => `
+                <div class="ops-edit-row">
+                    <input class="ops-edit-input" type="text" placeholder="Note..." value="${escHtml(entry.note || '')}" oninput="opsNotesData[${i}].note = this.value">
+                    <input class="ops-edit-input" type="text" placeholder="Date" value="${escHtml(entry.date || '')}" oninput="opsNotesData[${i}].date = this.value">
+                    <input class="ops-edit-input" type="text" placeholder="Init" value="${escHtml(entry.initials || '')}" oninput="opsNotesData[${i}].initials = this.value">
+                    <button class="ops-edit-remove" onclick="removeOpsNote(${i})">&#10005;</button>
+                </div>
+            `).join('');
+        }
+
+        function addOpsNote() {
+            opsNotesData.push({ note: '', date: '', initials: '' });
+            renderOpsNotes();
+        }
+
+        function removeOpsNote(i) {
+            opsNotesData.splice(i, 1);
+            renderOpsNotes();
+        }
+
+        async function saveOpsNotes() {
+            const { error } = await _supabase
+                .from('airfield_ops')
+                .upsert({ id: 'ops_notes', items: opsNotesData, updated_by: currentUser.email, updated_at: new Date().toISOString() });
+            if (error) { showToast('Error saving OPS Notes: ' + error.message, 'error'); return; }
+            showToast('OPS Notes saved successfully.', 'success');
+        }
+
+        function renderSpecialInterest() {
+            const container = document.getElementById('specialInterestList');
+            if (!specialInterestData.length) {
+                container.innerHTML = '<div style="color:#666;font-size:0.8rem;font-style:italic;margin-bottom:6px;">No items. Click + Add Item.</div>';
+                return;
+            }
+            container.innerHTML = specialInterestData.map((entry, i) => `
+                <div class="ops-edit-row si-row">
+                    <input class="ops-edit-input" type="text" placeholder="Special interest item..." value="${escHtml(entry.item || '')}" oninput="specialInterestData[${i}].item = this.value">
+                    <button class="ops-edit-remove" onclick="removeSpecialInterest(${i})">&#10005;</button>
+                </div>
+            `).join('');
+        }
+
+        function addSpecialInterest() {
+            specialInterestData.push({ item: '' });
+            renderSpecialInterest();
+        }
+
+        function removeSpecialInterest(i) {
+            specialInterestData.splice(i, 1);
+            renderSpecialInterest();
+        }
+
+        async function saveSpecialInterest() {
+            const { error } = await _supabase
+                .from('airfield_ops')
+                .upsert({ id: 'special_interest', items: specialInterestData, updated_by: currentUser.email, updated_at: new Date().toISOString() });
+            if (error) { showToast('Error saving Special Interest Items: ' + error.message, 'error'); return; }
+            showToast('Special Interest Items saved successfully.', 'success');
+        }
+
+        // ── Security helper ────────────────────────────────────────────────
+        function escHtml(str) {
+            if (str == null) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // ── Boot ───────────────────────────────────────────────────────────
+        initAdmin();
+    </script>
+</body>
+</html>

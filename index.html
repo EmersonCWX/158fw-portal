@@ -1,0 +1,131 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>158th Fighter Squadron - Green Mountain Boys</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-container">
+            <div class="header-left">
+                <img src="assets/vang-logo.png.png" alt="VA ANG Logo" class="header-logo">
+                <span class="header-title">Virtual VERMONT AIR NATIONAL GUARD</span>
+            </div>
+            <div class="header-nav">
+                <a href="#home" class="header-link">Home</a>
+                <a href="about.html" class="header-link">About</a>
+                <a href="news.html" class="header-link">News</a>
+                <a href="#roster" class="header-link">Roster</a>
+                <a href="pilot.html" class="header-link">Become a Fighter Pilot</a>
+                <button class="login-btn" id="loginBtn">LOGIN</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Homepage -->
+    <section id="home" class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-content">
+            <h1 class="hero-title">158TH FIGHTER WING</h1>
+            <h2 class="hero-subtitle">HOME OF THE GREEN MOUNTAIN BOYS</h2>
+            <p class="hero-tagline">Defending freedom with honor, pride and excellence.</p>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="about page-section" style="display: none;">
+        <div class="container">
+            <h2>About the Virtual 158th Fighter Squadron</h2>
+            <div class="about-content">
+                <div class="about-text">
+                    <p style="font-style: italic;">
+                        The Virtual 158th Fighter Squadron, known as the "Green Mountain Boys," represents excellence in flightsim military aviation. With a proud heritage, we continue to uphold the highest standards of professionalism, dedication, and tactical superiority.
+                    </p>
+                    <p style="font-style: italic;">
+                        Based in South Burlington, Vermont, our squadron is committed to maintaining air superiority and protecting American interests at home and abroad. Our pilots and personnel are trained to the highest standards and equipped with cutting-edge aircraft and technology.
+                    </p>
+                </div>
+                <div class="about-logo">
+                    <img src="assets/vang-logo.png.png" alt="Vermont Air National Guard logo">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>134th Fighter Squadron</h4>
+                    <h5>G.M.B.'s</h5>
+                    <ul class="gmb-footer-list">
+                        <li>Generate Growth</li>
+                        <li>Maximize Mission Readiness</li>
+                        <li>Build Leaders</li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="#home">Home</a></li>
+                        <li><a href="#pilot">Become a Pilot</a></li>
+                        <li><a href="#about">About</a></li>
+                        <li><a href="#roster">Roster</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Follow Us</h4>
+                    <div class="social-links">
+                        <a href="#" class="social-link">Facebook</a>
+                        <a href="#" class="social-link">Twitter</a>
+                        <a href="#" class="social-link">Instagram</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 v158th Fighter Wing/v134th Fighter Squadron - vGreen Mountain Boys. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Login Modal -->
+    <div class="modal-overlay" id="loginModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div class="modal-header-left">
+                    <img src="assets/vang-logo.png.png" alt="VA ANG Logo" class="modal-logo">
+                    <span id="modalTitle" class="modal-title">MEMBER LOGIN</span>
+                </div>
+                <button class="modal-close" id="modalClose" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-subtitle">Virtual Vermont Air National Guard</p>
+                <form class="login-form" id="loginForm" autocomplete="off">
+                    <div class="form-group">
+                        <label for="loginEmail">EMAIL</label>
+                        <input type="email" id="loginEmail" name="email" placeholder="Enter your email address" required autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">PASSWORD</label>
+                        <input type="password" id="loginPassword" name="password" placeholder="Enter password" required autocomplete="current-password">
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="login-submit-btn">LOGIN</button>
+                    </div>
+                    <p id="loginError" class="login-error" style="display:none;"></p>
+                    <p class="login-note">Access restricted to authorized personnel only.</p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/script.js"></script>
+</body>
+</html>

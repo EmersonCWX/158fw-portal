@@ -1,0 +1,639 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hazard Report | vSAFEREP | 158th Fighter Wing</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/member-nav.js"></script>
+    <style>
+        body {
+            background: #12151a;
+            color: #e8e8e8;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .hazard-wrapper {
+            max-width: 740px;
+            margin: 0 auto;
+            padding: 90px 20px 60px;
+        }
+
+        /* ── Step card ── */
+        .step-card {
+            background: #1f2226;
+            border: 1px solid #3a3f45;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        /* ── Progress bar ── */
+        .progress-bar-track {
+            height: 4px;
+            background: #2c3035;
+            width: 100%;
+        }
+        .progress-bar-fill {
+            height: 4px;
+            background: #7a8694;
+            transition: width 0.4s ease;
+        }
+
+        /* ── Step header ── */
+        .step-header {
+            padding: 28px 36px 20px;
+            border-bottom: 1px solid #3a3f45;
+            text-align: center;
+        }
+        .step-header h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #fff;
+            margin: 0;
+            letter-spacing: 0.3px;
+        }
+        .step-label {
+            font-size: 0.75rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        /* ── Step body ── */
+        .step-body {
+            padding: 28px 36px 24px;
+        }
+
+        .step-description {
+            font-size: 0.9rem;
+            color: #a0a8b4;
+            line-height: 1.65;
+            margin: 0 0 22px;
+        }
+        .step-description strong {
+            color: #c8cfd8;
+        }
+
+        /* ── Textarea ── */
+        .hazard-textarea {
+            width: 100%;
+            min-height: 200px;
+            background: #12151a;
+            border: 1px solid #3a3f45;
+            border-radius: 6px;
+            color: #e8e8e8;
+            font-family: inherit;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            padding: 14px 16px;
+            resize: vertical;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+        .hazard-textarea:focus {
+            outline: none;
+            border-color: #7a8694;
+        }
+        .hazard-textarea::placeholder {
+            color: #505660;
+        }
+
+        /* ── Char counter ── */
+        .char-counter {
+            text-align: right;
+            font-size: 0.78rem;
+            color: #555;
+            margin-top: 6px;
+        }
+        .char-counter.over-limit {
+            color: #e85a4a;
+        }
+
+        /* ── Input row (label + input) ── */
+        .input-row {
+            margin-bottom: 18px;
+        }
+        .input-row label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 7px;
+        }
+        .input-row input,
+        .input-row select {
+            width: 100%;
+            background: #12151a;
+            border: 1px solid #3a3f45;
+            border-radius: 6px;
+            color: #e8e8e8;
+            font-family: inherit;
+            font-size: 0.9rem;
+            padding: 10px 14px;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+        .input-row input:focus,
+        .input-row select:focus {
+            outline: none;
+            border-color: #7a8694;
+        }
+        .input-row select option {
+            background: #1f2226;
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        /* ── Review table ── */
+        .review-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+        }
+        .review-table tr {
+            border-bottom: 1px solid #2c3035;
+        }
+        .review-table tr:last-child {
+            border-bottom: none;
+        }
+        .review-table td:first-child {
+            color: #666;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            padding: 10px 0 10px 0;
+            width: 38%;
+            vertical-align: top;
+        }
+        .review-table td:last-child {
+            color: #e8e8e8;
+            padding: 10px 0;
+        }
+
+        /* ── Confirmation banner ── */
+        .confirm-banner {
+            background: #1a2e1a;
+            border: 1px solid #4caf50;
+            border-radius: 8px;
+            padding: 20px 24px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .confirm-banner .check-icon {
+            font-size: 2.2rem;
+            color: #4caf50;
+            display: block;
+            margin-bottom: 10px;
+        }
+        .confirm-banner h2 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #4caf50;
+            margin: 0 0 6px;
+        }
+        .confirm-banner p {
+            font-size: 0.88rem;
+            color: #a8c8a8;
+            margin: 0;
+        }
+        .report-id-chip {
+            display: inline-block;
+            background: #12151a;
+            border: 1px solid #4caf50;
+            color: #4caf50;
+            border-radius: 4px;
+            padding: 4px 14px;
+            font-size: 0.8rem;
+            font-family: monospace;
+            letter-spacing: 1px;
+            margin-top: 10px;
+        }
+
+        /* ── Nav buttons ── */
+        .step-nav {
+            padding: 20px 36px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            border-top: 1px solid #3a3f45;
+        }
+        .btn-nav {
+            padding: 10px 32px;
+            border-radius: 20px;
+            border: none;
+            font-family: inherit;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, opacity 0.2s;
+            letter-spacing: 0.3px;
+        }
+        .btn-back {
+            background: #4a6fa5;
+            color: #fff;
+        }
+        .btn-back:hover { background: #3d5e8a; }
+        .btn-next {
+            background: #4a6fa5;
+            color: #fff;
+        }
+        .btn-next:hover { background: #3d5e8a; }
+        .btn-submit {
+            background: #2e7d32;
+            color: #fff;
+        }
+        .btn-submit:hover { background: #256427; }
+        .btn-new {
+            background: #3a3f45;
+            color: #e8e8e8;
+        }
+        .btn-new:hover { background: #4a5060; }
+        .btn-nav:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* ── Validation error ── */
+        .field-error {
+            font-size: 0.78rem;
+            color: #e85a4a;
+            margin-top: 5px;
+            display: none;
+        }
+        .field-error.visible { display: block; }
+
+        /* ── Hidden steps ── */
+        .step { display: none; }
+        .step.active { display: block; }
+
+        /* ── Footer note ── */
+        .page-footer-note {
+            text-align: center;
+            font-size: 0.72rem;
+            color: #444;
+            margin-top: 1.8rem;
+            letter-spacing: 0.03em;
+        }
+    </style>
+</head>
+<body>
+
+<div class="hazard-wrapper">
+    <div class="step-card">
+
+        <!-- Progress bar -->
+        <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="progressBar" style="width: 25%"></div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             STEP 1 — Describe the Hazard
+        ═══════════════════════════════════════════════════════════════ -->
+        <div class="step active" id="step1">
+            <div class="step-header">
+                <span class="step-label">Step 1 of 4</span>
+                <h1>Describe the hazard:</h1>
+            </div>
+            <div class="step-body">
+                <p class="step-description">
+                    A hazard is a condition, error, unsafe procedure, or practice that could cause injury, damage, or illness if not corrected.
+                    If injury, damage, or illness occurred, go back and select the <strong>"Report a Mishap"</strong> button.
+                    Enter a brief description of what happened, answering the <strong>"who, what, where, why, and how"</strong> as best you can.
+                    Provide as many specifics as you can.
+                </p>
+                <textarea
+                    class="hazard-textarea"
+                    id="hazardDescription"
+                    maxlength="3900"
+                    placeholder='Enter a brief description of what you observed, answering the "who, what, where, why, and how." Be as specific as you can - more information helps your safety staff resolve the issue.'
+                ></textarea>
+                <div class="char-counter" id="descCounter">0/3900</div>
+                <div class="field-error" id="descError">Please describe the hazard before continuing.</div>
+            </div>
+            <div class="step-nav">
+                <button class="btn-nav btn-back" onclick="window.location.href='vsaferep.html'">Back</button>
+                <button class="btn-nav btn-next" onclick="goToStep(2)">Next</button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             STEP 2 — Location & Details
+        ═══════════════════════════════════════════════════════════════ -->
+        <div class="step" id="step2">
+            <div class="step-header">
+                <span class="step-label">Step 2 of 4</span>
+                <h1>Location &amp; Details</h1>
+            </div>
+            <div class="step-body">
+                <p class="step-description">
+                    Provide details about where and when the hazard was observed. Be as specific as possible.
+                </p>
+
+                <div class="input-grid">
+                    <div class="input-row">
+                        <label>Date Observed</label>
+                        <input type="date" id="hazardDate">
+                    </div>
+                    <div class="input-row">
+                        <label>Time (Zulu / Local)</label>
+                        <input type="text" id="hazardTime" placeholder="e.g. 1430Z">
+                    </div>
+                </div>
+
+                <div class="input-row">
+                    <label>Location / Installation</label>
+                    <input type="text" id="hazardLocation" placeholder="e.g. Ramp area, Hangar 4, Range 51...">
+                </div>
+
+                <div class="input-row">
+                    <label>Hazard Category</label>
+                    <select id="hazardCategory">
+                        <option value="">— Select category —</option>
+                        <option value="ground">Ground Safety</option>
+                        <option value="aviation">Aviation / Flight Ops</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <div class="input-row">
+                    <label>Estimated Risk Level</label>
+                    <select id="hazardRisk">
+                        <option value="">— Select risk level —</option>
+                        <option value="critical">Critical — Likely to cause death or severe injury</option>
+                        <option value="serious">Serious — Could cause injury or significant damage</option>
+                        <option value="moderate">Moderate — Could cause minor injury or damage</option>
+                        <option value="low">Low — Negligible consequence if unresolved</option>
+                    </select>
+                </div>
+
+                <div class="field-error" id="detailsError">Please fill in the date, location, and category fields.</div>
+            </div>
+            <div class="step-nav">
+                <button class="btn-nav btn-back" onclick="goToStep(1)">Back</button>
+                <button class="btn-nav btn-next" onclick="goToStep(3)">Next</button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             STEP 3 — Reporter Information
+        ═══════════════════════════════════════════════════════════════ -->
+        <div class="step" id="step3">
+            <div class="step-header">
+                <span class="step-label">Step 3 of 4</span>
+                <h1>Reporter Information</h1>
+            </div>
+            <div class="step-body">
+                <p class="step-description">
+                    Your report may be submitted anonymously. Providing your contact information allows the safety office to follow up if needed.
+                </p>
+
+                <div class="input-row">
+                    <label>Name <span style="color:#555; font-size:0.75rem; text-transform:none; letter-spacing:0">(optional)</span></label>
+                    <input type="text" id="reporterName" placeholder="Your name or callsign">
+                </div>
+
+                <div class="input-row">
+                    <label>Email / vSAFEREP ID <span style="color:#555; font-size:0.75rem; text-transform:none; letter-spacing:0">(optional)</span></label>
+                    <input type="email" id="reporterEmail" placeholder="your@email.com">
+                    <div class="field-error" id="emailError">Please enter a valid email address.</div>
+                </div>
+
+                <div class="input-row">
+                    <label>Unit / Squadron</label>
+                    <input type="text" id="reporterUnit" placeholder="e.g. 134th FS, 158th MXG...">
+                </div>
+
+                <div class="input-row">
+                    <label>Duty Position</label>
+                    <select id="reporterDuty">
+                        <option value="">— Select position —</option>
+                        <option value="pilot">Pilot</option>
+                        <option value="ops-support">Ops Support</option>
+                        <option value="admin">Admin / Support</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+            </div>
+            <div class="step-nav">
+                <button class="btn-nav btn-back" onclick="goToStep(2)">Back</button>
+                <button class="btn-nav btn-next" onclick="goToStep(4)">Next</button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             STEP 4 — Review & Submit
+        ═══════════════════════════════════════════════════════════════ -->
+        <div class="step" id="step4">
+            <div class="step-header">
+                <span class="step-label">Step 4 of 4</span>
+                <h1>Review &amp; Submit</h1>
+            </div>
+            <div class="step-body">
+                <p class="step-description">
+                    Review your report before submitting. Once submitted, a copy will be logged and forwarded to the 158th FW Safety Office.
+                </p>
+
+                <table class="review-table" id="reviewTable">
+                    <tr><td>Description</td><td id="rv-desc">—</td></tr>
+                    <tr><td>Date / Time</td><td id="rv-datetime">—</td></tr>
+                    <tr><td>Location</td><td id="rv-loc">—</td></tr>
+                    <tr><td>Category</td><td id="rv-cat">—</td></tr>
+                    <tr><td>Risk Level</td><td id="rv-risk">—</td></tr>
+                    <tr><td>Reporter</td><td id="rv-reporter">—</td></tr>
+                    <tr><td>Unit</td><td id="rv-unit">—</td></tr>
+                </table>
+
+                <div class="field-error" id="submitError" style="margin-top:14px;"></div>
+                <div id="submitSpinner" style="display:none; text-align:center; color:#888; font-size:0.85rem; margin-top:14px;">Submitting…</div>
+            </div>
+            <div class="step-nav">
+                <button class="btn-nav btn-back" id="backFromReview" onclick="goToStep(3)">Back</button>
+                <button class="btn-nav btn-submit" id="submitBtn" onclick="submitReport()">Submit Report</button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             STEP 5 — Confirmation
+        ═══════════════════════════════════════════════════════════════ -->
+        <div class="step" id="step5">
+            <div class="step-header">
+                <span class="step-label">Complete</span>
+                <h1>Report Submitted</h1>
+            </div>
+            <div class="step-body">
+                <div class="confirm-banner">
+                    <span class="check-icon">&#10003;</span>
+                    <h2>Hazard Report Received</h2>
+                    <p>Your report has been submitted to the 158th FW Safety Office. Thank you for helping keep our wing safe.</p>
+                    <span class="report-id-chip" id="reportIdChip">HSF-000000</span>
+                </div>
+                <p class="step-description" style="text-align:center; margin:0;">
+                    A copy of this report has been logged. If you provided contact information, the safety staff may reach out with any follow-up questions.
+                </p>
+            </div>
+            <div class="step-nav">
+                <button class="btn-nav btn-new" onclick="resetForm()">Submit Another Report</button>
+                <button class="btn-nav btn-back" onclick="window.location.href='vsaferep.html'">Return to vSAFEREP</button>
+            </div>
+        </div>
+
+    </div><!-- /.step-card -->
+
+    <p class="page-footer-note">vSAFEREP &bull; For training and record-keeping purposes only</p>
+</div>
+
+<script>
+    // ── Supabase ─────────────────────────────────────────────────────────────
+    const SUPABASE_URL  = 'https://gcumgpfyfqtfwbskkngt.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdW1ncGZ5ZnF0Zndic2trbmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDczMTAsImV4cCI6MjA4ODM4MzMxMH0.OSY0XEPQp-WsFWuiGrUG5fcLIVMI3c8AxBEv2shFftg';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    const STEPS = 4;
+    const PROGRESS = { 1: 25, 2: 50, 3: 75, 4: 100, 5: 100 };
+
+    // Character counter for textarea
+    document.getElementById('hazardDescription').addEventListener('input', function () {
+        const len = this.value.length;
+        const counter = document.getElementById('descCounter');
+        counter.textContent = len + '/3900';
+        counter.classList.toggle('over-limit', len >= 3900);
+    });
+
+    // ── Step navigation ──────────────────────────────────────────────────────
+    function goToStep(n) {
+        // Validate before advancing
+        if (n === 2 && !validateStep1()) return;
+        if (n === 4 && !validateStep3()) return;
+
+        // Populate review on step 4
+        if (n === 4) populateReview();
+
+        document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+        document.getElementById('step' + n).classList.add('active');
+        document.getElementById('progressBar').style.width = PROGRESS[n] + '%';
+
+        // Scroll to top of card
+        document.querySelector('.step-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ── Validation ───────────────────────────────────────────────────────────
+    function validateStep1() {
+        const desc = document.getElementById('hazardDescription').value.trim();
+        const err  = document.getElementById('descError');
+        if (!desc) {
+            err.classList.add('visible');
+            return false;
+        }
+        err.classList.remove('visible');
+        return true;
+    }
+
+    function validateStep3() {
+        const email = document.getElementById('reporterEmail').value.trim();
+        const err   = document.getElementById('emailError');
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            err.classList.add('visible');
+            return false;
+        }
+        err.classList.remove('visible');
+        return true;
+    }
+
+    // ── Populate review ──────────────────────────────────────────────────────
+    function populateReview() {
+        const desc      = document.getElementById('hazardDescription').value.trim();
+        const date      = document.getElementById('hazardDate').value;
+        const time      = document.getElementById('hazardTime').value.trim();
+        const loc       = document.getElementById('hazardLocation').value.trim();
+        const cat       = document.getElementById('hazardCategory');
+        const risk      = document.getElementById('hazardRisk');
+        const name      = document.getElementById('reporterName').value.trim();
+        const email     = document.getElementById('reporterEmail').value.trim();
+        const unit      = document.getElementById('reporterUnit').value.trim();
+
+        document.getElementById('rv-desc').textContent     = desc || '—';
+        document.getElementById('rv-datetime').textContent = [date, time].filter(Boolean).join(' / ') || '—';
+        document.getElementById('rv-loc').textContent      = loc || '—';
+        document.getElementById('rv-cat').textContent      = cat.options[cat.selectedIndex].text !== '— Select category —' ? cat.options[cat.selectedIndex].text : '—';
+        document.getElementById('rv-risk').textContent     = risk.options[risk.selectedIndex].text !== '— Select risk level —' ? risk.options[risk.selectedIndex].text : '—';
+        document.getElementById('rv-reporter').textContent = [name, email].filter(Boolean).join(' / ') || 'Anonymous';
+        document.getElementById('rv-unit').textContent     = unit || '—';
+    }
+
+    // ── Submit ───────────────────────────────────────────────────────────────
+    async function submitReport() {
+        const btn     = document.getElementById('submitBtn');
+        const spinner = document.getElementById('submitSpinner');
+        const errEl   = document.getElementById('submitError');
+
+        btn.disabled  = true;
+        spinner.style.display = 'block';
+        errEl.classList.remove('visible');
+        errEl.textContent = '';
+
+        // Generate client-side UUID so no SELECT permission is needed (admin-only table)
+        const reportId = crypto.randomUUID();
+        const shortId  = 'HSF-' + reportId.slice(0, 6).toUpperCase();
+
+        // Gather data
+        const payload = {
+            id             : reportId,
+            report_type    : 'hazard',
+            description    : document.getElementById('hazardDescription').value.trim(),
+            observed_date  : document.getElementById('hazardDate').value || null,
+            observed_time  : document.getElementById('hazardTime').value.trim() || null,
+            location       : document.getElementById('hazardLocation').value.trim() || null,
+            category       : document.getElementById('hazardCategory').value || null,
+            risk_level     : document.getElementById('hazardRisk').value || null,
+            reporter_name  : document.getElementById('reporterName').value.trim() || null,
+            reporter_email : document.getElementById('reporterEmail').value.trim() || null,
+            unit           : document.getElementById('reporterUnit').value.trim() || null,
+            duty_position  : document.getElementById('reporterDuty').value || null,
+        };
+
+        try {
+            const { error } = await _supabase
+                .from('vsaferep_reports')
+                .insert([payload]);
+
+            spinner.style.display = 'none';
+
+            if (error) throw error;
+
+            document.getElementById('reportIdChip').textContent = shortId;
+
+            goToStep(5);
+        } catch (err) {
+            spinner.style.display = 'none';
+            btn.disabled = false;
+            errEl.textContent = 'Submission failed: ' + (err.message || 'unknown error') + '. Please try again.';
+            errEl.classList.add('visible');
+        }
+    }
+
+    // ── Reset ────────────────────────────────────────────────────────────────
+    function resetForm() {
+        document.getElementById('hazardDescription').value = '';
+        document.getElementById('descCounter').textContent = '0/3900';
+        ['hazardDate','hazardTime','hazardLocation','reporterName','reporterEmail','reporterUnit'].forEach(id => {
+            document.getElementById(id).value = '';
+        });
+        ['hazardCategory','hazardRisk','reporterDuty'].forEach(id => {
+            document.getElementById(id).selectedIndex = 0;
+        });
+        goToStep(1);
+    }
+</script>
+
+</body>
+</html>
