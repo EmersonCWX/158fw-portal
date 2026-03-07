@@ -1,28 +1,3 @@
-// Login modal open/close (auth logic lives in auth.js)
-const loginModal = document.getElementById('loginModal');
-const modalClose = document.getElementById('modalClose');
-
-if (modalClose) {
-    modalClose.addEventListener('click', closeLoginModal);
-}
-
-if (loginModal) {
-    loginModal.addEventListener('click', (e) => {
-        if (e.target === loginModal) closeLoginModal();
-    });
-}
-
-document.addEventListener('keydown', (e) => {
-    if (loginModal && e.key === 'Escape' && loginModal.classList.contains('active')) {
-        closeLoginModal();
-    }
-});
-
-function closeLoginModal() {
-    if (loginModal) loginModal.classList.remove('active');
-    document.body.style.overflow = '';
-}
-
 // Mobile Menu Toggle
 const hamburger = document.querySelector('.hamburger');
 const navMenu = document.querySelector('.nav-menu');
@@ -308,26 +283,12 @@ window.addEventListener('load', () => {
 // Also call immediately in case DOM is already loaded
 restoreLoginState();
 
-// Login Modal Handling
-const loginModal = document.getElementById('loginModal');
+// Login Modal Handling — modal is managed by auth.js
+// Use auth.js openLoginModal/closeLoginModal functions
 const signupModal = document.getElementById('signupModal');
-const loginBtn = document.querySelector('.login-btn');
 const closeBtn = document.querySelector('.login-modal-close');
 const signupCloseBtn = document.querySelector('.signup-modal-close');
 const signupLinks = document.querySelectorAll('.signup-link');
-
-if (loginBtn) {
-    loginBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        loginModal.classList.add('show');
-    });
-}
-
-if (closeBtn) {
-    closeBtn.addEventListener('click', () => {
-        loginModal.classList.remove('show');
-    });
-}
 
 // User Credentials Database
 // Add users from Excel file here
@@ -380,7 +341,7 @@ if (signInBtn) {
             setLoginState(user.email, user.callsign);
             
             // Hide login modal
-            loginModal.classList.remove('show');
+            closeLoginModal();
             
             // Show Operations menu and user menu
             const operationsMenu = document.getElementById('operationsMenu');
@@ -468,9 +429,7 @@ signupLinks.forEach(link => {
     link.addEventListener('click', (e) => {
         e.preventDefault();
         // Close login modal if open
-        if (loginModal) {
-            loginModal.classList.remove('show');
-        }
+        closeLoginModal();
         // Open signup modal
         if (signupModal) {
             signupModal.classList.add('show');
@@ -485,13 +444,7 @@ if (signupCloseBtn) {
 }
 
 // Close modal when clicking outside of it
-if (loginModal) {
-    loginModal.addEventListener('click', (e) => {
-        if (e.target === loginModal) {
-            loginModal.classList.remove('show');
-        }
-    });
-}
+// loginModal click-outside is handled by auth.js
 
 if (signupModal) {
     signupModal.addEventListener('click', (e) => {
@@ -506,8 +459,8 @@ if (signupModal) {
             if (signupModal.classList.contains('show')) {
                 signupModal.classList.remove('show');
             }
-            if (loginModal && loginModal.classList.contains('show')) {
-                loginModal.classList.remove('show');
+            if (loginModal && loginModal.classList.contains('active')) {
+                closeLoginModal();
             }
         }
     });

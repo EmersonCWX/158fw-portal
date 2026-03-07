@@ -21,6 +21,22 @@ if (loginBtn) {
     });
 }
 
+// Close modal — X button and overlay click
+const modalClose = document.getElementById('modalClose');
+if (modalClose) {
+    modalClose.addEventListener('click', closeLoginModal);
+}
+if (loginModal) {
+    loginModal.addEventListener('click', (e) => {
+        if (e.target === loginModal) closeLoginModal();
+    });
+}
+document.addEventListener('keydown', (e) => {
+    if (loginModal && e.key === 'Escape' && loginModal.classList.contains('active')) {
+        closeLoginModal();
+    }
+});
+
 // Handle login form submit
 if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
