@@ -715,7 +715,7 @@ body {
     margin-top: 70px;
     padding: 3rem 1rem 4rem;
     background-image: linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)), url('../assets/20240503183002_1.jpg');
-    background-size: auto;
+    background-size: 100% auto;
     background-position: center top;
     background-repeat: no-repeat;
     background-attachment: scroll;
