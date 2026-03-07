@@ -1,3 +1,12 @@
+/* Ethnocentric Font */
+@font-face {
+    font-family: 'Ethnocentric';
+    src: url('../assets/fonts/Ethnocentric-Regular.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
 /* Root Colors */
 :root {
     --dark-blue: #0a1f36;
@@ -71,11 +80,22 @@ body {
 
 .header-title {
     color: #F5E6D3;
-    font-size: 1 rem;
-    font-weight: 600;
+    font-family: 'Ethnocentric', 'Segoe UI', Tahoma, sans-serif;
+    font-size: 1rem;
+    font-weight: normal;
     letter-spacing: 0.5px;
     text-transform: uppercase;
     font-style: italic;
+}
+
+.header-title-link {
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+}
+
+.header-title-link:hover .header-title {
+    color: #D4A843;
 }
 
 .header-nav {
@@ -694,7 +714,10 @@ body {
     min-height: calc(100vh - 70px);
     margin-top: 70px;
     padding: 3rem 1rem 4rem;
-    background-color: #1a1a1a;
+    background-image: linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)), url('../assets/20240503183002_1.jpg');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
 }
 
 .roster-header {
