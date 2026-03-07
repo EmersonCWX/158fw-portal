@@ -107,16 +107,41 @@
             <div class="modal-body">
                 <p class="modal-subtitle">Virtual Vermont Air National Guard</p>
                 <form class="login-form" id="loginForm" autocomplete="off">
-                    <div class="form-group">
-                        <label for="loginEmail">EMAIL</label>
-                        <input type="email" id="loginEmail" name="email" placeholder="Enter your email address" required autocomplete="email">
+                    <!-- Regular login -->
+                    <div id="loginSection">
+                        <div class="form-group">
+                            <label for="loginEmail">EMAIL</label>
+                            <input type="email" id="loginEmail" name="email" placeholder="Enter your email address" required autocomplete="email">
+                        </div>
+                        <div class="form-group">
+                            <label for="loginPassword">PASSWORD</label>
+                            <input type="password" id="loginPassword" name="password" placeholder="Enter password" required autocomplete="current-password">
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="login-submit-btn">LOGIN</button>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="loginPassword">PASSWORD</label>
-                        <input type="password" id="loginPassword" name="password" placeholder="Enter password" required autocomplete="current-password">
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="login-submit-btn">LOGIN</button>
+                    <!-- First-time setup (shown when invite link is clicked) -->
+                    <div id="setupSection" style="display:none;">
+                        <div class="form-group">
+                            <label>EMAIL</label>
+                            <input type="text" id="setupEmail" disabled style="opacity:0.6; cursor:not-allowed;">
+                        </div>
+                        <div class="form-group">
+                            <label for="setupCallsign">CALLSIGN</label>
+                            <input type="text" id="setupCallsign" placeholder="e.g. VIPER01" maxlength="16" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label for="setupPassword">SET PASSWORD</label>
+                            <input type="password" id="setupPassword" placeholder="Create a password (min 8 chars)" autocomplete="new-password">
+                        </div>
+                        <div class="form-group">
+                            <label for="setupPasswordConfirm">CONFIRM PASSWORD</label>
+                            <input type="password" id="setupPasswordConfirm" placeholder="Repeat password" autocomplete="new-password">
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" id="setupSubmitBtn" class="login-submit-btn">ACTIVATE ACCOUNT</button>
+                        </div>
                     </div>
                     <p id="loginError" class="login-error" style="display:none;"></p>
                     <p class="login-note">Access restricted to authorized personnel only.</p>
