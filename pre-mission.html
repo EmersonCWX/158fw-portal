@@ -560,27 +560,31 @@
             };
         }
 
-        // aviationweather.gov supports CORS natively — no proxy needed
-        function wxUrl(path) {
-            return 'https://aviationweather.gov/api/data/' + path;
+        // Fetch JSON from aviationweather.gov — tries direct first (works on GitHub Pages),
+        // falls back to allorigins proxy for local file:// testing where origin is 'null'
+        async function wxFetch(path) {
+            const directUrl = 'https://aviationweather.gov/api/data/' + path;
+            try {
+                const r = await fetch(directUrl);
+                if (r.ok) return r.json();
+            } catch (_) {}
+            // Proxy fallback for local testing
+            const r = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(directUrl));
+            if (!r.ok) throw new Error('Weather fetch failed');
+            return r.json();
         }
 
-        // Fetch and display weather data — no Node server needed
+        // Fetch and display weather data
         async function fetchWeatherData(icaoCode) {
             const code = icaoCode.toUpperCase();
             weatherResultsContainer.innerHTML = '<p style="text-align: center; color: #fff;">Loading weather data...</p>';
 
             try {
-                // Aviation weather calls go through CORS proxy; VATSIM is direct
-                const [metarResp, tafResp, airportResp, vatsimResp] = await Promise.all([
-                    fetch(wxUrl(`metar?ids=${code}&format=json`)),
-                    fetch(wxUrl(`taf?ids=${code}&format=json`)),
-                    fetch(wxUrl(`airport?ids=${code}&format=json`)),
-                    fetch('https://data.vatsim.net/v3/vatsim-data.json')
-                ]);
-
                 const [metarArr, tafArr, airportArr, vatsimJson] = await Promise.all([
-                    metarResp.json(), tafResp.json(), airportResp.json(), vatsimResp.json()
+                    wxFetch(`metar?ids=${code}&format=json`),
+                    wxFetch(`taf?ids=${code}&format=json`),
+                    wxFetch(`airport?ids=${code}&format=json`),
+                    fetch('https://data.vatsim.net/v3/vatsim-data.json').then(r => r.json())
                 ]);
 
                 const metarData = metarArr && metarArr.length > 0 ? metarArr[0] : null;
