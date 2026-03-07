@@ -687,10 +687,7 @@
                 if (results.has(cid)) continue;
 
                 try {
-                    const proxy = 'https://corsproxy.io/?url=';
-                    const url   = proxy + encodeURIComponent(
-                        'https://api.vatsim.net/v2/members/' + cid + '/stats'
-                    );
+                    const url = 'https://api.vatsim.net/v2/members/' + cid + '/stats';
                     const res = await fetch(url);
                     if (res.ok) {
                         const data = await res.json();

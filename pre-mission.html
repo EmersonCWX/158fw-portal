@@ -560,10 +560,9 @@
             };
         }
 
-        // ── CORS proxy helper for aviationweather.gov (no CORS headers) ──
+        // aviationweather.gov supports CORS natively — no proxy needed
         function wxUrl(path) {
-            const raw = 'https://aviationweather.gov/api/data/' + path;
-            return 'https://corsproxy.io/?' + encodeURIComponent(raw);
+            return 'https://aviationweather.gov/api/data/' + path;
         }
 
         // Fetch and display weather data — no Node server needed
