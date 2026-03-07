@@ -188,8 +188,9 @@
         <p class="subtitle">Welcome to the Virtual Vermont Air National Guard.<br>
            Please set a password below to activate your account.</p>
 
-        <label for="callsignInput">Callsign (optional)</label>
-        <input type="text" id="callsignInput" placeholder="e.g. VIPER" autocomplete="off" maxlength="30">
+        <label for="callsignInput">Callsign <span style="color:#e85a4a;">*</span></label>
+        <input type="text" id="callsignInput" placeholder="e.g. VIPER" autocomplete="off" maxlength="30" required>
+        <p class="password-requirements">This is how you'll appear to other members.</p>
 
         <label for="passwordInput">Password</label>
         <input type="password" id="passwordInput" placeholder="Create a password" autocomplete="new-password" required>
@@ -272,6 +273,16 @@
         const callsign = document.getElementById('callsignInput').value.trim();
 
         // Basic client-side validation
+        if (!callsign) {
+            showError('Callsign is required.');
+            document.getElementById('callsignInput').focus();
+            return;
+        }
+        if (callsign.length < 2) {
+            showError('Callsign must be at least 2 characters.');
+            document.getElementById('callsignInput').focus();
+            return;
+        }
         if (password.length < 8) {
             showError('Password must be at least 8 characters.');
             return;
@@ -284,11 +295,11 @@
         submitBtn.disabled    = true;
         submitBtn.textContent = 'ACTIVATING…';
 
-        // Build the update payload
-        const updatePayload = { password };
-        if (callsign) {
-            updatePayload.data = { callsign: callsign.toUpperCase() };
-        }
+        // Build the update payload — callsign is always present here
+        const updatePayload = {
+            password,
+            data: { callsign: callsign.toUpperCase() }
+        };
 
         // This call sets the password AND marks email_confirmed_at in Supabase,
         // which triggers the on_auth_user_confirmed SQL trigger → status = 'active'.
