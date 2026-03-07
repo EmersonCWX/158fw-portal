@@ -716,8 +716,8 @@ body {
     padding: 3rem 1rem 4rem;
     background-image: linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)), url('../assets/20240503183002_1.jpg');
     background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
+    background-position: center top;
+    background-attachment: scroll;
 }
 
 .roster-header {
