@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accept Invitation — 158th Fighter Wing</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            min-height: 100vh;
+            background: #0d1117;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #c9d1d9;
+        }
+
+        .invite-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 2.5rem 2rem;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+        }
+
+        .invite-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 1.8rem;
+        }
+
+        .invite-logo img {
+            height: 36px;
+            width: 36px;
+            object-fit: contain;
+        }
+
+        .invite-logo-text {
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: #F5E6D3;
+        }
+
+        h1 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #e6edf3;
+            margin-bottom: 0.4rem;
+        }
+
+        .subtitle {
+            font-size: 0.82rem;
+            color: #8b949e;
+            margin-bottom: 1.8rem;
+            line-height: 1.5;
+        }
+
+        label {
+            display: block;
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            color: #8b949e;
+            margin-bottom: 6px;
+        }
+
+        input[type="password"],
+        input[type="text"] {
+            width: 100%;
+            padding: 10px 12px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            color: #e6edf3;
+            font-size: 0.92rem;
+            outline: none;
+            margin-bottom: 1.1rem;
+            transition: border-color 0.2s;
+        }
+
+        input[type="password"]:focus,
+        input[type="text"]:focus {
+            border-color: #388bfd;
+        }
+
+        .password-requirements {
+            font-size: 0.75rem;
+            color: #6e7681;
+            margin-top: -0.8rem;
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 10px;
+            background: #238636;
+            border: 1px solid #2ea043;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 0.88rem;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            background: #2ea043;
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .error-msg {
+            display: none;
+            background: rgba(248,81,73,0.1);
+            border: 1px solid rgba(248,81,73,0.4);
+            border-radius: 4px;
+            color: #f85149;
+            font-size: 0.82rem;
+            padding: 10px 12px;
+            margin-top: 1rem;
+            line-height: 1.5;
+        }
+
+        .success-msg {
+            display: none;
+            background: rgba(35,134,54,0.15);
+            border: 1px solid rgba(46,160,67,0.4);
+            border-radius: 4px;
+            color: #3fb950;
+            font-size: 0.88rem;
+            padding: 14px 16px;
+            margin-top: 1rem;
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        .divider {
+            height: 1px;
+            background: #21262d;
+            margin: 1.5rem 0;
+        }
+
+        /* State: loading */
+        .loading-state { text-align: center; color: #8b949e; font-size: 0.88rem; padding: 1.5rem 0; }
+        /* State: invalid/expired link */
+        .invalid-state { text-align: center; color: #f85149; }
+        .invalid-state h2 { margin-bottom: 0.5rem; }
+        .invalid-state p { font-size: 0.82rem; color: #8b949e; line-height: 1.6; }
+    </style>
+</head>
+<body>
+
+<div class="invite-card">
+
+    <div class="invite-logo">
+        <img src="assets/vang-logo.png.png" alt="VANG Logo">
+        <span class="invite-logo-text">Virtual Vermont Air National Guard</span>
+    </div>
+
+    <!-- Shown while we check the URL hash -->
+    <div id="loadingState" class="loading-state">Verifying invite link…</div>
+
+    <!-- Shown if the link is missing / expired -->
+    <div id="invalidState" class="invalid-state" style="display:none;">
+        <h2>Invalid or Expired Link</h2>
+        <p>This invite link has already been used or has expired.<br>
+           Contact wing leadership to request a new invite.</p>
+    </div>
+
+    <!-- The set-password form -->
+    <form id="inviteForm" style="display:none;" novalidate>
+        <h1>Welcome to the 158th FW</h1>
+        <p class="subtitle">Welcome to the Virtual Vermont Air National Guard.<br>
+           Please set a password below to activate your account.</p>
+
+        <label for="callsignInput">Callsign (optional)</label>
+        <input type="text" id="callsignInput" placeholder="e.g. VIPER" autocomplete="off" maxlength="30">
+
+        <label for="passwordInput">Password</label>
+        <input type="password" id="passwordInput" placeholder="Create a password" autocomplete="new-password" required>
+        <p class="password-requirements">Minimum 8 characters.</p>
+
+        <label for="confirmInput">Confirm Password</label>
+        <input type="password" id="confirmInput" placeholder="Repeat your password" autocomplete="new-password" required>
+
+        <div class="divider"></div>
+
+        <button type="submit" class="submit-btn" id="submitBtn">ACTIVATE ACCOUNT</button>
+
+        <div class="error-msg" id="errorMsg"></div>
+        <div class="success-msg" id="successMsg">
+            Account activated! Redirecting to Airfield Status…
+        </div>
+    </form>
+</div>
+
+<script>
+(function () {
+    const SUPABASE_URL      = 'https://gcumgpfyfqtfwbskkngt.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdW1ncGZ5ZnF0Zndic2trbmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDczMTAsImV4cCI6MjA4ODM4MzMxMH0.OSY0XEPQp-WsFWuiGrUG5fcLIVMI3c8AxBEv2shFftg';
+
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const loadingEl  = document.getElementById('loadingState');
+    const invalidEl  = document.getElementById('invalidState');
+    const formEl     = document.getElementById('inviteForm');
+    const submitBtn  = document.getElementById('submitBtn');
+    const errorMsg   = document.getElementById('errorMsg');
+    const successMsg = document.getElementById('successMsg');
+
+    // ── Validate the invite link ─────────────────────────────
+    // Supabase appends: #access_token=...&type=invite to the redirect URL.
+    // We check either the URL hash or the active session set by the SDK.
+    async function init() {
+        // The Supabase JS SDK automatically exchanges the token in the hash.
+        // Give it a moment to do so, then check the resulting session.
+        const { data: { session }, error } = await _supabase.auth.getSession();
+
+        // Also check if the hash indicates an invite-type token exchange
+        const hash = window.location.hash;
+        const isInviteHash = hash.includes('type=invite') || hash.includes('type=recovery');
+
+        if (error || (!session && !isInviteHash)) {
+            showInvalid();
+            return;
+        }
+
+        // If session is already active (SDK exchanged the token from the hash)
+        // or the hash contains invite params — show the form
+        loadingEl.style.display = 'none';
+        formEl.style.display    = 'block';
+    }
+
+    function showInvalid() {
+        loadingEl.style.display  = 'none';
+        invalidEl.style.display  = 'block';
+    }
+
+    function showError(msg) {
+        errorMsg.textContent    = msg;
+        errorMsg.style.display  = 'block';
+        successMsg.style.display = 'none';
+    }
+
+    function clearError() {
+        errorMsg.textContent    = '';
+        errorMsg.style.display  = 'none';
+    }
+
+    // ── Form submit — set password + optional callsign ───────
+    formEl.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearError();
+
+        const password = document.getElementById('passwordInput').value;
+        const confirm  = document.getElementById('confirmInput').value;
+        const callsign = document.getElementById('callsignInput').value.trim();
+
+        // Basic client-side validation
+        if (password.length < 8) {
+            showError('Password must be at least 8 characters.');
+            return;
+        }
+        if (password !== confirm) {
+            showError('Passwords do not match.');
+            return;
+        }
+
+        submitBtn.disabled    = true;
+        submitBtn.textContent = 'ACTIVATING…';
+
+        // Build the update payload
+        const updatePayload = { password };
+        if (callsign) {
+            updatePayload.data = { callsign: callsign.toUpperCase() };
+        }
+
+        // This call sets the password AND marks email_confirmed_at in Supabase,
+        // which triggers the on_auth_user_confirmed SQL trigger → status = 'active'.
+        const { error } = await _supabase.auth.updateUser(updatePayload);
+
+        if (error) {
+            showError(error.message || 'Failed to activate account. Please try again.');
+            submitBtn.disabled    = false;
+            submitBtn.textContent = 'ACTIVATE ACCOUNT';
+            return;
+        }
+
+        // Success
+        successMsg.style.display = 'block';
+        formEl.querySelectorAll('input, button').forEach(el => el.disabled = true);
+
+        // Redirect to member area after a short delay
+        setTimeout(() => {
+            window.location.replace('airfield-status.html');
+        }, 2000);
+    });
+
+    // Start
+    init();
+}());
+</script>
+
+</body>
+</html>
