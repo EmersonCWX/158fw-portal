@@ -560,23 +560,28 @@
             };
         }
 
-        // Fetch JSON from aviationweather.gov — tries direct first (works on GitHub Pages),
-        // falls back to allorigins proxy for local file:// testing where origin is 'null'
+        // Fetch JSON from aviationweather.gov
         async function wxFetch(path) {
-            const directUrl = 'https://aviationweather.gov/api/data/' + path;
-            try {
-                const r = await fetch(directUrl);
-                if (r.ok) return r.json();
-            } catch (_) {}
-            // Proxy fallback for local testing
-            const r = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(directUrl));
-            if (!r.ok) throw new Error('Weather fetch failed');
+            const url = 'https://aviationweather.gov/api/data/' + path;
+            const r = await fetch(url);
+            if (!r.ok) throw new Error('Weather fetch failed: ' + r.status);
             return r.json();
         }
 
         // Fetch and display weather data
         async function fetchWeatherData(icaoCode) {
             const code = icaoCode.toUpperCase();
+
+            // file:// origin blocks all external fetches — must use the live site
+            if (location.protocol === 'file:') {
+                weatherResultsContainer.innerHTML = `
+                    <div style="text-align:center;padding:2rem;color:#f0ad4e;">
+                        <p style="font-size:1.1rem;font-weight:600;">&#9888; Weather data unavailable locally</p>
+                        <p style="color:#aaa;margin-top:0.5rem;">Open the live site on GitHub Pages to use this feature.<br>Browsers block external API calls when opening HTML files directly.</p>
+                    </div>`;
+                return;
+            }
+
             weatherResultsContainer.innerHTML = '<p style="text-align: center; color: #fff;">Loading weather data...</p>';
 
             try {
