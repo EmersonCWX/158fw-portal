@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Become a Fighter Pilot - 158th Fighter Wing</title>
     <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <!-- Header -->
@@ -12,7 +13,7 @@
         <div class="header-container">
             <div class="header-left">
                 <img src="assets/vang-logo.png.png" alt="VA ANG Logo" class="header-logo">
-                <span class="header-title">Virtual VERMONT AIR NATIONAL GUARD</span>
+                <a href="index.html" class="header-title-link"><span class="header-title">Virtual VERMONT AIR NATIONAL GUARD</span></a>
             </div>
             <div class="header-nav">
                 <a href="index.html" class="header-link">Home</a>
@@ -20,6 +21,7 @@
                 <a href="news.html" class="header-link">News</a>
                 <a href="roster.html" class="header-link">Roster</a>
                 <a href="pilot.html" class="header-link active-link">Become a Fighter Pilot</a>
+                <button class="login-btn" id="loginBtn">LOGIN</button>
             </div>
         </div>
     </header>
@@ -50,7 +52,7 @@
         <div class="container">
             <div class="footer-content">
                 <div class="footer-section">
-                    <h4>134th Fighter Squadron</h4>
+                    <h4>v134th Fighter Squadron</h4>
                     <h5>G.M.B.'s</h5>
                     <ul class="gmb-footer-list">
                         <li>Generate Growth</li>
@@ -70,7 +72,7 @@
                 <div class="footer-section">
                     <h4>Follow Us</h4>
                     <div class="social-links">
-                        <a href="#" class="social-link">Facebook</a>
+                        <a href="https://discord.gg/zrm9ytuQK5" class="social-link" target="_blank" rel="noopener noreferrer">Discord</a>
                         <a href="#" class="social-link">Twitter</a>
                         <a href="#" class="social-link">Instagram</a>
                     </div>
@@ -82,6 +84,38 @@
         </div>
     </footer>
 
+    <!-- Login Modal -->
+    <div class="modal-overlay" id="loginModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div class="modal-header-left">
+                    <img src="assets/vang-logo.png.png" alt="VA ANG Logo" class="modal-logo">
+                    <span id="modalTitle" class="modal-title">MEMBER LOGIN</span>
+                </div>
+                <button class="modal-close" id="modalClose" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-subtitle">Virtual Vermont Air National Guard</p>
+                <form class="login-form" id="loginForm" autocomplete="off">
+                    <div class="form-group">
+                        <label for="loginEmail">EMAIL</label>
+                        <input type="email" id="loginEmail" name="email" placeholder="Enter your email address" required autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">PASSWORD</label>
+                        <input type="password" id="loginPassword" name="password" placeholder="Enter password" required autocomplete="current-password">
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="login-submit-btn">LOGIN</button>
+                    </div>
+                    <p id="loginError" class="login-error" style="display:none;"></p>
+                    <p class="login-note">Access restricted to authorized personnel only.</p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
     <script src="js/script.js"></script>
 </body>
 </html>

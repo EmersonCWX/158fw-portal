@@ -13,7 +13,7 @@
         <div class="header-container">
             <div class="header-left">
                 <img src="assets/vang-logo.png.png" alt="VA ANG Logo" class="header-logo">
-                <span class="header-title">Virtual VERMONT AIR NATIONAL GUARD</span>
+                <a href="index.html" class="header-title-link"><span class="header-title">Virtual VERMONT AIR NATIONAL GUARD</span></a>
             </div>
             <div class="header-nav">
                 <a href="#home" class="header-link">Home</a>
@@ -30,7 +30,7 @@
     <section id="home" class="hero">
         <div class="hero-bg"></div>
         <div class="hero-content">
-            <h1 class="hero-title">158TH FIGHTER WING</h1>
+            <h1 class="hero-title">v158TH FIGHTER WING</h1>
             <h2 class="hero-subtitle">HOME OF THE GREEN MOUNTAIN BOYS</h2>
             <p class="hero-tagline">Defending freedom with honor, pride and excellence.</p>
         </div>
@@ -61,7 +61,7 @@
         <div class="container">
             <div class="footer-content">
                 <div class="footer-section">
-                    <h4>134th Fighter Squadron</h4>
+                    <h4>v134th Fighter Squadron</h4>
                     <h5>G.M.B.'s</h5>
                     <ul class="gmb-footer-list">
                         <li>Generate Growth</li>
@@ -82,7 +82,7 @@
                 <div class="footer-section">
                     <h4>Follow Us</h4>
                     <div class="social-links">
-                        <a href="#" class="social-link">Facebook</a>
+                        <a href="https://discord.gg/zrm9ytuQK5" class="social-link" target="_blank" rel="noopener noreferrer">Discord</a>
                         <a href="#" class="social-link">Twitter</a>
                         <a href="#" class="social-link">Instagram</a>
                     </div>
@@ -127,5 +127,29 @@
 
     <script src="js/auth.js"></script>
     <script src="js/script.js"></script>
+    <script>
+        (function () {
+            var commonBgs = [
+                "assets/mt rainerF45.jpg",
+                "assets/4 Uk.jpg",
+                "assets/F35 Moon.jpg",
+                "assets/hero-aircraft.jpg.jpg"
+            ];
+            var rareBg = "assets/rare.jpg";
+
+            // 1-in-30 chance for rare
+            var isRare = Math.floor(Math.random() * 30) === 0;
+            var chosen = isRare
+                ? rareBg
+                : commonBgs[Math.floor(Math.random() * commonBgs.length)];
+
+            var heroBg = document.querySelector('.hero-bg');
+            if (heroBg) {
+                heroBg.style.background =
+                    "linear-gradient(rgba(34,34,34,0.6), rgba(34,34,34,0.6)), url('" + chosen + "') center/cover no-repeat";
+                heroBg.style.backgroundAttachment = "fixed";
+            }
+        })();
+    </script>
 </body>
 </html>
