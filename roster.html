@@ -6,6 +6,8 @@
     <title>Roster | v158th Fighter Wing</title>
     <link rel="stylesheet" href="css/styles.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>window.MEMBER_NAV_PUBLIC_PAGE = true;</script>
+    <script src="js/member-nav.js"></script>
 </head>
 <body>
     <!-- Header -->
@@ -637,19 +639,18 @@
             const STATS_URL = 'https://stats.vatsim.net/stats/';
             const DAYS_45   = 45 * 24 * 60 * 60 * 1000;
             const cutoff    = new Date(Date.now() - DAYS_45);
-            const memberMap = new Map(); // cid -> [{ row, statusCell }]
+            const memberMap = new Map();
 
             // Phase 1 – scan tables, wrap numeric VATSIM IDs in links
             document.querySelectorAll('.roster-table').forEach(table => {
                 table.querySelectorAll('tbody tr').forEach(row => {
                     const cells = row.querySelectorAll('td');
                     if (cells.length < 5) return;
-                    const idCell     = cells[3]; // VATSIM ID column
-                    const statusCell = cells[4]; // Status column
+                    const idCell     = cells[3];
+                    const statusCell = cells[4];
                     const raw = idCell.textContent.trim();
-                    if (!/^\d+$/.test(raw)) return; // skip em-dash / empty
+                    if (!/^\d+$/.test(raw)) return;
 
-                    // Make clickable link to stats.vatsim.net
                     idCell.innerHTML =
                         '<a href="' + STATS_URL + raw + '" target="_blank" ' +
                         'rel="noopener" class="vatsim-link">' + raw + '</a>';
@@ -661,72 +662,62 @@
 
             if (memberMap.size === 0) return;
 
-            const results = new Map(); // cid -> true/false
+            const results = new Map();
 
-            // Phase 2 – check VATSIM live feed (has CORS) for online members
+            // Phase 2 – check VATSIM live feed for online members
             try {
                 const liveRes = await fetch('https://data.vatsim.net/v3/vatsim-data.json');
                 if (liveRes.ok) {
                     const live = await liveRes.json();
                     const onlineCids = new Set();
-                    (live.pilots  || []).forEach(p => onlineCids.add(String(p.cid)));
+                    (live.pilots      || []).forEach(p => onlineCids.add(String(p.cid)));
                     (live.controllers || []).forEach(c => onlineCids.add(String(c.cid)));
-                    (live.atis    || []).forEach(a => onlineCids.add(String(a.cid)));
+                    (live.atis        || []).forEach(a => onlineCids.add(String(a.cid)));
                     for (const cid of memberMap.keys()) {
                         if (onlineCids.has(cid)) {
-                            results.set(cid, true); // currently online = active
-                            // persist last-seen in localStorage
+                            results.set(cid, true);
                             localStorage.setItem('vatsim_lastseen_' + cid, Date.now());
                         }
                     }
                 }
             } catch (e) { console.warn('VATSIM live feed unavailable:', e); }
 
-            // Phase 3 – for remaining members, try VATSIM API via CORS proxy
+            // Phase 3 – for remaining members, try VATSIM stats API
             for (const cid of memberMap.keys()) {
                 if (results.has(cid)) continue;
-
                 try {
                     const url = 'https://api.vatsim.net/v2/members/' + cid + '/stats';
                     const res = await fetch(url);
                     if (res.ok) {
-                        const data = await res.json();
-                        // Look for any usable "last activity" timestamp
+                        const apiData = await res.json();
                         let lastDate = null;
-                        const fields = [
-                            'last_connection', 'last_login', 'last_logon',
-                            'updated_at', 'lastratingchange'
-                        ];
+                        const fields = ['last_connection','last_login','last_logon','updated_at','lastratingchange'];
                         for (const f of fields) {
-                            if (data[f]) {
-                                const d = new Date(data[f]);
+                            if (apiData[f]) {
+                                const d = new Date(apiData[f]);
                                 if (!isNaN(d) && (!lastDate || d > lastDate)) lastDate = d;
                             }
                         }
                         if (lastDate) {
                             results.set(cid, lastDate >= cutoff);
-                            if (lastDate >= cutoff) {
-                                localStorage.setItem('vatsim_lastseen_' + cid, lastDate.getTime());
-                            }
+                            if (lastDate >= cutoff) localStorage.setItem('vatsim_lastseen_' + cid, lastDate.getTime());
                             continue;
                         }
                     }
                 } catch (e) { console.warn('API check failed for ' + cid + ':', e); }
 
-                // Phase 3b – fallback: use localStorage last-seen timestamp
+                // Phase 3b – fallback to localStorage last-seen
                 const stored = localStorage.getItem('vatsim_lastseen_' + cid);
                 if (stored) {
                     results.set(cid, Number(stored) >= cutoff.getTime());
                 } else {
-                    results.set(cid, true); // default active if no data
+                    results.set(cid, true);
                 }
             }
 
             // Phase 4 – update status badges
-            let activeCount = 0;
             for (const [cid, entries] of memberMap) {
                 const active = results.get(cid) !== false;
-                if (active) activeCount += entries.length;
                 entries.forEach(({ statusCell }) => {
                     const badge = statusCell.querySelector('.roster-badge');
                     if (badge) {

@@ -561,8 +561,13 @@
         }
 
         // Fetch JSON from aviationweather.gov
+        // aviationweather.gov does not send CORS headers, so we route through
+        // corsproxy.io when running on the live site (not file://).
         async function wxFetch(path) {
-            const url = 'https://aviationweather.gov/api/data/' + path;
+            const target = 'https://aviationweather.gov/api/data/' + path;
+            const url = location.protocol === 'file:'
+                ? target
+                : 'https://corsproxy.io/?' + encodeURIComponent(target);
             const r = await fetch(url);
             if (!r.ok) throw new Error('Weather fetch failed: ' + r.status);
             return r.json();
