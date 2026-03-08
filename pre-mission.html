@@ -335,7 +335,7 @@
             <main class="pg-main">
                 <div class="wx-search-card">
                     <h2>Airfield Status</h2>
-                    <p>Live weather, TAF, VATSIM ATC, and airfield status from aviationweather.gov</p>
+                    <p>Live weather, TAF, VATSIM ATC, and airfield status from AVWX</p>
                     <div class="wx-input-row">
                         <input type="text" placeholder="ENTER ICAO CODE (E.G. KBTV, KJFK)" class="airport-input">
                         <button class="btn-get-status">Get Status</button>
@@ -505,17 +505,12 @@
         const facilityMap = { 2:'DEL', 3:'GND', 4:'TWR', 5:'APP', 6:'CTR' };
 
         // ── Helper: parse runway data from airport API response ──
-        function parseRunways(airportData) {
-            if (!airportData || !airportData.length || !airportData[0].runways) return [];
+        function parseRunways(stationData) {
+            if (!stationData || !stationData.runways) return [];
             const runways = [];
-            airportData[0].runways.forEach(rwy => {
-                const parts = rwy.id.split('/');
-                const baseHdg = rwy.alignment || null;
-                if (parts.length === 2) {
-                    runways.push({ id: parts[0], heading: baseHdg });
-                    const recipHdg = baseHdg !== null ? (baseHdg + 180) % 360 : null;
-                    runways.push({ id: parts[1], heading: recipHdg });
-                }
+            stationData.runways.forEach(rwy => {
+                runways.push({ id: rwy.ident1, heading: rwy.bearing1 || null });
+                runways.push({ id: rwy.ident2, heading: rwy.bearing2 || null });
             });
             return runways;
         }
@@ -560,15 +555,10 @@
             };
         }
 
-        // Fetch JSON from aviationweather.gov
-        // aviationweather.gov does not send CORS headers, so we route through
-        // corsproxy.io when running on the live site (not file://).
-        async function wxFetch(path) {
-            const target = 'https://aviationweather.gov/api/data/' + path;
-            const url = location.protocol === 'file:'
-                ? target
-                : 'https://corsproxy.io/?' + encodeURIComponent(target);
-            const r = await fetch(url);
+        const AVWX_TOKEN = 'MEsA2QSGtIHWpgECLiOUBHwtka0EiiyoAfCRHOTG5QA';
+
+        async function avwxFetch(path) {
+            const r = await fetch(`https://avwx.rest/api/${path}?token=${AVWX_TOKEN}`);
             if (!r.ok) throw new Error('Weather fetch failed: ' + r.status);
             return r.json();
         }
@@ -577,33 +567,21 @@
         async function fetchWeatherData(icaoCode) {
             const code = icaoCode.toUpperCase();
 
-            // file:// origin blocks all external fetches — must use the live site
-            if (location.protocol === 'file:') {
-                weatherResultsContainer.innerHTML = `
-                    <div style="text-align:center;padding:2rem;color:#f0ad4e;">
-                        <p style="font-size:1.1rem;font-weight:600;">&#9888; Weather data unavailable locally</p>
-                        <p style="color:#aaa;margin-top:0.5rem;">Open the live site on GitHub Pages to use this feature.<br>Browsers block external API calls when opening HTML files directly.</p>
-                    </div>`;
-                return;
-            }
-
             weatherResultsContainer.innerHTML = '<p style="text-align: center; color: #fff;">Loading weather data...</p>';
 
             try {
-                const [metarArr, tafArr, airportArr, vatsimJson] = await Promise.all([
-                    wxFetch(`metar?ids=${code}&format=json`),
-                    wxFetch(`taf?ids=${code}&format=json`),
-                    wxFetch(`airport?ids=${code}&format=json`),
+                const [metarData, tafData, stationData, vatsimJson] = await Promise.all([
+                    avwxFetch(`metar/${code}`),
+                    avwxFetch(`taf/${code}`).catch(() => null),
+                    avwxFetch(`station/${code}`).catch(() => null),
                     fetch('https://data.vatsim.net/v3/vatsim-data.json').then(r => r.json())
                 ]);
 
-                const metarData = metarArr && metarArr.length > 0 ? metarArr[0] : null;
-                const tafData   = tafArr && tafArr.length > 0 ? tafArr[0] : null;
-                const runways   = parseRunways(airportArr);
+                const runways = parseRunways(stationData);
                 const vatsimData = filterVatsimData(vatsimJson, code);
 
-                if (metarData) {
-                    displayWeatherResults(code, metarData, tafData, runways, vatsimData);
+                if (metarData && !metarData.error) {
+                    displayWeatherResults(code, metarData, tafData, stationData, runways, vatsimData);
                 } else {
                     weatherResultsContainer.innerHTML = `<p style="text-align: center; color: #ff6b6b;">No weather data found for ${code}</p>`;
                 }
@@ -614,28 +592,28 @@
         }
 
         // Display weather results
-        function displayWeatherResults(code, metarData, tafData, runways, vatsimData) {
-            const rawMetar = metarData.rawOb || metarData.rawText || '';
-            const rawTaf = tafData ? (tafData.rawTAF || tafData.rawText || '') : '';
+        function displayWeatherResults(code, metarData, tafData, stationData, runways, vatsimData) {
+            const rawMetar = metarData.raw || '';
+            const rawTaf = tafData ? (tafData.raw || '') : '';
             const parsedMetar = parseMetar(rawMetar);
             
             // Extract values from API data
-            const tempVal = metarData.temp !== undefined ? metarData.temp : 'N/A';
-            const dewpVal = metarData.dewp !== undefined ? metarData.dewp : 'N/A';
-            const windSpd = metarData.wspd !== undefined ? metarData.wspd : 'N/A';
-            const windDirRaw = metarData.wdir !== undefined ? metarData.wdir : null;
-            const windDir = windDirRaw !== null ? `${windDirRaw}°` : 'N/A';
+            const tempVal = metarData.temperature ? metarData.temperature.value : 'N/A';
+            const dewpVal = metarData.dewpoint ? metarData.dewpoint.value : 'N/A';
+            const windSpd = metarData.wind_speed ? metarData.wind_speed.value : 'N/A';
+            const windDirRaw = metarData.wind_direction ? metarData.wind_direction.value : null;
+            const windDir = windDirRaw !== null ? `${windDirRaw}°` : (metarData.wind_direction ? metarData.wind_direction.repr : 'N/A');
             const windArrowDeg = windDirRaw !== null ? windDirRaw + 180 : 0;
-            const windGust = metarData.wgst ? `G${metarData.wgst}` : '';
-            const visibVal = metarData.visib !== undefined ? metarData.visib : 'N/A';
-            const altimInHg = metarData.altim !== undefined ? (metarData.altim * 0.02953).toFixed(2) : 'N/A';
-            const altimHpa = metarData.altim !== undefined ? Math.round(metarData.altim) : 'N/A';
-            const elevVal = metarData.elev !== undefined ? metarData.elev : 'N/A';
-            const fltCat = metarData.fltCat || parsedMetar.flightCategory;
-            const stationName = metarData.name || code;
+            const windGust = metarData.wind_gust ? `G${metarData.wind_gust.value}` : '';
+            const visibVal = metarData.visibility ? metarData.visibility.value : 'N/A';
+            const altimInHg = metarData.altimeter ? metarData.altimeter.value.toFixed(2) : 'N/A';
+            const altimHpa = metarData.altimeter ? Math.round(metarData.altimeter.value * 33.8639) : 'N/A';
+            const elevVal = stationData && stationData.elevation_ft !== undefined ? stationData.elevation_ft : 'N/A';
+            const fltCat = metarData.flight_rules || parsedMetar.flightCategory;
+            const stationName = (stationData && stationData.name) || code;
             
             // Observation time
-            const obsTime = metarData.reportTime || '';
+            const obsTime = metarData.time ? metarData.time.dt : '';
             let obsTimeDisplay = '';
             let obsAgo = '';
             if (obsTime) {
@@ -658,13 +636,13 @@
             let ceilingText = 'CLR';
             let ceilingAgl = Infinity;
             if (metarData.clouds && metarData.clouds.length > 0) {
-                const ceilingLayers = metarData.clouds.filter(c => c.cover === 'BKN' || c.cover === 'OVC');
+                const ceilingLayers = metarData.clouds.filter(c => c.type === 'BKN' || c.type === 'OVC');
                 if (ceilingLayers.length > 0) {
-                    ceilingAgl = ceilingLayers[0].base || Infinity;
-                    ceilingText = `${ceilingLayers[0].cover} ${ceilingAgl.toLocaleString()} ft AGL`;
+                    ceilingAgl = (ceilingLayers[0].altitude || 0) * 100;
+                    ceilingText = `${ceilingLayers[0].type} ${ceilingAgl.toLocaleString()} ft AGL`;
                 } else {
                     const topLayer = metarData.clouds[metarData.clouds.length - 1];
-                    ceilingText = topLayer.cover === 'CLR' || topLayer.cover === 'SKC' ? 'CLR' : `${topLayer.cover} ${(topLayer.base || 0).toLocaleString()} ft`;
+                    ceilingText = topLayer.type === 'CLR' || topLayer.type === 'SKC' ? 'CLR' : `${topLayer.type} ${((topLayer.altitude || 0) * 100).toLocaleString()} ft`;
                 }
             }
 
@@ -810,7 +788,7 @@
                         </div>
                         <div class="section-body">
                             ${metarData.clouds && metarData.clouds.length > 0 ? 
-                                metarData.clouds.map(c => `<p>${c.cover} at ${c.base ? c.base.toLocaleString() + ' ft' : 'N/A'}</p>`).join('') 
+                                metarData.clouds.map(c => `<p>${c.type} at ${c.altitude !== null ? (c.altitude * 100).toLocaleString() + ' ft' : 'N/A'}</p>`).join('') 
                                 : '<p class="muted">No cloud data available</p>'
                             }
                         </div>

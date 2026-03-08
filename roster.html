@@ -6,7 +6,23 @@
     <title>Roster | v158th Fighter Wing</title>
     <link rel="stylesheet" href="css/styles.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>window.MEMBER_NAV_PUBLIC_PAGE = true;</script>
+    <script>
+        window.MEMBER_NAV_PUBLIC_PAGE = true;
+        // Hide the public header immediately if a Supabase session exists,
+        // so there's no grey-bar flash before member-nav.js finishes its async auth check.
+        (function() {
+            try {
+                const keys = Object.keys(localStorage);
+                const hasSession = keys.some(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+                if (hasSession) {
+                    document.addEventListener('DOMContentLoaded', function() {
+                        var h = document.querySelector('header.header');
+                        if (h) h.style.display = 'none';
+                    });
+                }
+            } catch(e) {}
+        })();
+    </script>
     <script src="js/member-nav.js"></script>
 </head>
 <body>
@@ -570,70 +586,7 @@
         </div>
     </div>
 
-    <script src="js/auth.js"></script>
-    <script src="js/script.js"></script>
     <script>
-        // Auth check
-        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        const storedName = localStorage.getItem('callsign') || localStorage.getItem('userName') || 'User';
-
-        if (isLoggedIn) {
-            const ops = document.getElementById('operationsMenu');
-            const userMenu = document.getElementById('userMenuNavItem');
-            const loginBtn = document.getElementById('loginBtnNav');
-            const userNameEl = document.getElementById('userName');
-            if (ops) ops.style.display = '';
-            if (userMenu) userMenu.style.display = '';
-            if (loginBtn) loginBtn.style.display = 'none';
-            if (userNameEl) userNameEl.textContent = storedName;
-
-            // Show clock
-            const nc = document.getElementById('navClock');
-            if (nc) { nc.style.display = ''; startNavClock(); }
-        }
-
-        // Logout
-        const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                localStorage.removeItem('isLoggedIn');
-                localStorage.removeItem('callsign');
-                localStorage.removeItem('userName');
-                window.location.href = 'index.html';
-            });
-        }
-
-        // Nav clock
-        function startNavClock() {
-            function pad(n) { return n < 10 ? '0' + n : n; }
-            function updateClock() {
-                const now = new Date();
-                const lH = pad(now.getHours()), lM = pad(now.getMinutes()), lS = pad(now.getSeconds());
-                const uH = pad(now.getUTCHours()), uM = pad(now.getUTCMinutes()), uS = pad(now.getUTCSeconds());
-                const lt = document.getElementById('localTime');
-                const ut = document.getElementById('utcTime');
-                if (lt) lt.textContent = lH + ':' + lM + ':' + lS;
-                if (ut) ut.textContent = uH + ':' + uM + ':' + uS;
-                try {
-                    const tz = Intl.DateTimeFormat('en-US', { timeZoneName: 'short' }).formatToParts(now).find(p => p.type === 'timeZoneName');
-                    if (tz) { const el = document.getElementById('tzAbbr'); if (el) el.textContent = tz.value; }
-                } catch(e) {}
-            }
-            updateClock();
-            setInterval(updateClock, 1000);
-        }
-
-        // Hamburger menu
-        const hamburger = document.getElementById('hamburger');
-        const navMenu = document.querySelector('.nav-menu');
-        if (hamburger) {
-            hamburger.addEventListener('click', () => {
-                hamburger.classList.toggle('active');
-                navMenu.classList.toggle('active');
-            });
-        }
-
         // ── VATSIM Integration: Link IDs & auto-check 45-day activity ──
         (async function initVatsimIntegration() {
             const STATS_URL = 'https://stats.vatsim.net/stats/';
