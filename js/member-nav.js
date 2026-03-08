@@ -134,6 +134,11 @@
         body.member-page {
             padding-top: 60px !important;
         }
+        /* Remove the public-header margin offset on pages that use it (e.g. roster) */
+        body.member-page .roster-page {
+            margin-top: 0 !important;
+            height: calc(100vh - 60px) !important;
+        }
         /* Clocks */
         .member-header-clocks {
             display: flex;
@@ -235,13 +240,23 @@
         // Auth guard
         const { data: { session } } = await _supabase.auth.getSession();
         if (!session) {
-            window.location.replace('index.html');
+            // Public pages (e.g. roster.html) are viewable without login — don't redirect
+            if (!window.MEMBER_NAV_PUBLIC_PAGE) {
+                window.location.replace('index.html');
+            }
             return;
         }
 
         // Inject header
         document.body.insertAdjacentHTML('afterbegin', headerHTML);
         document.body.classList.add('member-page');
+
+        // On public pages the original public <header> is still in the DOM — hide it
+        // so only the member nav is shown to logged-in users.
+        if (window.MEMBER_NAV_PUBLIC_PAGE) {
+            const publicHeader = document.querySelector('header.header');
+            if (publicHeader) publicHeader.style.display = 'none';
+        }
 
         // Clocks
         const _kbtvFmt = new Intl.DateTimeFormat('en-US', {
@@ -300,7 +315,7 @@
 
         // Listen for session expiry
         _supabase.auth.onAuthStateChange((_event, session) => {
-            if (!session) window.location.replace('index.html');
+            if (!session && !window.MEMBER_NAV_PUBLIC_PAGE) window.location.replace('index.html');
         });
     });
 }());
