@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>v158th FW E-Publishing</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f0f2f5;
+            color: #1a1a2e;
+            min-height: 100vh;
+        }
+
+        /* ── Member nav sits above everything ── */
+        #memberNavMount { position: relative; z-index: 100; }
+
+        /* ── Sensitive banner ── */
+        .sensitive-bar {
+            width: 100%;
+            background: #000;
+            color: #ffd700;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-align: center;
+            padding: 5px 12px;
+            text-transform: uppercase;
+            position: relative;
+            z-index: 200;
+        }
+
+        /* ── Hero ── */
+        .epubs-hero {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .epubs-hero-bg {
+            position: absolute;
+            inset: 0;
+            background-image: url('assets/Epubs image.jpg');
+            background-size: cover;
+            background-position: center 35%;
+            filter: brightness(0.52);
+        }
+        /* Top white bar */
+        .epubs-topbar {
+            position: relative;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            height: 72px;
+            background: rgba(255,255,255,0.96);
+            flex-shrink: 0;
+        }
+        .epubs-brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .epubs-brand img { height: 46px; }
+        .epubs-brand-text {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #1a2a4a;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            line-height: 1.25;
+        }
+        .epubs-topnav {
+            display: flex;
+            align-items: center;
+            gap: 40px;
+        }
+        .epubs-topnav a {
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: #8a6030;
+            text-decoration: none;
+            padding-bottom: 3px;
+            border-bottom: 2px solid transparent;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .epubs-topnav a.active,
+        .epubs-topnav a:hover {
+            color: #b8741a;
+            border-bottom-color: #b8741a;
+        }
+        /* Hero title overlay */
+        .epubs-hero-label {
+            position: relative;
+            z-index: 4;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            text-shadow: 0 3px 16px rgba(0,0,0,0.75);
+        }
+
+        /* ── Page body layout ── */
+        .epubs-layout {
+            max-width: 1060px;
+            margin: 36px auto 80px;
+            padding: 0 24px;
+            display: flex;
+            gap: 28px;
+            align-items: flex-start;
+        }
+
+        /* ── Sidebar ── */
+        .epubs-sidebar {
+            width: 200px;
+            flex-shrink: 0;
+        }
+        .epubs-sidebar-box {
+            background: #fff;
+            border: 1px solid #d0d4dc;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .epubs-sidebar-item {
+            padding: 12px 16px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: #1a2a4a;
+            background: #eef0f4;
+            border-bottom: 1px solid #d0d4dc;
+            cursor: default;
+        }
+        .epubs-sidebar-item:last-child { border-bottom: none; }
+        .epubs-sidebar-item.active { background: #fff; color: #b8741a; }
+
+        /* ── Main panel ── */
+        .epubs-main {
+            flex: 1;
+            background: #fff;
+            border: 1px solid #d0d4dc;
+            border-radius: 4px;
+            padding: 28px 32px 36px;
+        }
+        .epubs-main-title {
+            font-size: 1.25rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #1a2a4a;
+            border-bottom: 2px solid #1a2a4a;
+            padding-bottom: 10px;
+            margin-bottom: 22px;
+        }
+        .epubs-section-head {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #4a4a6a;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 18px 0 10px;
+        }
+
+        /* ── Accordion ── */
+        .epubs-list { list-style: none; padding: 0; margin: 0; }
+        .epubs-list li { border-bottom: 1px solid #e8eaee; }
+        .epubs-list li:last-child { border-bottom: none; }
+
+        .acc-row {
+            width: 100%;
+            text-align: left;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 11px 6px 11px 4px;
+            font-size: 0.93rem;
+            font-weight: 600;
+            color: #1a2a4a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.15s, color 0.15s;
+            border-radius: 3px;
+        }
+        .acc-row:hover { background: #f0f4ff; color: #6b0000; }
+        .acc-row .dbl-arrow { color: #8b1a1a; font-weight: 900; font-size: 0.88rem; flex-shrink: 0; }
+        .acc-row .tri {
+            font-size: 0.6rem;
+            color: #888;
+            transition: transform 0.2s;
+            flex-shrink: 0;
+        }
+        .acc-row.open .tri { transform: rotate(90deg); }
+
+        .acc-panel {
+            display: none;
+            padding: 2px 0 4px 28px;
+            border-top: 1px solid #eef0f4;
+        }
+        .acc-panel.open { display: block; }
+        .acc-panel .epubs-list li { border-bottom: 1px solid #f0f2f5; }
+
+        /* Nested rows slightly smaller */
+        .acc-panel .acc-row {
+            font-size: 0.88rem;
+            padding: 9px 6px 9px 4px;
+            color: #2a2a4a;
+        }
+        .acc-panel .acc-panel { padding-left: 22px; }
+
+        /* External link rows */
+        .epubs-link-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #1a3a7a;
+            text-decoration: none;
+            border-radius: 3px;
+            transition: background 0.15s, color 0.15s;
+        }
+        .epubs-link-row:hover { background: #f0f4ff; color: #8b1a1a; text-decoration: underline; }
+        .epubs-link-row .dbl-arrow { color: #8b1a1a; font-weight: 900; font-size: 0.88rem; flex-shrink: 0; }
+
+        /* Static leaf row */
+        .epubs-leaf-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 6px;
+            font-size: 0.9rem;
+            color: #444;
+        }
+        .epubs-leaf-row .dbl-arrow { color: #8b1a1a; font-weight: 900; font-size: 0.88rem; flex-shrink: 0; }
+
+        @media (max-width: 700px) {
+            .epubs-layout { flex-direction: column; }
+            .epubs-sidebar { width: 100%; }
+            .epubs-topbar { padding: 0 16px; }
+            .epubs-topnav { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sensitive Banner -->
+    <div class="sensitive-bar">~&nbsp;Virtual 158th Fighter Wing Sensitive&nbsp;~&nbsp;Not for Dissemination&nbsp;~</div>
+
+    <div id="memberNavMount"></div>
+    <script src="js/member-nav.js"></script>
+
+    <!-- Hero -->
+    <div class="epubs-hero">
+        <div class="epubs-hero-bg"></div>
+        <div class="epubs-topbar">
+            <div class="epubs-brand">
+                <img src="assets/vang-logo.png.png" alt="v158th FW Logo">
+                <div class="epubs-brand-text">Virtual 158th Fighter Wing<br>E-Publishing</div>
+            </div>
+            <nav class="epubs-topnav">
+                <a href="#publications" class="active">Publications and Forms</a>
+            </nav>
+        </div>
+        <div class="epubs-hero-label">Publications and Forms</div>
+    </div>
+
+    <!-- Body -->
+    <div class="epubs-layout">
+
+        <!-- Sidebar -->
+        <aside class="epubs-sidebar">
+            <div class="epubs-sidebar-box">
+                <div class="epubs-sidebar-item active">EPUBS Home</div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="epubs-main" id="publications">
+            <div class="epubs-main-title">Product Index</div>
+            <div class="epubs-section-head">Publications</div>
+
+            <ul class="epubs-list">
+
+                <!-- ── Flight Ops ── -->
+                <li>
+                    <button class="acc-row" onclick="toggle(this)">
+                        <span class="tri">&#9654;</span>
+                        <span class="dbl-arrow">&raquo;</span> Flight Ops
+                    </button>
+                    <div class="acc-panel">
+                        <ul class="epubs-list">
+                            <li>
+                                <a class="epubs-link-row"
+                                   href="https://docs.google.com/spreadsheets/d/1kI2s4YAfi6XurwOb1AFH4KY9ozWgRaIvCkEqlk4Qvss/edit?usp=drive_link"
+                                   target="_blank" rel="noopener">
+                                    <span class="dbl-arrow">&raquo;</span> v158th FW Line Up Card
+                                </a>
+                            </li>
+                            <li>
+                                <span class="epubs-leaf-row">
+                                    <span class="dbl-arrow">&raquo;</span> v158th FW Slide Deck Template
+                                </span>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+
+                <!-- ── Operating Procedures ── -->
+                <li>
+                    <button class="acc-row" onclick="toggle(this)">
+                        <span class="tri">&#9654;</span>
+                        <span class="dbl-arrow">&raquo;</span> Operating Procedures
+                    </button>
+                    <div class="acc-panel">
+                        <ul class="epubs-list">
+                            <li><span class="epubs-leaf-row"><span class="dbl-arrow">&raquo;</span> Coming Soon</span></li>
+                        </ul>
+                    </div>
+                </li>
+
+                <!-- ── Training & Currencies ── -->
+                <li>
+                    <button class="acc-row" onclick="toggle(this)">
+                        <span class="tri">&#9654;</span>
+                        <span class="dbl-arrow">&raquo;</span> Training &amp; Currencies
+                    </button>
+                    <div class="acc-panel">
+                        <ul class="epubs-list">
+
+                            <!-- FL -->
+                            <li>
+                                <button class="acc-row" onclick="toggle(this)">
+                                    <span class="tri">&#9654;</span>
+                                    <span class="dbl-arrow">&raquo;</span> FL
+                                </button>
+                                <div class="acc-panel">
+                                    <ul class="epubs-list">
+                                        <li><span class="epubs-leaf-row"><span class="dbl-arrow">&raquo;</span> Coming Soon</span></li>
+                                    </ul>
+                                </div>
+                            </li>
+
+                            <!-- IP -->
+                            <li>
+                                <button class="acc-row" onclick="toggle(this)">
+                                    <span class="tri">&#9654;</span>
+                                    <span class="dbl-arrow">&raquo;</span> IP
+                                </button>
+                                <div class="acc-panel">
+                                    <ul class="epubs-list">
+                                        <li><span class="epubs-leaf-row"><span class="dbl-arrow">&raquo;</span> Coming Soon</span></li>
+                                    </ul>
+                                </div>
+                            </li>
+
+                            <!-- MC -->
+                            <li>
+                                <button class="acc-row" onclick="toggle(this)">
+                                    <span class="tri">&#9654;</span>
+                                    <span class="dbl-arrow">&raquo;</span> MC
+                                </button>
+                                <div class="acc-panel">
+                                    <ul class="epubs-list">
+                                        <li><span class="epubs-leaf-row"><span class="dbl-arrow">&raquo;</span> Coming Soon</span></li>
+                                    </ul>
+                                </div>
+                            </li>
+
+                            <!-- MQT -->
+                            <li>
+                                <button class="acc-row" onclick="toggle(this)">
+                                    <span class="tri">&#9654;</span>
+                                    <span class="dbl-arrow">&raquo;</span> MQT
+                                </button>
+                                <div class="acc-panel">
+                                    <ul class="epubs-list">
+                                        <li><span class="epubs-leaf-row"><span class="dbl-arrow">&raquo;</span> MQT-1</span></li>
+                                        <li><span class="epubs-leaf-row"><span class="dbl-arrow">&raquo;</span> MQT-2</span></li>
+                                        <li><span class="epubs-leaf-row"><span class="dbl-arrow">&raquo;</span> MQT-3</span></li>
+                                        <li><span class="epubs-leaf-row"><span class="dbl-arrow">&raquo;</span> MQT-4</span></li>
+                                        <li><span class="epubs-leaf-row"><span class="dbl-arrow">&raquo;</span> MQT-5</span></li>
+
+                                        <!-- MST -->
+                                        <li>
+                                            <button class="acc-row" onclick="toggle(this)">
+                                                <span class="tri">&#9654;</span>
+                                                <span class="dbl-arrow">&raquo;</span> MST
+                                            </button>
+                                            <div class="acc-panel">
+                                                <ul class="epubs-list">
+                                                    <li><span class="epubs-leaf-row"><span class="dbl-arrow">&raquo;</span> MST-1</span></li>
+                                                    <li><span class="epubs-leaf-row"><span class="dbl-arrow">&raquo;</span> MST-2</span></li>
+                                                    <li><span class="epubs-leaf-row"><span class="dbl-arrow">&raquo;</span> MST-3</span></li>
+                                                    <li><span class="epubs-leaf-row"><span class="dbl-arrow">&raquo;</span> MST-4</span></li>
+                                                    <li><span class="epubs-leaf-row"><span class="dbl-arrow">&raquo;</span> MST-5</span></li>
+                                                </ul>
+                                            </div>
+                                        </li>
+
+                                        <!-- TI -->
+                                        <li><span class="epubs-leaf-row"><span class="dbl-arrow">&raquo;</span> TI</span></li>
+
+                                        <!-- ACAD -->
+                                        <li><span class="epubs-leaf-row"><span class="dbl-arrow">&raquo;</span> ACAD</span></li>
+
+                                        <!-- VST -->
+                                        <li>
+                                            <button class="acc-row" onclick="toggle(this)">
+                                                <span class="tri">&#9654;</span>
+                                                <span class="dbl-arrow">&raquo;</span> VST
+                                            </button>
+                                            <div class="acc-panel">
+                                                <ul class="epubs-list">
+                                                    <li><span class="epubs-leaf-row"><span class="dbl-arrow">&raquo;</span> VST-1</span></li>
+                                                    <li><span class="epubs-leaf-row"><span class="dbl-arrow">&raquo;</span> VST-2</span></li>
+                                                    <li><span class="epubs-leaf-row"><span class="dbl-arrow">&raquo;</span> VST-3</span></li>
+                                                    <li><span class="epubs-leaf-row"><span class="dbl-arrow">&raquo;</span> VST-4</span></li>
+                                                    <li><span class="epubs-leaf-row"><span class="dbl-arrow">&raquo;</span> VST-5</span></li>
+                                                </ul>
+                                            </div>
+                                        </li>
+
+                                    </ul>
+                                </div>
+                            </li>
+
+                            <!-- Flying Training Syllabus -->
+                            <li>
+                                <a class="epubs-link-row"
+                                   href="https://docs.google.com/document/d/1UmhWI4F8-k9EY9prpzPN2ISCtm1XyBH1zp7Ho0hJnNQ/edit?usp=drive_link"
+                                   target="_blank" rel="noopener">
+                                    <span class="dbl-arrow">&raquo;</span> v158th FW Flying Training Syllabus
+                                </a>
+                            </li>
+
+                        </ul>
+                    </div>
+                </li>
+
+            </ul>
+        </main>
+    </div>
+
+    <script>
+        function toggle(btn) {
+            btn.classList.toggle('open');
+            var panel = btn.nextElementSibling;
+            if (panel && panel.classList.contains('acc-panel')) {
+                panel.classList.toggle('open');
+            }
+        }
+    </script>
+</body>
+</html>
+
