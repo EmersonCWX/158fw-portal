@@ -30,10 +30,39 @@
     <main class="news-page">
         <div class="container">
             <h2>Latest News</h2>
-            <div class="news-grid">
-                <!-- Placeholder — add news cards here -->
-                <div class="news-empty">No news posted yet. Check back soon.</div>
+            <div class="news-carousel">
+                <div class="news-carousel-track" id="newsTrack">
+
+                    <!-- Article 1 -->
+                    <a class="news-tile" href="#" data-story="greenland" style="background-image: url('assets/News Images/Baltic Cover.jpg')">
+                        <div class="news-tile-overlay">
+                            <div class="news-tile-date">January 26, 2025</div>
+                            <div class="news-tile-title">v134th FS Deploys to Greenland for NATO Air Policing Mission</div>
+                            <span class="news-tile-link">&#8594; SEE MORE</span>
+                        </div>
+                    </a>
+
+                    <!-- Article 2 -->
+                    <a class="news-tile" href="#" data-story="longdrive" style="background-image: url('assets/News Images/Long Drive.jpg')">
+                        <div class="news-tile-overlay">
+                            <div class="news-tile-date">March 25, 2025</div>
+                            <div class="news-tile-title">Cobra Warrior '25</div>
+                            <span class="news-tile-link">&#8594; SEE MORE</span>
+                        </div>
+                    </a>
+
+                    <!-- Article 3 -->
+                    <a class="news-tile" href="#" data-story="zsea" style="background-image: url('assets/News Images/Pride Flies cover.png')">
+                        <div class="news-tile-overlay">
+                            <div class="news-tile-date">June 15, 2025</div>
+                            <div class="news-tile-title">v158th FW &amp; Seattle ARTCC Conduct Pride Flies Flyover</div>
+                            <span class="news-tile-link">&#8594; SEE MORE</span>
+                        </div>
+                    </a>
+
+                </div>
             </div>
+            <div class="news-carousel-dots" id="newsCarouselDots"></div>
         </div>
     </main>
 
@@ -74,6 +103,75 @@
         </div>
     </footer>
 
+    <!-- News Article Modal -->
+    <div class="modal-overlay" id="articleModal" role="dialog" aria-modal="true" aria-labelledby="articleModalTitle">
+        <div class="article-modal-container">
+            <button class="article-modal-close" id="articleModalClose" aria-label="Close article">&times;</button>
+            <!-- Photo gallery -->
+            <div class="article-gallery" id="articleGallery">
+                <div class="article-gallery-track" id="articleGalleryTrack"></div>
+                <div class="article-gallery-dots" id="articleGalleryDots"></div>
+                <button class="gallery-arrow gallery-arrow-left" id="galleryPrev" aria-label="Previous photo">&#8249;</button>
+                <button class="gallery-arrow gallery-arrow-right" id="galleryNext" aria-label="Next photo">&#8250;</button>
+            </div>
+            <div class="article-modal-body">
+                <div class="article-modal-meta">
+                    <span class="article-modal-date" id="articleModalDate"></span>
+                </div>
+                <h2 class="article-modal-title" id="articleModalTitle"></h2>
+                <div class="article-modal-content" id="articleModalContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Story: Greenland -->
+    <template id="story-greenland">
+        <div class="story-photos"
+             data-photos="assets/News Images/Baltic Cover.jpg|assets/News Images/Baltic photo 1.jpg|assets/News Images/Blatic photo 2.jpg|assets/News Images/Baltic photo 3.jpg"></div>
+        <div class="story-date">January 26, 2025</div>
+        <div class="story-title">v134th FS Deploys to Greenland for NATO Air Policing Mission</div>
+            <div class="story-body">
+                <p>Pilots of the v134th Fighter Squadron departed Burlington, VT on Jan 7th for a rotational deployment to Thule Air Base, Greenland, in support of NATO's Enhanced Air Policing mission. The deployment marks the first Arctic tasking for the v134th FS and represents a significant milestone for the Virtual Vermont Air National Guard.</p>
+            <p>During the 2 week deployment, the squadron conducted intercepts, identification, and escort operations in coordination with Allied air assets across the Greenland-Iceland-UK gap. The unit returned to Burlington on January 24th, 2025.</p>
+            <p>"This is exactly what we train for," said "Venus," a v134th FS Pilot. "Operating in an Arctic environment at polar midnight with NATO partners adds a new dimension to our readiness profile."</p>
+        </div>
+    </template>
+
+    <!-- Story: Cobra Warrior -->
+    <template id="story-longdrive">
+        <div class="story-photos"
+             data-photos="assets/News Images/Long Drive.jpg|assets/News Images/Long drive 1.jpg|assets/News Images/Long drive 2.jpg|assets/News Images/Long Drive 3.jpg"></div>
+        <div class="story-date">March 25, 2025</div>
+        <div class="story-title">vCobra Warrior '25</div>
+        <div class="story-body">
+            <p class="article-byline">v158th Fighter Wing Public Affairs &mdash; RAF Waddington, UK</p>
+            <p>F-35A Lightning IIs assigned to the v134th Fighter Squadron, Vermont Air National Guard, touched down at RAF Waddington, United Kingdom, Mar. 23, 2025, to partake in the RAF's Cobra Warrior exercise.</p>
+            <p>The v134th FS will be integrating with F-16 Fighting Falcons from the vBAF, Typhoons, F-35Bs and Tornados from the RAF, and Rafales from the vFAF, to train at an international level and enhance fighter capabilities with NATO partners.</p>
+            <p>"The v158th is using Cobra Warrior as our capstone ACE exercise before we deploy in the winter," said Lt Col. Marceline Johanson, v134th FS Director of Operations. "While we're here we plan on leveraging our experiences and techniques alongside our NATO partner flying units, which will significantly enhance our operational versatility in the Indo-Pacific in December."</p>
+            <p>As one of the biggest international exercise, units that participate will teach and train tactics that strengthen capabilities, such as ACE, and project combat power in concert with allies and partners.</p>
+            <p>"Working with international aircraft is a big part of why we're here," said Capt. Cameron MacGregor, v158th Fighter Wing Operations Group. "We're working with aircraft we don't get to work with back in Vermont, and rather than us seeing each other in theater and being like who are you? I can look at them and say hey again, old friend."</p>
+            <p>Throughout these deployments, the v158th Fighter Wing will continue to comply with applicable bilateral agreements with the Government of the United Kingdom. All visiting aircrews receive thorough briefings on local noise abatement procedures and mission planners will continue to give due consideration to the local community.</p>
+            <p>Modernizing capabilities in the NATO theater remains a top priority. The Cobra Warrior 25-1 exercise exemplifies the unit's continued commitment to enhancing posture while building on the strong foundation of its Alliance with vNATO Allies.</p>
+        </div>
+    </template>
+
+    <!-- Story: ZSEA -->
+    <template id="story-zsea">
+        <div class="story-photos"
+             data-photos="assets/News Images/Pride Flies cover.png|assets/News Images/pride flies map 1.webp|assets/News Images/pride flies map 2.webp|assets/News Images/Pride flies 3.webp|assets/mt_rainerF45.jpg"
+             data-fits="stretch|stretch|stretch|cover|cover"></div>
+        <div class="story-date">June 15, 2025</div>
+        <div class="story-title">v158th FW &amp; Seattle ARTCC Conduct Pride Flies Flyover</div>
+        <div class="story-body">
+            <p class="article-byline">v158th Fighter Wing Public Affairs &mdash; Pacific Northwest</p>
+            <p>The v158th Fighter Wing and Seattle ARTCC teamed up on June 15, 2025, to conduct a special flyover for the Pride Flies event, celebrating Pride and the LGBTQ+ community.</p>
+            <p>Led by WG/CV vCol. Marceline "Smore" Johnson, the formation conducted a flyover of key points in LGBTQ+ history throughout the Pacific Northwest, honoring the history, strength, and sacrifice of the queer and trans communities both in and out of uniform.</p>
+            <p>"The v158th Fighter Wing, in association with the Virtual Tactical Air Command, is proud to announce our participation in Pride Flies this June, honoring and celebrating the queer and trans community, in and out of service," said vCol. Johnson. "We'll be flying throughout the PACNW, emboldening the strength, grit, and commitment of our LGBTQ+ aircrew. This is not just a flight. It's a statement: who we are will never hold us down."</p>
+            <p>The event brought together virtual aviators and controllers from across the VATSIM community together to celebrate inclusion and diversity in virtual aviation, a mission the v158th FW is proud to stand behind.</p>
+            <blockquote class="article-quote">"You never completely have your rights, one person, until you all have your rights." &#8212; Marsha P. Johnson</blockquote>
+        </div>
+    </template>
+
     <!-- Login Modal -->
     <div class="modal-overlay" id="loginModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal-container">
@@ -107,5 +205,153 @@
 
     <script src="js/auth.js"></script>
     <script src="js/script.js"></script>
+    <script>
+    // Carousel
+    (function () {
+        var carousel  = document.querySelector('.news-carousel');
+        var track     = document.getElementById('newsTrack');
+        var dotsWrap  = document.getElementById('newsCarouselDots');
+        var tiles     = Array.from(track.querySelectorAll('.news-tile'));
+        var current   = 0;
+
+        // Build dots
+        var dots = tiles.map(function (_, i) {
+            var dot = document.createElement('button');
+            dot.className = 'news-carousel-dot' + (i === 0 ? ' active' : '');
+            dot.setAttribute('aria-label', 'Go to article ' + (i + 1));
+            dot.addEventListener('click', function () { goTo(i); });
+            dotsWrap.appendChild(dot);
+            return dot;
+        });
+
+        function syncDots() {
+            dots.forEach(function (d, i) { d.classList.toggle('active', i === current); });
+        }
+        function setWidths() {
+            var w = carousel.clientWidth;
+            tiles.forEach(function (t) { t.style.width = w + 'px'; });
+        }
+        function goTo(index) {
+            current = index;
+            track.style.transform = 'translateX(' + (-current * carousel.clientWidth) + 'px)';
+            syncDots();
+        }
+        function next() {
+            var nextIndex = (current + 1) % tiles.length;
+            if (nextIndex === 0) {
+                track.style.transition = 'none';
+                track.style.transform  = 'translateX(0)';
+                current = 0;
+                syncDots();
+                requestAnimationFrame(function () {
+                    requestAnimationFrame(function () { track.style.transition = ''; });
+                });
+            } else {
+                goTo(nextIndex);
+            }
+        }
+        setWidths();
+        window.addEventListener('resize', function () { setWidths(); goTo(current); });
+        setInterval(next, 30000);
+    })();
+
+    // Article Modal
+    (function () {
+        var overlay    = document.getElementById('articleModal');
+        var closeBtn   = document.getElementById('articleModalClose');
+        var galTrack   = document.getElementById('articleGalleryTrack');
+        var galDots    = document.getElementById('articleGalleryDots');
+        var btnPrev    = document.getElementById('galleryPrev');
+        var btnNext    = document.getElementById('galleryNext');
+        var dateEl     = document.getElementById('articleModalDate');
+        var titleEl    = document.getElementById('articleModalTitle');
+        var contentEl  = document.getElementById('articleModalContent');
+        var galPhotos  = [];
+        var galCurrent = 0;
+
+        function buildGallery(photos, fits) {
+            galPhotos  = photos;
+            galCurrent = 0;
+            galTrack.innerHTML = '';
+            galDots.innerHTML  = '';
+
+            photos.forEach(function (src, i) {
+                var slide = document.createElement('div');
+                slide.className = 'gallery-slide';
+                slide.style.backgroundImage = 'url("' + src + '")';
+                if (fits[i] === 'stretch') {
+                    slide.style.backgroundSize = '100% 100%';
+                    slide.style.backgroundRepeat = 'no-repeat';
+                }
+                galTrack.appendChild(slide);
+
+                var dot = document.createElement('button');
+                dot.className = 'gallery-dot' + (i === 0 ? ' active' : '');
+                dot.setAttribute('aria-label', 'Photo ' + (i + 1));
+                dot.addEventListener('click', function () { goGallery(i); });
+                galDots.appendChild(dot);
+            });
+
+            galTrack.style.transform = 'translateX(0)';
+            var multi = photos.length > 1;
+            btnPrev.style.display = multi ? '' : 'none';
+            btnNext.style.display = multi ? '' : 'none';
+            galDots.style.display = multi ? '' : 'none';
+        }
+
+        function goGallery(index) {
+            galCurrent = (index + galPhotos.length) % galPhotos.length;
+            galTrack.style.transform = 'translateX(' + (-galCurrent * 100) + '%)';
+            galDots.querySelectorAll('.gallery-dot').forEach(function (d, i) {
+                d.classList.toggle('active', i === galCurrent);
+            });
+        }
+
+        function openStory(storyId) {
+            var tpl = document.getElementById('story-' + storyId);
+            if (!tpl) return;
+            var nodes      = tpl.content.cloneNode(true);
+            var photosNode = nodes.querySelector('.story-photos');
+            var dateNode   = nodes.querySelector('.story-date');
+            var titleNode  = nodes.querySelector('.story-title');
+            var bodyNode   = nodes.querySelector('.story-body');
+
+            var photos = photosNode && photosNode.dataset.photos ? photosNode.dataset.photos.split('|') : [];
+            var fits   = photosNode && photosNode.dataset.fits ? photosNode.dataset.fits.split('|') : [];
+            buildGallery(photos, fits);
+
+            dateEl.textContent  = dateNode  ? dateNode.textContent  : '';
+            titleEl.textContent = titleNode ? titleNode.textContent : '';
+            contentEl.innerHTML = '';
+            if (bodyNode) contentEl.appendChild(bodyNode);
+
+            overlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeStory() {
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        btnPrev.addEventListener('click', function () { goGallery(galCurrent - 1); });
+        btnNext.addEventListener('click', function () { goGallery(galCurrent + 1); });
+
+        document.querySelectorAll('.news-tile[data-story]').forEach(function (tile) {
+            tile.addEventListener('click', function (e) {
+                e.preventDefault();
+                openStory(tile.dataset.story);
+            });
+        });
+        closeBtn.addEventListener('click', closeStory);
+        overlay.addEventListener('click', function (e) { if (e.target === overlay) closeStory(); });
+        document.addEventListener('keydown', function (e) {
+            if (!overlay.classList.contains('active')) return;
+            if (e.key === 'Escape')     closeStory();
+            if (e.key === 'ArrowLeft')  goGallery(galCurrent - 1);
+            if (e.key === 'ArrowRight') goGallery(galCurrent + 1);
+        });
+    })();
+    </script>
 </body>
 </html>
