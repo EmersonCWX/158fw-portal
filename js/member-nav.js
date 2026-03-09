@@ -265,22 +265,54 @@
             if (publicHeader) publicHeader.style.display = 'none';
         }
 
-        // Clocks
+        // Clocks — NTP-synced via worldtimeapi.org
         const _kbtvFmt = new Intl.DateTimeFormat('en-US', {
             timeZone: 'America/New_York',
             hour: '2-digit', minute: '2-digit', second: '2-digit',
             hour12: false
         });
-        function updateMemberNavClocks() {
-            const now = new Date();
-            const pad = n => String(n).padStart(2, '0');
-            document.getElementById('memberNavLocalClock').textContent =
-                _kbtvFmt.format(now).replace(/^24/, '00');
-            document.getElementById('memberNavZuluClock').textContent =
-                `${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())}`;
+        let _clockOffset = 0; // ms difference: serverTime - Date.now()
+        let _clockTick = null;
+
+        function _startClockTick() {
+            if (_clockTick) clearInterval(_clockTick);
+            function tick() {
+                const now = new Date(Date.now() + _clockOffset);
+                const pad = n => String(n).padStart(2, '0');
+                const localEl = document.getElementById('memberNavLocalClock');
+                const zuluEl  = document.getElementById('memberNavZuluClock');
+                if (localEl) localEl.textContent = _kbtvFmt.format(now).replace(/^24/, '00');
+                if (zuluEl)  zuluEl.textContent  = `${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())}`;
+            }
+            tick();
+            _clockTick = setInterval(tick, 1000);
         }
-        updateMemberNavClocks();
-        setInterval(updateMemberNavClocks, 1000);
+
+        function _syncClocks() {
+            const localEl = document.getElementById('memberNavLocalClock');
+            const zuluEl  = document.getElementById('memberNavZuluClock');
+            if (localEl) localEl.textContent = 'Resyncing...';
+            if (zuluEl)  zuluEl.textContent  = 'Resyncing...';
+            if (_clockTick) { clearInterval(_clockTick); _clockTick = null; }
+
+            const t0 = Date.now();
+            fetch('https://worldtimeapi.org/api/timezone/Etc/UTC')
+                .then(r => r.json())
+                .then(data => {
+                    const serverMs = new Date(data.utc_datetime).getTime();
+                    const rtt = Date.now() - t0;
+                    _clockOffset = serverMs + rtt / 2 - Date.now();
+                    _startClockTick();
+                })
+                .catch(() => {
+                    // Fall back to system time silently
+                    _clockOffset = 0;
+                    _startClockTick();
+                });
+        }
+
+        _syncClocks();
+        setInterval(_syncClocks, 5 * 60 * 1000); // resync every 5 minutes
 
         // Populate username
         const user = session.user;
