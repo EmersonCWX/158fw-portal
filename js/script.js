@@ -70,7 +70,7 @@ window.addEventListener('load', () => {
 
 // Contact Form Handling
 const contactForm = document.querySelector('.contact-form');
-if (contactForm) {
+if (contactForm && contactForm.id !== 'pilotApplicationForm') {
     contactForm.addEventListener('submit', (e) => {
         e.preventDefault();
         
