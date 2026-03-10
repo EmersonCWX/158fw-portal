@@ -223,6 +223,10 @@ CREATE TABLE IF NOT EXISTS public.pilot_applications (
 
 ALTER TABLE public.pilot_applications ENABLE ROW LEVEL SECURITY;
 
+-- Grant table-level privileges (required in addition to RLS policies)
+GRANT INSERT ON public.pilot_applications TO anon;
+GRANT SELECT, UPDATE, DELETE ON public.pilot_applications TO authenticated;
+
 -- Allow any visitor (unauthenticated) to submit
 DROP POLICY IF EXISTS "public: insert pilot application" ON public.pilot_applications;
 CREATE POLICY "public: insert pilot application"

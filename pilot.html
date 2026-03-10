@@ -144,6 +144,7 @@
             };
 
             const { data, error } = await _appSupabase.from('pilot_applications').insert(payload).select();
+            console.log('Insert result:', { data, error });
 
             if (error) {
                 msg.style.color = '#e85a4a';
