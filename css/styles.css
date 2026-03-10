@@ -1239,23 +1239,30 @@ body {
 .pilot-form input,
 .pilot-form textarea {
     padding: 0.8rem 1rem;
-    border: 2px solid #FF8C00;
+    border: 1px solid #3a3f45;
     border-radius: 6px;
-    background: #0a1f36;
-    color: #d4a853;
+    background: #12151a;
+    color: #fff;
     font-size: 1rem;
     font-family: inherit;
     width: 100%;
+    transition: border-color 0.2s;
+}
+
+.pilot-form input:focus,
+.pilot-form textarea:focus {
+    outline: none;
+    border-color: #fff;
 }
 
 .pilot-form input::placeholder,
 .pilot-form textarea::placeholder {
-    color: #999;
+    color: #888;
 }
 
 .pilot-form button {
-    background: #FF8C00;
-    color: #fff;
+    background: #4a4a4a;
+    color: #F5E6D3;
     border: none;
     padding: 0.8rem 1.5rem;
     border-radius: 6px;
@@ -1268,6 +1275,6 @@ body {
 }
 
 .pilot-form button:hover {
-    background: #d4a853;
-    color: #0a1f36;
+    background: #666;
+    color: #fff;
 }
