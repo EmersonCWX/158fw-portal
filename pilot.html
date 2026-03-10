@@ -38,11 +38,12 @@
                     <p>Above all, though, we're looking for people who share enthusiasm, keep their chin up, and enjoy working as a team. If that sounds familiar, I look forward to meeting you.</p>
                     <p>vCol. Marceline "Smore" Johnson, v158th Fighter Wing, Vice Commander</p>
                 </div>
-                <form class="contact-form">
-                    <input type="text" placeholder="Your Name" required>
-                    <input type="email" placeholder="Your Email" required>
-                    <textarea placeholder="Your Message" rows="5" required></textarea>
-                    <button type="submit" class="btn btn-primary">SEND MESSAGE</button>
+                <form class="contact-form" id="pilotApplicationForm">
+                    <input type="text" id="appRealName" placeholder="Your Full Name" required>
+                    <input type="email" id="appEmail" placeholder="Your Email" required>
+                    <textarea id="appMotivation" placeholder="Your message" rows="6" required></textarea>
+                    <p id="appFormMsg" style="display:none; padding:8px 0; font-size:0.9rem;"></p>
+                    <button type="submit" class="btn btn-primary" id="appSubmitBtn">SUBMIT</button>
                 </form>
             </div>
         </div>
@@ -118,5 +119,44 @@
 
     <script src="js/auth.js"></script>
     <script src="js/script.js"></script>
+    <script>
+        const SUPABASE_URL = 'https://gcumgpfyfqtfwbskkngt.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdW1ncGZ5ZnF0Zndic2trbmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDczMTAsImV4cCI6MjA4ODM4MzMxMH0.OSY0XEPQp-WsFWuiGrUG5fcLIVMI3c8AxBEv2shFftg';
+        const _appSupabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'v158fw-auth' }
+        });
+
+        document.getElementById('pilotApplicationForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('appSubmitBtn');
+            const msg = document.getElementById('appFormMsg');
+            btn.disabled = true;
+            btn.textContent = 'SUBMITTING…';
+            msg.style.display = 'none';
+
+            const payload = {
+                real_name:  document.getElementById('appRealName').value.trim(),
+                email:      document.getElementById('appEmail').value.trim(),
+                motivation: document.getElementById('appMotivation').value.trim(),
+                status:     'pending'
+            };
+
+            const { error } = await _appSupabase.from('pilot_applications').insert(payload);
+
+            if (error) {
+                msg.style.color = '#e85a4a';
+                msg.textContent = 'Submission failed: ' + error.message;
+                msg.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = 'SUBMIT APPLICATION';
+            } else {
+                msg.style.color = '#4caf50';
+                msg.textContent = 'Application submitted! We\'ll be in touch.';
+                msg.style.display = 'block';
+                this.reset();
+                btn.textContent = 'SUBMITTED';
+            }
+        });
+    </script>
 </body>
 </html>

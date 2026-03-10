@@ -601,10 +601,10 @@
             </div>
         </div>
 
-        <!-- New Pilot Applicants -->
+        <!-- Expressions of Interest -->
         <div class="admin-section">
             <div class="admin-section-header">
-                <h2 class="admin-section-title">New Pilot Applicants</h2>
+                <h2 class="admin-section-title">Expressions of Interest</h2>
                 <div style="display:flex; gap:8px; align-items:center;">
                     <select class="admin-filter-select" id="filterApplicantStatus" onchange="applyApplicantFilters()">
                         <option value="pending">Pending</option>
@@ -620,17 +620,16 @@
                     <table class="admin-table">
                         <thead>
                             <tr>
-                                <th>Applied</th>
-                                <th>Callsign</th>
-                                <th>Real Name</th>
+                                <th>Date</th>
+                                <th>Name</th>
                                 <th>Email</th>
-                                <th>VATSIM ID</th>
+                                <th>Message</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="applicantsTableBody">
-                            <tr><td colspan="7" class="no-data">Loading...</td></tr>
+                            <tr><td colspan="6" class="no-data">Loading...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -1028,14 +1027,14 @@
 
         async function loadApplicants() {
             document.getElementById('applicantsTableBody').innerHTML =
-                '<tr><td colspan="7" class="no-data">Loading...</td></tr>';
+                '<tr><td colspan="6" class="no-data">Loading...</td></tr>';
             const { data, error } = await _supabase
                 .from('pilot_applications')
                 .select('*')
                 .order('created_at', { ascending: false });
             if (error) {
                 document.getElementById('applicantsTableBody').innerHTML =
-                    `<tr><td colspan="7" class="no-data" style="color:#e85a4a;">Error: ${error.message}</td></tr>`;
+                    `<tr><td colspan="6" class="no-data" style="color:#e85a4a;">Error: ${error.message}</td></tr>`;
                 document.getElementById('statPendingApplicants').textContent = 'Err';
                 return;
             }
@@ -1055,7 +1054,7 @@
         function renderApplicants(applicants) {
             const tbody = document.getElementById('applicantsTableBody');
             if (!applicants.length) {
-                tbody.innerHTML = '<tr><td colspan="7" class="no-data">No applicants found.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="no-data">No expressions of interest found.</td></tr>';
                 return;
             }
             tbody.innerHTML = applicants.map(a => {
@@ -1065,12 +1064,12 @@
                 const status = a.status || 'pending';
                 const badgeClass = status === 'approved' ? 'badge-approved' : status === 'denied' ? 'badge-denied' : 'badge-pending';
                 const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+                const msgPreview = a.motivation ? escHtml(a.motivation.substring(0, 60)) + (a.motivation.length > 60 ? '…' : '') : '—';
                 return `<tr>
                     <td>${applied}</td>
-                    <td><strong>${escHtml(a.callsign || '—')}</strong></td>
                     <td>${escHtml(a.real_name || '—')}</td>
                     <td>${escHtml(a.email || '—')}</td>
-                    <td>${escHtml(a.vatsim_id || '—')}</td>
+                    <td style="max-width:220px;">${msgPreview}</td>
                     <td><span class="report-badge ${badgeClass}">${statusLabel}</span></td>
                     <td style="white-space:nowrap;">
                         ${status === 'pending'
