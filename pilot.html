@@ -134,8 +134,10 @@
             btn.textContent = 'SUBMITTING…';
             msg.style.display = 'none';
 
+            const realName = document.getElementById('appRealName').value.trim();
             const payload = {
-                real_name:  document.getElementById('appRealName').value.trim(),
+                real_name:  realName,
+                callsign:   realName,
                 email:      document.getElementById('appEmail').value.trim(),
                 motivation: document.getElementById('appMotivation').value.trim(),
                 status:     'pending'
