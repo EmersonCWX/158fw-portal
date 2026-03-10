@@ -209,10 +209,7 @@ GRANT SELECT ON public.active_members TO authenticated;
 CREATE TABLE IF NOT EXISTS public.pilot_applications (
     id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     real_name     TEXT        NOT NULL,
-    callsign      TEXT        NOT NULL,
     email         TEXT        NOT NULL,
-    vatsim_id     TEXT,
-    experience    TEXT,
     motivation    TEXT,
     status        TEXT        NOT NULL DEFAULT 'pending'
                               CHECK (status IN ('pending', 'approved', 'denied')),
