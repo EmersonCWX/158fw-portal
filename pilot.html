@@ -137,18 +137,12 @@
                 status:     'pending'
             };
 
-            const { data, error } = await _supabase.from('pilot_applications').insert(payload).select();
-            console.log('Insert result:', { data, error });
+            const { error } = await _supabase.from('pilot_applications').insert(payload);
+            console.log('Insert result:', { error });
 
             if (error) {
                 msg.style.color = '#e85a4a';
                 msg.textContent = 'Submission failed: ' + error.message;
-                msg.style.display = 'block';
-                btn.disabled = false;
-                btn.textContent = 'SUBMIT';
-            } else if (!data || data.length === 0) {
-                msg.style.color = '#e85a4a';
-                msg.textContent = 'Submission blocked — please contact us on Discord.';
                 msg.style.display = 'block';
                 btn.disabled = false;
                 btn.textContent = 'SUBMIT';
