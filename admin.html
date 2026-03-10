@@ -1083,14 +1083,15 @@
         }
 
         async function updateApplicant(id, status) {
-            const action = status === 'approved' ? 'approve' : status === 'denied' ? 'deny' : 'reset';
+            const action      = status === 'approved' ? 'approve' : status === 'denied' ? 'deny' : 'reset';
+            const actionPast  = status === 'approved' ? 'Approved' : status === 'denied' ? 'Denied' : 'Reset';
             if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} this applicant?`)) return;
             const { error } = await _supabase
                 .from('pilot_applications')
                 .update({ status, reviewed_by: currentUser.email, reviewed_at: new Date().toISOString() })
                 .eq('id', id);
             if (error) { showToast('Error: ' + error.message, 'error'); return; }
-            showToast(`Applicant ${action}d.`, 'success');
+            showToast(`Applicant ${actionPast}.`, 'success');
             loadApplicants();
         }
 
