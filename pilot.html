@@ -120,39 +120,46 @@
     <script src="js/auth.js"></script>
     <script src="js/script.js"></script>
     <script>
-        document.getElementById('pilotApplicationForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const btn = document.getElementById('appSubmitBtn');
-            const msg = document.getElementById('appFormMsg');
-            btn.disabled = true;
-            btn.textContent = 'SUBMITTING…';
-            msg.style.display = 'none';
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('pilotApplicationForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const btn = document.getElementById('appSubmitBtn');
+                const msg = document.getElementById('appFormMsg');
+                btn.disabled = true;
+                btn.textContent = 'SUBMITTING…';
+                msg.style.display = 'none';
 
-            const realName = document.getElementById('appRealName').value.trim();
-            const payload = {
-                real_name:  realName,
-                callsign:   realName,
-                email:      document.getElementById('appEmail').value.trim(),
-                motivation: document.getElementById('appMotivation').value.trim(),
-                status:     'pending'
-            };
+                const realName = document.getElementById('appRealName').value.trim();
+                const email    = document.getElementById('appEmail').value.trim();
+                const message  = document.getElementById('appMotivation').value.trim();
 
-            const { error } = await _supabase.from('pilot_applications').insert(payload);
-            console.log('Insert result:', { error });
+                console.log('Submitting:', { realName, email, message });
 
-            if (error) {
-                msg.style.color = '#e85a4a';
-                msg.textContent = 'Submission failed: ' + error.message;
-                msg.style.display = 'block';
-                btn.disabled = false;
-                btn.textContent = 'SUBMIT';
-            } else {
-                msg.style.color = '#4caf50';
-                msg.textContent = 'Application submitted! We\'ll be in touch.';
-                msg.style.display = 'block';
-                this.reset();
-                btn.textContent = 'SUBMITTED';
-            }
+                const payload = {
+                    real_name:  realName,
+                    callsign:   realName,
+                    email:      email,
+                    motivation: message,
+                    status:     'pending'
+                };
+
+                const { error } = await _supabase.from('pilot_applications').insert(payload);
+                console.log('Insert result:', { error });
+
+                if (error) {
+                    msg.style.color = '#e85a4a';
+                    msg.textContent = 'Submission failed: ' + error.message;
+                    msg.style.display = 'block';
+                    btn.disabled = false;
+                    btn.textContent = 'SUBMIT';
+                } else {
+                    msg.style.color = '#4caf50';
+                    msg.textContent = "Application submitted! We'll be in touch.";
+                    msg.style.display = 'block';
+                    this.reset();
+                    btn.textContent = 'SUBMITTED';
+                }
+            });
         });
     </script>
 </body>
