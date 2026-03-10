@@ -200,3 +200,70 @@ GRANT SELECT ON public.active_members TO authenticated;
 -- ============================================================
 
 
+-- ── 8. PILOT APPLICATIONS — RLS POLICIES ────────────────────
+-- Run these in the Supabase SQL Editor if anonymous form
+-- submissions are being blocked (silent failure / not appearing
+-- in the admin panel).
+
+-- Create the table if it doesn't exist yet
+CREATE TABLE IF NOT EXISTS public.pilot_applications (
+    id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    real_name     TEXT        NOT NULL,
+    callsign      TEXT        NOT NULL,
+    email         TEXT        NOT NULL,
+    vatsim_id     TEXT,
+    experience    TEXT,
+    motivation    TEXT,
+    status        TEXT        NOT NULL DEFAULT 'pending'
+                              CHECK (status IN ('pending', 'approved', 'denied')),
+    reviewed_by   TEXT,
+    reviewed_at   TIMESTAMPTZ,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.pilot_applications ENABLE ROW LEVEL SECURITY;
+
+-- Allow any visitor (unauthenticated) to submit
+DROP POLICY IF EXISTS "public: insert pilot application" ON public.pilot_applications;
+CREATE POLICY "public: insert pilot application"
+    ON public.pilot_applications
+    FOR INSERT
+    WITH CHECK (true);
+
+-- Allow admins to read all submissions
+DROP POLICY IF EXISTS "admin: select pilot applications" ON public.pilot_applications;
+CREATE POLICY "admin: select pilot applications"
+    ON public.pilot_applications
+    FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.vsaferep_admins
+            WHERE email = auth.email()
+        )
+    );
+
+-- Allow admins to approve/deny
+DROP POLICY IF EXISTS "admin: update pilot applications" ON public.pilot_applications;
+CREATE POLICY "admin: update pilot applications"
+    ON public.pilot_applications
+    FOR UPDATE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.vsaferep_admins
+            WHERE email = auth.email()
+        )
+    );
+
+-- Allow admins to delete
+DROP POLICY IF EXISTS "admin: delete pilot applications" ON public.pilot_applications;
+CREATE POLICY "admin: delete pilot applications"
+    ON public.pilot_applications
+    FOR DELETE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.vsaferep_admins
+            WHERE email = auth.email()
+        )
+    );
+
+-- ============================================================
