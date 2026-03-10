@@ -1098,20 +1098,17 @@
             const a = allApplicants.find(x => x.id === id);
             if (!a) return;
             const status = a.status || 'pending';
-            document.getElementById('modalTitle').textContent = 'Pilot Application — ' + escHtml(a.callsign || 'Unknown');
+            document.getElementById('modalTitle').textContent = 'Expression of Interest — ' + escHtml(a.real_name || 'Unknown');
             const applied = a.created_at
                 ? new Date(a.created_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
                 : '—';
             let html = `<div class="admin-modal-grid">
-                <div class="admin-modal-field"><div class="admin-modal-field-label">Callsign</div><div class="admin-modal-field-value">${escHtml(a.callsign || '—')}</div></div>
-                <div class="admin-modal-field"><div class="admin-modal-field-label">Real Name</div><div class="admin-modal-field-value">${escHtml(a.real_name || '—')}</div></div>
+                <div class="admin-modal-field"><div class="admin-modal-field-label">Name</div><div class="admin-modal-field-value">${escHtml(a.real_name || '—')}</div></div>
                 <div class="admin-modal-field"><div class="admin-modal-field-label">Email</div><div class="admin-modal-field-value">${escHtml(a.email || '—')}</div></div>
-                <div class="admin-modal-field"><div class="admin-modal-field-label">VATSIM ID</div><div class="admin-modal-field-value">${escHtml(a.vatsim_id || '—')}</div></div>
-                <div class="admin-modal-field"><div class="admin-modal-field-label">Applied</div><div class="admin-modal-field-value">${escHtml(applied)}</div></div>
+                <div class="admin-modal-field"><div class="admin-modal-field-label">Submitted</div><div class="admin-modal-field-value">${escHtml(applied)}</div></div>
                 <div class="admin-modal-field"><div class="admin-modal-field-label">Status</div><div class="admin-modal-field-value">${escHtml(status)}</div></div>
             </div>
-            <div class="admin-modal-field"><div class="admin-modal-field-label">Flight Experience</div><div class="admin-modal-field-value">${escHtml(a.experience || '—')}</div></div>
-            <div class="admin-modal-field"><div class="admin-modal-field-label">Motivation / Statement</div><div class="admin-modal-field-value">${escHtml(a.motivation || '—')}</div></div>
+            <div class="admin-modal-field"><div class="admin-modal-field-label">Message</div><div class="admin-modal-field-value">${escHtml(a.motivation || '—')}</div></div>
             <div style="margin-top:18px;padding-top:14px;border-top:1px solid #2a2d33;display:flex;justify-content:flex-end;gap:10px;">
                 ${status === 'pending'
                     ? `<button class="admin-btn admin-btn-danger" onclick="closeModal();updateApplicant('${a.id}','denied')">Deny</button>
