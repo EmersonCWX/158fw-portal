@@ -120,12 +120,6 @@
     <script src="js/auth.js"></script>
     <script src="js/script.js"></script>
     <script>
-        const SUPABASE_URL = 'https://gcumgpfyfqtfwbskkngt.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdW1ncGZ5ZnF0Zndic2trbmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDczMTAsImV4cCI6MjA4ODM4MzMxMH0.OSY0XEPQp-WsFWuiGrUG5fcLIVMI3c8AxBEv2shFftg';
-        const _appSupabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-            auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'v158fw-auth' }
-        });
-
         document.getElementById('pilotApplicationForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const btn = document.getElementById('appSubmitBtn');
@@ -143,7 +137,7 @@
                 status:     'pending'
             };
 
-            const { data, error } = await _appSupabase.from('pilot_applications').insert(payload).select();
+            const { data, error } = await _supabase.from('pilot_applications').insert(payload).select();
             console.log('Insert result:', { data, error });
 
             if (error) {
