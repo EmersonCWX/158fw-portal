@@ -116,6 +116,11 @@
                     <div class="section-title">NOTAMs <span id="notam-count" style="font-size:0.78em;color:#aaa;font-weight:normal;"></span></div>
                     <div id="notams-list" style="max-height:220px;overflow-y:auto;font-size:0.8em;"><span class="gray">Loading...</span></div>
                 </div>
+                <!-- Special Interest Events -->
+                <div class="section">
+                    <div class="section-title">Special Interest Events</div>
+                    <div id="sie-list" style="font-size:0.88em;"></div>
+                </div>
             </div>
             <!-- Right Column -->
             <div class="flex-col">
@@ -625,6 +630,126 @@
         };
 
         renderBoard();
+    })();
+    </script>
+
+    <!-- Special Interest Events -->
+    <script>
+    (function() {
+        // ── ADD EVENTS HERE ──────────────────────────────────────────────────
+        // Format: { date: "YYYY-MM-DD", title: "Event Name" }
+        const SIE_EVENTS = [
+            // { date: "2026-03-20", title: "Pacific Sword D3" },
+        ];
+        // ─────────────────────────────────────────────────────────────────────
+
+        const SUPABASE_URL      = 'https://gcumgpfyfqtfwbskkngt.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdW1ncGZ5ZnF0Zndic2trbmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDczMTAsImV4cCI6MjA4ODM4MzMxMH0.OSY0XEPQp-WsFWuiGrUG5fcLIVMI3c8AxBEv2shFftg';
+        const _sieSb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY,
+            { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'v158fw-auth' } });
+
+        let _sieSession = null;
+
+        async function sieGetSession() {
+            if (_sieSession) return _sieSession;
+            const { data: { session } } = await _sieSb.auth.getSession();
+            _sieSession = session;
+            return session;
+        }
+
+        async function sieGetIdentity() {
+            const session = await sieGetSession();
+            if (!session) return null;
+            const callsign = (session.user.user_metadata && session.user.user_metadata.callsign)
+                ? session.user.user_metadata.callsign.toUpperCase()
+                : session.user.email;
+            return { uid: session.user.id, callsign };
+        }
+
+        function fmtDate(dateStr) {
+            const [y, m, d] = dateStr.split('-').map(Number);
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const days   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+            const dt = new Date(y, m - 1, d);
+            return days[dt.getDay()] + ' ' + months[m-1] + ' ' + d + ', ' + y;
+        }
+
+        function isPast(dateStr) {
+            const [y, m, d] = dateStr.split('-').map(Number);
+            const eventDate = new Date(y, m - 1, d);
+            const today = new Date(); today.setHours(0,0,0,0);
+            return eventDate < today;
+        }
+
+        // Returns map of event_key -> status for the current user
+        async function sieLoadMyRsvps(uid) {
+            if (!uid) return {};
+            const { data } = await _sieSb.from('sie_rsvps')
+                .select('event_key, status')
+                .eq('user_id', uid);
+            const map = {};
+            (data || []).forEach(r => { map[r.event_key] = r.status; });
+            return map;
+        }
+
+        async function sieRender() {
+            const list = document.getElementById('sie-list');
+            if (!list) return;
+
+            const identity = await sieGetIdentity();
+            const myRsvps  = identity ? await sieLoadMyRsvps(identity.uid) : {};
+
+            const upcoming = SIE_EVENTS
+                .filter(e => !isPast(e.date))
+                .sort((a, b) => a.date.localeCompare(b.date));
+
+            if (upcoming.length === 0) {
+                list.innerHTML = '<span style="color:#666;font-style:italic;">No upcoming events.</span>';
+                return;
+            }
+
+            list.innerHTML = upcoming.map((ev, i) => {
+                const evKey = ev.date + '::' + ev.title.replace(/[^a-zA-Z0-9]/g,'_');
+                const status = myRsvps[evKey] || null;
+                const goingStyle = status === 'going'    ? 'background:#1a6a1a;color:#7f7;' : 'background:#333;color:#aaa;';
+                const nogoStyle  = status === 'notgoing' ? 'background:#6a1a1a;color:#f77;' : 'background:#333;color:#aaa;';
+                return `<div style="border-bottom:1px solid #444;padding:7px 0;">
+                    <div style="color:#ffd580;font-weight:bold;margin-bottom:3px;">${ev.title}</div>
+                    <div style="color:#aaa;margin-bottom:5px;">${fmtDate(ev.date)}</div>
+                    <div style="display:flex;gap:6px;">
+                        <button onclick="sieRsvp('${evKey}','going')" style="${goingStyle}border:none;border-radius:4px;padding:3px 10px;cursor:pointer;font-size:0.9em;">&#10003; Going</button>
+                        <button onclick="sieRsvp('${evKey}','notgoing')" style="${nogoStyle}border:none;border-radius:4px;padding:3px 10px;cursor:pointer;font-size:0.9em;">&#10007; Not Going</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        window.sieRsvp = async function(evKey, newStatus) {
+            const identity = await sieGetIdentity();
+            if (!identity) { alert('You must be logged in to RSVP.'); return; }
+
+            // Check current status first
+            const { data: existing } = await _sieSb.from('sie_rsvps')
+                .select('id, status').eq('user_id', identity.uid).eq('event_key', evKey).maybeSingle();
+
+            if (existing && existing.status === newStatus) {
+                // Toggle off
+                await _sieSb.from('sie_rsvps').delete().eq('id', existing.id);
+            } else if (existing) {
+                await _sieSb.from('sie_rsvps').update({
+                    status: newStatus, callsign: identity.callsign, updated_at: new Date().toISOString()
+                }).eq('id', existing.id);
+            } else {
+                await _sieSb.from('sie_rsvps').insert({
+                    user_id: identity.uid, callsign: identity.callsign,
+                    event_key: evKey, status: newStatus
+                });
+            }
+            _sieSession = null; // reset so next render refreshes
+            sieRender();
+        };
+
+        document.addEventListener('DOMContentLoaded', sieRender);
     })();
     </script>
 </body>

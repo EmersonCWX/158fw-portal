@@ -269,7 +269,7 @@ CREATE POLICY "admin: delete pilot applications"
 
 -- ============================================================
 
--- -- 9. FLIGHT RECORDS � TABLE & RLS POLICIES ----------------
+-- -- 9. FLIGHT RECORDS � TABLE & RLS POLICIES ----------------
 -- Stores post-mission flight logs submitted by each pilot.
 -- Run this block in the Supabase SQL Editor if the table does
 -- not yet exist, or if admins cannot see all unit flight records.
@@ -334,4 +334,38 @@ CREATE POLICY "admin: select all flight records"
         )
     );
 
+-- ============================================================
+
+-- ── 10. SPECIAL INTEREST EVENTS — RSVP TABLE ────────────────
+CREATE TABLE IF NOT EXISTS public.sie_rsvps (
+    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    callsign    TEXT,
+    event_key   TEXT        NOT NULL,
+    status      TEXT        NOT NULL CHECK (status IN ('going','notgoing')),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (user_id, event_key)
+);
+
+ALTER TABLE public.sie_rsvps ENABLE ROW LEVEL SECURITY;
+
+GRANT INSERT, SELECT, UPDATE, DELETE ON public.sie_rsvps TO authenticated;
+
+-- Members can manage their own RSVPs
+DROP POLICY IF EXISTS "member: manage own rsvps" ON public.sie_rsvps;
+CREATE POLICY "member: manage own rsvps"
+    ON public.sie_rsvps FOR ALL
+    USING  (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
+
+-- Admins can read all RSVPs
+DROP POLICY IF EXISTS "admin: read all rsvps" ON public.sie_rsvps;
+CREATE POLICY "admin: read all rsvps"
+    ON public.sie_rsvps FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.vsaferep_admins
+            WHERE email = auth.email()
+        )
+    );
 -- ============================================================
