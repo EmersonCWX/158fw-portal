@@ -709,6 +709,29 @@ body {
     margin-top: 1.2rem;
 }
 
+/* ── Partner Logos Bar ── */
+.partner-logos {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 2.5rem;
+    padding: 1.2rem 1rem;
+    background-color: #222;
+    flex-wrap: wrap;
+}
+
+.partner-logos img {
+    height: 70px;
+    width: auto;
+    object-fit: contain;
+    filter: brightness(0.9);
+    transition: filter 0.2s;
+}
+
+.partner-logos img:hover {
+    filter: brightness(1.15);
+}
+
 /* ── Roster Page ── */
 .roster-page {
     height: calc(100vh - 70px);
