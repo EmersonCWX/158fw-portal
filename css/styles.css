@@ -720,9 +720,18 @@ body {
     flex-wrap: wrap;
 }
 
+.partner-logos a {
+    display: flex;
+    align-items: center;
+    line-height: 0;
+    flex-shrink: 0;
+}
+
 .partner-logos img {
     height: 70px;
+    max-height: 70px;
     width: auto;
+    max-width: 220px;
     object-fit: contain;
     filter: brightness(0.9);
     transition: filter 0.2s;
