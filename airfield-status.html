@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -46,7 +46,7 @@
             <!-- Left Column -->
             <div class="flex-col">
                 <div class="section" id="scorpion-ops-section">
-                    <div class="section-title">Scorpion Ops</div>
+                    <div class="section-title">MAPLE OPS - v158th OG</div>
                     <div class="center">
                         <span id="runway-display" class="highlight" style="font-size:2em;">--</span>
                         <div>Departure</div>
@@ -112,6 +112,10 @@
                     <div class="row"><span id="range-adirondack" class="green">Adirondack MOA</span></div>
                     <div class="row"><span id="range-condor1" class="green">Condor 1 MOA</span></div>
                 </div>
+                <div class="section">
+                    <div class="section-title">NOTAMs <span id="notam-count" style="font-size:0.78em;color:#aaa;font-weight:normal;"></span></div>
+                    <div id="notams-list" style="max-height:220px;overflow-y:auto;font-size:0.8em;"><span class="gray">Loading...</span></div>
+                </div>
             </div>
             <!-- Right Column -->
             <div class="flex-col">
@@ -150,11 +154,55 @@
                         </tbody>
                     </table>
                 </div>
+                <!-- MXG Aircraft Status Board -->
+                <div class="section">
+                    <div class="section-title">v158th MXG - Aircraft Status Board <span id="mxg-date" style="font-size:0.82em;color:#aaa;font-weight:normal;margin-left:10px;"></span></div>
+                    <div id="mxg-tail-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(85px,1fr));gap:6px;margin:10px 0 12px 0;"></div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                        <div style="font-size:0.85em;color:#ccc;">
+                            <span style="color:#4a9">■</span> Ready &nbsp;
+                            <span style="color:#b87">■</span> Maintenance &nbsp;
+                            <span style="color:#a44">■</span> Phase MX (12-day) &nbsp;
+                            <span style="color:#88c">■</span> Off Station &nbsp;
+                            <span style="color:#555">■</span> Not Assigned Today
+                        </div>
+                        <button id="mxg-assign-btn" onclick="mxgAssignJet()" style="background:#1a2e22;color:#4a9;border:1px solid #4a9;border-radius:5px;padding:6px 18px;cursor:pointer;font-size:0.95em;font-family:Arial,sans-serif;">Assign My Jet</button>
+                    </div>
+                    <div id="mxg-assigned" style="margin-top:9px;font-size:1.1em;text-align:center;display:none;"></div>
+                </div>
             </div>
         </div>
     </div>
     <script>
     const avwxToken = 'MEsA2QSGtIHWpgECLiOUBHwtka0EiiyoAfCRHOTG5QA';
+    const laminarKey = 'YOUR_LAMINAR_DATA_USER_KEY';
+
+    // -- NOTAMs (Laminar Data / Cirium v2) ------------------------------------
+    (async function loadNotams() {
+        const el = document.getElementById('notams-list');
+        const countEl = document.getElementById('notam-count');
+        if (!el) return;
+        try {
+            const url = `https://api.laminardata.aero/notamdata/v2/aerodromes/KBTV/notams?userKey=${laminarKey}`;
+            const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+            if (!res.ok) { el.innerHTML = `<span class="red">Error ${res.status}</span>`; return; }
+            const data = await res.json();
+            const features = data.features || [];
+            if (!features.length) { el.innerHTML = '<span class="gray">No active NOTAMs.</span>'; return; }
+            if (countEl) countEl.textContent = `(${features.length})`;
+            el.innerHTML = features.map(ft => {
+                const p    = ft.properties || {};
+                const id   = (p.series || '') + (p.number || ft.id || '');
+                const text = p.text || (p.translations && p.translations[0] && p.translations[0].simpleText) || '';
+                return `<div style="border-bottom:1px solid #333;padding:5px 0;">`
+                     + `<div style="color:#aaf;font-family:monospace;margin-bottom:2px;">${id}</div>`
+                     + `<div style="color:#ccc;line-height:1.4;">${text}</div>`
+                     + `</div>`;
+            }).join('');
+        } catch (e) {
+            el.innerHTML = '<span class="red">Failed to load NOTAMs.</span>';
+        }
+    })();
 
     // Helper to fetch METAR/TAF from NOAA (CORS-friendly)
     function fetchTextData(url, callback) {
@@ -422,6 +470,161 @@
         } else {
             opsBody.innerHTML = '<tr><td colspan="3" style="color:#aaa;font-style:italic;">No OPS notes.</td></tr>';
         }
+    })();
+
+    // ── v158th MXG Aircraft Status Board ──────────────────────────────────────
+    (async function () {
+        const TAILS = [
+            { id: '17-5265', wing: true },
+            { id: '17-5266' }, { id: '17-5277' }, { id: '17-5278' }, { id: '17-5279' },
+            { id: '17-5280' }, { id: '17-5284' },
+            { id: '18-5336' }, { id: '18-5337' }, { id: '18-5338' }, { id: '18-5339' },
+            { id: '18-5340' }, { id: '18-5341' }, { id: '18-5343' }, { id: '18-5344' },
+            { id: '18-5349' }, { id: '18-5358' }, { id: '18-5359' }, { id: '18-5360' },
+            { id: '18-5361' }
+        ];
+
+        // Xorshift32 seeded PRNG
+        function mkRng(seed) {
+            let s = (seed ^ 0xDEADBEEF) >>> 0 || 1;
+            return function () {
+                s ^= s << 13; s ^= s >> 17; s ^= s << 5;
+                s = s >>> 0;
+                return s / 4294967296;
+            };
+        }
+
+        // Seeded Fisher-Yates shuffle (returns new array)
+        function shuffle(arr, rng) {
+            const a = arr.slice();
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(rng() * (i + 1));
+                const tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+            }
+            return a;
+        }
+
+        // Days since 2025-01-01 (local date)
+        function dayIndex() {
+            const now = new Date();
+            const local = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const epoch = new Date(2025, 0, 1);
+            return Math.floor((local - epoch) / 86400000);
+        }
+
+        function computeStatus() {
+            const day = dayIndex();
+            const phaseCycle = Math.floor(day / 12);
+
+            // Phase maintenance: deterministic per 12-day cycle; Wing jet excluded
+            const phRng = mkRng(phaseCycle * 7919 + 42);
+            const phaseCount = phRng() < 0.45 ? 1 : 2;
+            const phasePool = shuffle(TAILS.filter(t => !t.wing).map(t => t.id), phRng);
+            const phaseTails = new Set(phasePool.slice(0, phaseCount));
+
+            // Daily active set: 12–16 tails; Wing + phase always included
+            const dayRng = mkRng(day * 2053 + 137);
+            const activeCount = 12 + Math.floor(dayRng() * 5); // 12–16
+            const nonSpecial = TAILS.filter(t => !t.wing && !phaseTails.has(t.id)).map(t => t.id);
+            const poolShuffled = shuffle(nonSpecial, mkRng(day * 1777 + 55));
+            const needed = Math.max(0, activeCount - 1 - phaseCount);
+            const fromPool = poolShuffled.slice(0, needed);
+            const activeTails = new Set(['17-5265', ...phaseTails, ...fromPool]);
+
+            // Regular maintenance: 1–2 from active non-phase non-wing tails
+            const mxRng = mkRng(day * 3571 + 99);
+            const maintCount = mxRng() < 0.5 ? 1 : 2;
+            const maintCandidates = shuffle(fromPool.slice(), mxRng);
+            const maintTails = new Set(maintCandidates.slice(0, maintCount));
+
+            const map = {};
+            for (const t of TAILS) {
+                if (phaseTails.has(t.id))       map[t.id] = 'phase';
+                else if (!activeTails.has(t.id)) map[t.id] = 'inactive';
+                else if (maintTails.has(t.id))   map[t.id] = 'maint';
+                else                              map[t.id] = 'ready';
+            }
+            return map;
+        }
+
+        const STATUS_COLOR = { ready: '#4a9', maint: '#b87', phase: '#a44', inactive: '#555', offstation: '#88c' };
+        const STATUS_BG    = { ready: '#131f18', maint: '#201810', phase: '#1e1010', inactive: '#1c1c1c', offstation: '#161525' };
+        const STATUS_LABEL = { ready: 'Ready', maint: 'Maintenance', phase: 'Phase MX', inactive: 'Not Assigned' };
+
+        const mxgStatus = computeStatus();
+
+        // Fetch today's off-station tails from flight_records
+        const offStation = {}; // tail_number -> arr_icao
+        try {
+            const today = new Date().toISOString().slice(0, 10);
+            const _sbMxg = supabase.createClient(
+                'https://gcumgpfyfqtfwbskkngt.supabase.co',
+                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdW1ncGZ5ZnF0Zndic2trbmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDczMTAsImV4cCI6MjA4ODM4MzMxMH0.OSY0XEPQp-WsFWuiGrUG5fcLIVMI3c8AxBEv2shFftg',
+                { auth: { persistSession: false } }
+            );
+            const { data: flights } = await _sbMxg
+                .from('flight_records')
+                .select('tail_number, arr_icao')
+                .eq('mission_date', today)
+                .not('tail_number', 'is', null)
+                .not('arr_icao', 'is', null);
+            if (flights) {
+                for (const f of flights) {
+                    if (f.tail_number && f.arr_icao && f.arr_icao.toUpperCase() !== 'KBTV') {
+                        offStation[f.tail_number.trim()] = f.arr_icao.toUpperCase();
+                    }
+                }
+            }
+        } catch (_) { /* silently ignore */ }
+
+        function renderBoard() {
+            const grid = document.getElementById('mxg-tail-grid');
+            if (!grid) return;
+            const now = new Date();
+            const dateEl = document.getElementById('mxg-date');
+            if (dateEl) dateEl.textContent = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+
+            grid.innerHTML = '';
+            for (const t of TAILS) {
+                const isOff = offStation[t.id];
+                const st = isOff ? 'offstation' : mxgStatus[t.id];
+                const color = STATUS_COLOR[st];
+                const bg = STATUS_BG[st];
+                const label = isOff ? 'Off Station' : STATUS_LABEL[st];
+
+                const card = document.createElement('div');
+                card.style.cssText = `background:${bg};border:1px solid ${color};border-radius:5px;padding:7px 4px;text-align:center;`;
+
+                const num = document.createElement('div');
+                num.style.cssText = `font-size:0.9em;font-weight:bold;color:${color};font-family:monospace;`;
+                num.textContent = t.id;
+                card.appendChild(num);
+
+                const lbl = document.createElement('div');
+                lbl.style.cssText = `font-size:0.68em;color:${color};margin-top:3px;opacity:0.85;`;
+                lbl.textContent = label;
+                card.appendChild(lbl);
+
+                grid.appendChild(card);
+            }
+        }
+
+        window.mxgAssignJet = function () {
+            const ready = TAILS.filter(t => mxgStatus[t.id] === 'ready' && !offStation[t.id]);
+            const el = document.getElementById('mxg-assigned');
+            if (!el) return;
+            el.style.display = 'block';
+            if (ready.length === 0) {
+                el.style.color = '#f55';
+                el.textContent = 'No Ready tails available today!';
+                return;
+            }
+            const pick = ready[Math.floor(Math.random() * ready.length)];
+            el.style.color = '#4a9';
+            el.innerHTML = 'Your jet today: <span style="font-size:1.3em;font-family:monospace;font-weight:bold;">' + pick.id + '</span>';
+        };
+
+        renderBoard();
     })();
     </script>
 </body>
