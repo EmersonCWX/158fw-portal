@@ -720,6 +720,15 @@
                         </div>
                     </div>
                 </div>
+                <!-- Special Interest Events (SIE) -->
+                <div style="margin-top:24px; border-top:1px solid #3a3f45; padding-top:20px;">
+                    <div style="font-size:0.78rem; font-weight:700; color:#888; letter-spacing:1px; text-transform:uppercase; margin-bottom:10px;">Special Interest Events (SIE Calendar)</div>
+                    <div id="sieEventsList"><div class="admin-spinner">Loading...</div></div>
+                    <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+                        <button class="admin-btn admin-btn-primary" onclick="addSieEvent()" style="font-size:0.78rem;">+ Add Event</button>
+                        <button class="admin-btn admin-btn-success" onclick="saveSieEvents()" style="font-size:0.78rem;">&#10003; Save Events</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1200,6 +1209,7 @@
         // ── Airfield Ops Editor ────────────────────────────────────────────
         let opsNotesData = [];
         let specialInterestData = [];
+        let sieEventsData = [];
 
         async function loadAirfieldOps() {
             const { data, error } = await _supabase
@@ -1216,11 +1226,14 @@
             if (data) {
                 const opsRow = data.find(r => r.id === 'ops_notes');
                 const siRow  = data.find(r => r.id === 'special_interest');
+                const sieRow = data.find(r => r.id === 'sie_events');
                 opsNotesData        = opsRow ? (opsRow.items  || []) : [];
                 specialInterestData = siRow  ? (siRow.items   || []) : [];
+                sieEventsData       = sieRow ? (sieRow.items  || []) : [];
             }
             renderOpsNotes();
             renderSpecialInterest();
+            renderSieEvents();
         }
 
         function renderOpsNotes() {
@@ -1287,6 +1300,39 @@
                 .upsert({ id: 'special_interest', items: specialInterestData, updated_by: currentUser.email, updated_at: new Date().toISOString() });
             if (error) { showToast('Error saving Special Interest Items: ' + error.message, 'error'); return; }
             showToast('Special Interest Items saved successfully.', 'success');
+        }
+
+        function renderSieEvents() {
+            const container = document.getElementById('sieEventsList');
+            if (!sieEventsData.length) {
+                container.innerHTML = '<div style="color:#666;font-size:0.8rem;font-style:italic;margin-bottom:6px;">No events. Click + Add Event.</div>';
+                return;
+            }
+            container.innerHTML = sieEventsData.map((ev, i) => `
+                <div class="ops-edit-row">
+                    <input class="ops-edit-input" type="date" value="${escHtml(ev.date || '')}" oninput="sieEventsData[${i}].date = this.value" style="max-width:145px;">
+                    <input class="ops-edit-input" type="text" placeholder="Event title..." value="${escHtml(ev.title || '')}" oninput="sieEventsData[${i}].title = this.value">
+                    <button class="ops-edit-remove" onclick="removeSieEvent(${i})">&#10005;</button>
+                </div>
+            `).join('');
+        }
+
+        function addSieEvent() {
+            sieEventsData.push({ date: '', title: '' });
+            renderSieEvents();
+        }
+
+        function removeSieEvent(i) {
+            sieEventsData.splice(i, 1);
+            renderSieEvents();
+        }
+
+        async function saveSieEvents() {
+            const { error } = await _supabase
+                .from('airfield_ops')
+                .upsert({ id: 'sie_events', items: sieEventsData, updated_by: currentUser.email, updated_at: new Date().toISOString() });
+            if (error) { showToast('Error saving SIE Events: ' + error.message, 'error'); return; }
+            showToast('SIE Events saved successfully.', 'success');
         }
 
         // ── Security helper ────────────────────────────────────────────────
