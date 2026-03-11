@@ -612,6 +612,12 @@
             const container = document.getElementById('briefingSections');
 
             function render() {
+                // Preserve which sections are currently expanded
+                const expanded = new Set();
+                document.querySelectorAll('.briefing-items:not(.collapsed)').forEach(el => {
+                    expanded.add(el.id);
+                });
+
                 let html = '';
                 sections.forEach(section => {
                     const checked = getSectionChecked(section);
@@ -655,6 +661,19 @@
                 });
 
                 container.innerHTML = html;
+
+                // Restore expanded/collapsed state
+                if (expanded.size > 0) {
+                    document.querySelectorAll('.briefing-items').forEach(el => {
+                        if (expanded.has(el.id)) {
+                            el.classList.remove('collapsed');
+                            const sNum = el.id.replace('items-', '');
+                            const btn = document.querySelector(`.btn-collapse[data-section="${sNum}"]`);
+                            if (btn) btn.classList.remove('rotated');
+                        }
+                    });
+                }
+
                 bindEvents();
                 updateProgress();
             }
