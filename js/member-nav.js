@@ -301,6 +301,7 @@
                             <li><a href="flight-history.html">Flight History</a></li>
                             <li><a href="vsaferep.html">vSAFEREP</a></li>
                             <li><a href="training.html">v158th FW EPUBS</a></li>
+                            <li><a href="gradesheet.html">Gradesheet</a></li>
                             <li><div class="member-dropdown-divider"></div></li>
                             <li><a href="admin.html" style="color:#e85a4a;">158th FW Leadership</a></li>
                         </ul>

@@ -44,14 +44,22 @@ CREATE POLICY "member: update own profile"
     USING (auth.uid() = id)
     WITH CHECK (auth.uid() = id);
 
--- Admins can read ALL member rows
+-- All authenticated members can read active member profiles (needed for gradesheet)
+DROP POLICY IF EXISTS "member: read active roster" ON public.members;
+CREATE POLICY "member: read active roster"
+    ON public.members
+    FOR SELECT
+    USING (status = 'active' AND auth.uid() IS NOT NULL);
+
+-- Admins can read ALL member rows (including inactive/pending)
+DROP POLICY IF EXISTS "admin: read all members" ON public.members;
 CREATE POLICY "admin: read all members"
     ON public.members
     FOR SELECT
     USING (
         EXISTS (
-            SELECT 1 FROM public.members m
-            WHERE m.id = auth.uid() AND m.role = 'admin'
+            SELECT 1 FROM public.vsaferep_admins
+            WHERE email = auth.email()
         )
     );
 
@@ -368,4 +376,56 @@ CREATE POLICY "admin: read all rsvps"
             WHERE email = auth.email()
         )
     );
+
+-- ============================================================
+
+-- ── 11. GRADESHEET ENTRIES ───────────────────────────────────
+-- Stores per-student per-course grades and instructor notes.
+-- Used by gradesheet.html (read) and admin.html (read/write).
+
+CREATE TABLE IF NOT EXISTS public.gradesheet_entries (
+    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id  UUID        NOT NULL REFERENCES public.members(id) ON DELETE CASCADE,
+    course_id   TEXT        NOT NULL,          -- e.g. 'FFAM', 'MQT1'
+    grade       TEXT        NOT NULL DEFAULT 'NG'
+                            CHECK (grade IN ('NG','E','G','F','U')),
+    notes       TEXT,                          -- instructor notes (nullable)
+    updated_by  TEXT,                          -- admin email
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (student_id, course_id)
+);
+
+COMMENT ON TABLE public.gradesheet_entries IS
+    'v158th FW training grades per student per course (FFAM, LAO, MQT1-10).';
+
+ALTER TABLE public.gradesheet_entries ENABLE ROW LEVEL SECURITY;
+
+GRANT SELECT ON public.gradesheet_entries TO authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.gradesheet_entries TO authenticated;
+
+-- Any authenticated member can read all grades (for the gradesheet view)
+DROP POLICY IF EXISTS "member: read all grades" ON public.gradesheet_entries;
+CREATE POLICY "member: read all grades"
+    ON public.gradesheet_entries
+    FOR SELECT
+    USING (auth.uid() IS NOT NULL);
+
+-- Only admins can insert/update/delete grades
+DROP POLICY IF EXISTS "admin: write grades" ON public.gradesheet_entries;
+CREATE POLICY "admin: write grades"
+    ON public.gradesheet_entries
+    FOR ALL
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.vsaferep_admins
+            WHERE email = auth.email()
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.vsaferep_admins
+            WHERE email = auth.email()
+        )
+    );
+
 -- ============================================================

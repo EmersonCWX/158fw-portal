@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Training Gradesheet | v158th Fighter Wing</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/member-nav.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #12151a;
+            color: #e8e8e8;
+            min-height: 100vh;
+        }
+
+        .page-wrapper {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 80px 24px 60px;
+        }
+
+        /* ── Title ── */
+        .gs-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 16px;
+            letter-spacing: 0.3px;
+        }
+
+        /* ── Admin Training Jacket banner ── */
+        .jacket-banner {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #1e2057;
+            border: 1px solid #3a3fa0;
+            border-radius: 6px;
+            padding: 13px 20px;
+            margin-bottom: 18px;
+            color: #a0a8ff;
+            text-decoration: none;
+            font-size: 0.93rem;
+            font-weight: 600;
+            transition: background 0.15s;
+        }
+        .jacket-banner:hover { background: #252870; color: #c0c8ff; }
+        .jacket-banner .jacket-icon { font-size: 1rem; }
+        .jacket-banner .jacket-admin {
+            font-size: 0.72rem;
+            color: #6868cc;
+            font-weight: 400;
+            margin-left: 2px;
+        }
+
+        /* ── Description ── */
+        .gs-desc {
+            color: #888;
+            font-size: 0.91rem;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        /* ── Filter bar ── */
+        .gs-filter-label {
+            font-size: 0.75rem;
+            color: #777;
+            font-weight: 600;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            display: block;
+            margin-bottom: 7px;
+        }
+        .gs-filter-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+        .gs-filter-input {
+            background: #1f2226;
+            border: 1px solid #3a3f45;
+            color: #e8e8e8;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-family: inherit;
+            width: 240px;
+            transition: border-color 0.15s;
+        }
+        .gs-filter-input::placeholder { color: #444; }
+        .gs-filter-input:focus { outline: none; border-color: #6060b0; }
+        .gs-clear-btn {
+            background: transparent;
+            border: 1px solid #3a3f45;
+            color: #777;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            font-family: inherit;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .gs-clear-btn:hover { border-color: #aaa; color: #ccc; }
+
+        /* ── Legend ── */
+        .gs-legend {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+        }
+        .gs-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 0.81rem;
+            color: #777;
+        }
+
+        /* ── Grade badges ── */
+        .gbadge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            line-height: 1;
+            padding: 0 4px;
+        }
+        .gbadge-E  { background: #163a28; color: #3dd47a; }
+        .gbadge-G  { background: #113222; color: #27ae60; }
+        .gbadge-F  { background: #3d2600; color: #e8970a; }
+        .gbadge-U  { background: #3d1111; color: #e74c3c; }
+        .gbadge-NG { background: #222529; color: #444; font-size: 0.55rem; letter-spacing: -0.5px; }
+
+        .notes-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #f5c518;
+            flex-shrink: 0;
+        }
+
+        /* ── Certification badges ── */
+        .cbadge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.63rem;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin: 1px;
+        }
+        .cbadge-IP   { background: #4a1515; color: #e74c3c; }
+        .cbadge-FORM { background: #38185a; color: #b07fe8; }
+        .cbadge-ADV  { background: #163825; color: #4caf50; }
+        .cbadge-VI   { background: #103a28; color: #2ecc71; }
+        .cbadge-CBT  { background: #162535; color: #7bb3cc; }
+
+        /* ── Table ── */
+        .gs-table-wrap {
+            overflow-x: auto;
+            border: 1px solid #2a2d32;
+            border-bottom: none;
+            border-radius: 6px 6px 0 0;
+            background: #1a1d22;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        table.gs-table {
+            border-collapse: collapse;
+            width: max-content;
+            min-width: 100%;
+        }
+
+        /* Phase label row */
+        .gs-table thead .phase-row th {
+            background: #1c2130;
+            color: #4a7aab;
+            font-size: 0.58rem;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            padding: 7px 8px;
+            border-bottom: 1px solid #2a2d32;
+            border-right: 1px solid #2a2d32;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .gs-table thead .phase-row th.col-name-hdr {
+            background: #1a1d22;
+            color: #555;
+            position: sticky;
+            left: 0;
+            z-index: 4;
+        }
+        .gs-table thead .phase-row th.col-certs-hdr {
+            background: #1a1d22;
+            position: sticky;
+            left: 140px;
+            z-index: 4;
+        }
+
+        /* Course header row */
+        .gs-table thead .course-row th {
+            background: #1a1d22;
+            color: #555;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            padding: 9px 7px;
+            border-bottom: 2px solid #2a2d32;
+            border-right: 1px solid #222529;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .gs-table thead .course-row th.col-name-hdr {
+            text-align: left;
+            padding-left: 16px;
+            position: sticky;
+            left: 0;
+            z-index: 4;
+            min-width: 140px;
+            background: #1a1d22;
+        }
+        .gs-table thead .course-row th.col-certs-hdr {
+            position: sticky;
+            left: 140px;
+            z-index: 4;
+            min-width: 150px;
+            background: #1a1d22;
+            text-align: left;
+            padding-left: 10px;
+        }
+
+        /* Body cells */
+        .gs-table tbody td {
+            padding: 8px 7px;
+            text-align: center;
+            font-size: 0.85rem;
+            border-bottom: 1px solid #1e2126;
+            border-right: 1px solid #1e2126;
+            color: #444;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+        .gs-table tbody td.col-name {
+            text-align: left;
+            padding-left: 16px;
+            font-weight: 700;
+            font-size: 0.88rem;
+            color: #e0e0e0;
+            position: sticky;
+            left: 0;
+            background: #1a1d22;
+            z-index: 1;
+            min-width: 140px;
+        }
+        .gs-table tbody td.col-certs {
+            text-align: left;
+            padding: 6px 8px;
+            position: sticky;
+            left: 140px;
+            background: #1a1d22;
+            z-index: 1;
+            min-width: 150px;
+            border-right: 2px solid #2a2d32;
+        }
+        .gs-table thead .course-row th.col-certs-hdr {
+            border-right: 2px solid #2a2d32;
+        }
+
+        .gs-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
+        .gs-table tbody tr:hover td.col-name,
+        .gs-table tbody tr:hover td.col-certs { background: #1e2126; }
+
+        /* Grade cell with optional note dot */
+        .grade-cell-wrap {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .grade-cell-wrap .note-sup {
+            position: absolute;
+            top: -3px;
+            right: -4px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #f5c518;
+        }
+
+        /* ── Status bar ── */
+        .gs-statusbar {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 9px 16px;
+            background: #161a1f;
+            border: 1px solid #2a2d32;
+            border-radius: 0 0 6px 6px;
+            font-size: 0.77rem;
+            color: #555;
+            flex-wrap: wrap;
+        }
+        .gs-statusbar .role-badge { color: #f5c518; font-weight: 700; }
+        .gs-statusbar .sep { color: #2a2d32; }
+        .gs-statusbar .notes-avail { color: #4caf50; font-weight: 600; }
+
+        /* ── Loading / empty ── */
+        .gs-loading, .gs-empty {
+            padding: 50px 20px;
+            text-align: center;
+            color: #555;
+            font-size: 0.88rem;
+            letter-spacing: 0.5px;
+        }
+        .spin {
+            display: inline-block;
+            width: 16px; height: 16px;
+            border: 2px solid #2a2d32;
+            border-top-color: #4a7aab;
+            border-radius: 50%;
+            animation: spin 0.75s linear infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Grade detail modal ── */
+        .gs-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 9000;
+            align-items: center;
+            justify-content: center;
+        }
+        .gs-modal-overlay.open { display: flex; }
+        .gs-modal {
+            background: #1f2226;
+            border: 1px solid #3a3f45;
+            border-radius: 8px;
+            padding: 24px 28px;
+            max-width: 420px;
+            width: 90%;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+        }
+        .gs-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #2a2d32;
+        }
+        .gs-modal-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #e8e8e8;
+        }
+        .gs-modal-close {
+            background: none;
+            border: none;
+            color: #555;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: inherit;
+        }
+        .gs-modal-close:hover { color: #aaa; background: rgba(255,255,255,0.05); }
+        .gs-modal-row {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 14px;
+        }
+        .gs-modal-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: #555;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .gs-modal-val {
+            font-size: 0.88rem;
+            color: #ccc;
+            line-height: 1.5;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+            .page-wrapper { padding: 70px 10px 40px; }
+            .gs-title { font-size: 1.2rem; }
+            .gs-table tbody td.col-name { min-width: 100px; }
+            .gs-table tbody td.col-certs { left: 100px; min-width: 110px; }
+            .gs-table thead .course-row th.col-name-hdr { min-width: 100px; }
+            .gs-table thead .course-row th.col-certs-hdr { left: 100px; min-width: 110px; }
+            .gs-table thead .phase-row th.col-certs-hdr { left: 100px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="page-wrapper">
+
+        <!-- Title -->
+        <h1 class="gs-title">v158th FW Training Gradesheet</h1>
+
+        <!-- Admin Training Jacket link (hidden until admin confirmed) -->
+        <a id="jacketLink" href="#" target="_blank" rel="noopener" class="jacket-banner" style="display:none;">
+            <span class="jacket-icon">&#x2197;</span>
+            <span>Open Training Jacket Sheet</span>
+            <span class="jacket-admin">(Admin Access)</span>
+        </a>
+
+        <!-- Description -->
+        <p class="gs-desc">Track your progress across all training courses. Click on a grade to see details.</p>
+
+        <!-- Filter -->
+        <label class="gs-filter-label" for="filterInput">Filter by Student Name</label>
+        <div class="gs-filter-row">
+            <input type="text" id="filterInput" class="gs-filter-input" placeholder="Search students...">
+            <button class="gs-clear-btn" id="clearBtn">Clear</button>
+        </div>
+
+        <!-- Legend -->
+        <div class="gs-legend">
+            <div class="gs-legend-item"><span class="gbadge gbadge-NG">NG</span> Not Graded</div>
+            <div class="gs-legend-item"><span class="gbadge gbadge-E">E</span> Excellent</div>
+            <div class="gs-legend-item"><span class="gbadge gbadge-G">G</span> Good</div>
+            <div class="gs-legend-item"><span class="gbadge gbadge-F">F</span> Fair</div>
+            <div class="gs-legend-item"><span class="gbadge gbadge-U">U</span> Unsatisfactory</div>
+            <div class="gs-legend-item"><span class="notes-dot"></span> Has instructor notes</div>
+        </div>
+
+        <!-- Loading state -->
+        <div id="gsLoading" class="gs-loading">
+            <span class="spin"></span> Loading gradesheet&hellip;
+        </div>
+
+        <!-- Main gradesheet content -->
+        <div id="gsContent" style="display:none;">
+            <div class="gs-table-wrap">
+                <table class="gs-table" id="gsTable">
+                    <thead>
+                        <tr class="phase-row" id="gsPhaseRow"></tr>
+                        <tr class="course-row" id="gsCourseRow"></tr>
+                    </thead>
+                    <tbody id="gsTableBody"></tbody>
+                </table>
+            </div>
+            <div class="gs-statusbar">
+                <span id="gsRoleBadge" class="role-badge"></span>
+                <span class="sep">|</span>
+                <span id="gsStudentCount"></span>
+                <span class="sep">|</span>
+                <span id="gsCourseCount"></span>
+                <span class="sep">|</span>
+                <span id="gsNotesStatus"></span>
+                <span style="margin-left:auto;">
+                    <button onclick="exportCSV()" style="background:transparent;border:1px solid #3a3f45;color:#aaa;padding:4px 14px;border-radius:4px;font-size:0.75rem;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;cursor:pointer;font-family:inherit;transition:border-color 0.15s,color 0.15s;" onmouseover="this.style.borderColor='#7aaa88';this.style.color='#affacc'" onmouseout="this.style.borderColor='#3a3f45';this.style.color='#aaa'">&#11015; Export CSV</button>
+                </span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Grade detail modal -->
+    <div class="gs-modal-overlay" id="gradeModal" role="dialog" aria-modal="true">
+        <div class="gs-modal">
+            <div class="gs-modal-header">
+                <span class="gs-modal-title" id="modalTitle">Grade Detail</span>
+                <button class="gs-modal-close" id="modalClose" aria-label="Close">&times;</button>
+            </div>
+            <div class="gs-modal-row">
+                <span class="gs-modal-label">Student</span>
+                <span class="gs-modal-val" id="modalStudent">—</span>
+            </div>
+            <div class="gs-modal-row">
+                <span class="gs-modal-label">Course</span>
+                <span class="gs-modal-val" id="modalCourse">—</span>
+            </div>
+            <div class="gs-modal-row">
+                <span class="gs-modal-label">Grade</span>
+                <span class="gs-modal-val" id="modalGrade">—</span>
+            </div>
+            <div class="gs-modal-row" id="modalNotesRow">
+                <span class="gs-modal-label">Instructor Notes</span>
+                <span class="gs-modal-val" id="modalNotes">—</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ── Supabase ──────────────────────────────────────────────────────────────
+    const SUPABASE_URL      = 'https://gcumgpfyfqtfwbskkngt.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdW1ncGZ5ZnF0Zndic2trbmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDczMTAsImV4cCI6MjA4ODM4MzMxMH0.OSY0XEPQp-WsFWuiGrUG5fcLIVMI3c8AxBEv2shFftg';
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: { persistSession: true, autoRefreshToken: true, storageKey: 'v158fw-auth' }
+    });
+
+    // ── Course definitions (34 total) ─────────────────────────────────────────
+    const COURSES = [
+        { id: 'FFAM'  },
+        { id: 'LAO'   },
+        { id: 'MQT1'  },
+        { id: 'MQT2'  },
+        { id: 'MQT3'  },
+        { id: 'MQT4'  },
+        { id: 'MQT5'  },
+        { id: 'MQT6'  },
+        { id: 'MQT7'  },
+        { id: 'MQT8'  },
+        { id: 'MQT9'  },
+        { id: 'MQT10' },
+    ];
+
+    const GRADE_LABELS = { E: 'Excellent', G: 'Good', F: 'Fair', U: 'Unsatisfactory', NG: 'Not Graded' };
+
+    const CERT_CLASS = {
+        'IP':   'cbadge-IP',
+        'FORM': 'cbadge-FORM',
+        'ADV':  'cbadge-ADV',
+        'V/I':  'cbadge-VI',
+        'CBT':  'cbadge-CBT',
+    };
+
+    // ── State ─────────────────────────────────────────────────────────────────
+    let allStudents    = [];
+    let gradesMap      = {};   // gradesMap[student_id][course_id] = { grade, notes }
+    let certsMap       = {};   // certsMap[student_id] = ['IP', ...]
+    let currentFilter  = '';
+    let hasAnyNotes    = false;
+    let userRole       = 'member';
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    async function init() {
+        const { data: { session } } = await db.auth.getSession();
+        if (!session) { window.location.replace('index.html'); return; }
+
+        // Load current user profile
+        const { data: profile } = await db
+            .from('members')
+            .select('callsign, rank, role')
+            .eq('id', session.user.id)
+            .maybeSingle();
+        if (profile) userRole = profile.role || 'member';
+
+        // Show admin jacket sheet button for admins
+        if (userRole === 'admin') {
+            document.getElementById('jacketLink').style.display = 'flex';
+        }
+
+        // Fetch students from the active_members view (bypasses per-row RLS restriction)
+        const { data: members, error: membersErr } = await db
+            .from('active_members')
+            .select('id, callsign, rank, role')
+            .order('callsign', { ascending: true });
+
+        if (membersErr || !members) {
+            document.getElementById('gsLoading').innerHTML =
+                '<span style="color:#e74c3c;">Error loading member roster.</span>';
+            return;
+        }
+        allStudents = members;
+
+        // Fetch grades (graceful — table may not exist yet)
+        const { data: grades } = await db
+            .from('gradesheet_entries')
+            .select('student_id, course_id, grade, notes');
+        if (grades) {
+            for (const g of grades) {
+                if (!gradesMap[g.student_id]) gradesMap[g.student_id] = {};
+                gradesMap[g.student_id][g.course_id] = { grade: g.grade, notes: g.notes || null };
+                if (g.notes) hasAnyNotes = true;
+            }
+        }
+
+        // Fetch certifications (graceful)
+        const { data: certs } = await db
+            .from('member_certifications')
+            .select('member_id, certification');
+        if (certs) {
+            for (const c of certs) {
+                if (!certsMap[c.member_id]) certsMap[c.member_id] = [];
+                certsMap[c.member_id].push(c.certification);
+            }
+        }
+
+        buildHead();
+        renderRows();
+        updateStatusBar();
+
+        document.getElementById('gsLoading').style.display  = 'none';
+        document.getElementById('gsContent').style.display  = 'block';
+    }
+
+    // ── Build table header (single header row) ────────────────────────────────
+    function buildHead() {
+        const phaseRow  = document.getElementById('gsPhaseRow');
+        const courseRow = document.getElementById('gsCourseRow');
+
+        // Hide unused phase row
+        phaseRow.style.display = 'none';
+
+        // Course row — Name + Certs + all course columns
+        courseRow.innerHTML =
+            `<th class="col-name-hdr">Student Name</th>` +
+            `<th class="col-certs-hdr">Certifications</th>` +
+            COURSES.map(c => `<th>${c.id}</th>`).join('');
+    }
+
+    // ── Render table body ─────────────────────────────────────────────────────
+    function renderRows() {
+        const tbody  = document.getElementById('gsTableBody');
+        const filter = currentFilter.toLowerCase().trim();
+        const shown  = filter
+            ? allStudents.filter(s => (s.callsign || '').toLowerCase().includes(filter))
+            : allStudents;
+
+        if (!shown.length) {
+            tbody.innerHTML = `<tr><td colspan="${COURSES.length + 2}" class="gs-empty">No students match the current filter.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = shown.map(student => {
+            const certs      = certsMap[student.id] || [];
+            const certBadges = certs.length
+                ? certs.map(c => `<span class="cbadge ${CERT_CLASS[c] || 'cbadge-CBT'}">${c}</span>`).join('')
+                : '<span style="color:#333;font-size:0.75rem;">—</span>';
+
+            const studentGrades = gradesMap[student.id] || {};
+
+            const gradeCells = COURSES.map(c => {
+                const g = studentGrades[c.id];
+                if (!g || !g.grade || g.grade === 'NG') return `<td>—</td>`;
+
+                const noteDot = g.notes
+                    ? `<span class="note-sup" title="${escapeHtml(g.notes)}"></span>`
+                    : '';
+
+                return `<td>
+                    <span class="grade-cell-wrap"
+                          style="cursor:pointer;"
+                          data-student="${escapeAttr(student.callsign || student.id)}"
+                          data-course="${c.id}"
+                          data-grade="${g.grade}"
+                          data-notes="${escapeAttr(g.notes || '')}"
+                          onclick="openModal(this)">
+                        <span class="gbadge gbadge-${g.grade}">${g.grade}</span>${noteDot}
+                    </span>
+                </td>`;
+            }).join('');
+
+            return `<tr>
+                <td class="col-name">${escapeHtml(student.callsign || '—')}</td>
+                <td class="col-certs">${certBadges}</td>
+                ${gradeCells}
+            </tr>`;
+        }).join('');
+    }
+
+    // ── Status bar ────────────────────────────────────────────────────────────
+    function updateStatusBar() {
+        const roleText = userRole === 'admin'
+            ? '★ v158th FW Admin (Full Access)'
+            : '✈ Member Access';
+        document.getElementById('gsRoleBadge').textContent  = roleText;
+        document.getElementById('gsStudentCount').textContent = `${allStudents.length} student${allStudents.length !== 1 ? 's' : ''}`;
+        document.getElementById('gsCourseCount').textContent  = `${COURSES.length} courses (FFAM / LAO / MQT1-10)`;
+        document.getElementById('gsNotesStatus').innerHTML    = hasAnyNotes
+            ? '<span class="notes-avail">Notes available</span>'
+            : '<span style="color:#444;">No notes</span>';
+    }
+
+    // ── Export to CSV ──────────────────────────────────────────────────────────
+    function exportCSV() {
+        const cols = COURSES.map(c => c.id);
+        const gradeLabel = { E: 'Excellent', G: 'Good', F: 'Fair', U: 'Unsatisfactory', NG: '' };
+
+        // Header row: Student, Certifications, FFAM, FFAM Notes, LAO, LAO Notes, ...
+        const headerCols = ['Student'];
+        cols.forEach(c => { headerCols.push(c); headerCols.push(c + ' Notes'); });
+        const rows = [headerCols];
+
+        allStudents.forEach(student => {
+            const studentGrades = gradesMap[student.id] || {};
+            const certs = (certsMap[student.id] || []).join(' ');
+            const row = [student.callsign || student.id];
+            cols.forEach(courseId => {
+                const g = studentGrades[courseId];
+                row.push(g && g.grade && g.grade !== 'NG' ? g.grade : '');
+                row.push(g && g.notes ? g.notes : '');
+            });
+            rows.push(row);
+        });
+
+        const csvContent = rows.map(r =>
+            r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')
+        ).join('\r\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        const date = new Date().toISOString().slice(0, 10);
+        a.href     = url;
+        a.download = `v158FW_Gradesheet_${date}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    // ── Grade detail modal ────────────────────────────────────────────────────
+    function openModal(el) {
+        const student = el.dataset.student;
+        const course  = el.dataset.course;
+        const grade   = el.dataset.grade;
+        const notes   = el.dataset.notes;
+
+        document.getElementById('modalTitle').textContent   = 'Grade Detail';
+        document.getElementById('modalStudent').textContent = student || '—';
+        document.getElementById('modalCourse').textContent  = course  || '—';
+        document.getElementById('modalGrade').innerHTML     =
+            `<span class="gbadge gbadge-${grade}" style="vertical-align:middle;margin-right:6px;">${grade}</span>` +
+            `<span>${GRADE_LABELS[grade] || grade}</span>`;
+
+        const notesRow = document.getElementById('modalNotesRow');
+        if (notes) {
+            document.getElementById('modalNotes').textContent = notes;
+            notesRow.style.display = '';
+        } else {
+            notesRow.style.display = 'none';
+        }
+        document.getElementById('gradeModal').classList.add('open');
+    }
+
+    document.getElementById('modalClose').addEventListener('click', () => {
+        document.getElementById('gradeModal').classList.remove('open');
+    });
+    document.getElementById('gradeModal').addEventListener('click', e => {
+        if (e.target === e.currentTarget)
+            document.getElementById('gradeModal').classList.remove('open');
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape')
+            document.getElementById('gradeModal').classList.remove('open');
+    });
+
+    // ── Filter ────────────────────────────────────────────────────────────────
+    document.getElementById('filterInput').addEventListener('input', e => {
+        currentFilter = e.target.value;
+        renderRows();
+    });
+    document.getElementById('clearBtn').addEventListener('click', () => {
+        document.getElementById('filterInput').value = '';
+        currentFilter = '';
+        renderRows();
+    });
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function escapeHtml(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+    function escapeAttr(str) {
+        return String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    // ── Boot ──────────────────────────────────────────────────────────────────
+    init();
+    </script>
+</body>
+</html>
