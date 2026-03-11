@@ -38,9 +38,15 @@
         .center { text-align: center; }
         .highlight { background: #444; color: #ff0; padding: 2px 6px; border-radius: 4px; }
         @media (max-width: 768px) {
-            .container { margin: 10px; padding: 12px; border-radius: 6px; }
+            html, body { overflow-x: hidden; max-width: 100vw; }
+            .container { margin: 10px; padding: 12px; border-radius: 6px; max-width: calc(100vw - 20px); box-sizing: border-box; }
             .grid { grid-template-columns: 1fr !important; gap: 12px; }
             h1 { font-size: 1.2rem; }
+            .metar, .taf, .pireps { word-break: break-all; overflow-wrap: break-word; white-space: pre-wrap; }
+            .section { max-width: 100%; box-sizing: border-box; }
+            .row { flex-wrap: wrap; gap: 2px; }
+            .row > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+            .table, .ops-table { min-width: unset; width: 100%; font-size: 0.82em; }
         }
     </style>
 </head>

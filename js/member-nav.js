@@ -289,7 +289,9 @@
                         </ul>
                     </div>
                     <!-- Roster -->
-                    <a href="roster.html" class="member-nav-link">ROSTER</a>
+                    <div class="member-nav-item">
+                        <a href="roster.html" class="member-nav-link">ROSTER</a>
+                    </div>
                     <!-- Pilot resources dropdown -->
                     <div class="member-nav-item" id="pilotResourcesDropdownItem">
                         <button class="member-nav-link" id="pilotResourcesDropdownBtn">

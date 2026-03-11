@@ -1413,28 +1413,36 @@ body {
     .article-modal-body { padding: 1.25rem; }
 
     /* ── Roster page ── */
+    html, .roster-page, .roster-page > .container { overflow-x: hidden; }
     .roster-page {
         height: auto;
         min-height: calc(100vh - 60px);
         margin-top: 60px;
-        overflow: visible;
-        background-attachment: scroll;
+        overflow-x: hidden;
+        overflow-y: visible;
+        background-image: none !important;
+        background-color: #111;
+        max-width: 100vw;
     }
     .roster-page > .container {
+        overflow-x: hidden;
         overflow-y: visible;
         padding: 1.5rem 0.75rem 3rem;
+        max-width: 100%;
+        box-sizing: border-box;
     }
     .roster-header {
         flex-direction: column;
         align-items: flex-start;
         gap: 0.5rem;
         margin-bottom: 1.5rem;
+        overflow: hidden;
     }
     .roster-header h1 { font-size: 1.5rem; letter-spacing: 1px; }
-    .roster-section { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .roster-table { font-size: 0.8rem; min-width: 460px; }
-    .roster-table thead th { padding: 0.5rem 0.65rem; font-size: 0.68rem; }
-    .roster-table td { padding: 0.6rem 0.65rem; }
+    .roster-section { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
+    .roster-table { font-size: 0.8rem; min-width: 360px; width: 100%; }
+    .roster-table thead th { padding: 0.5rem 0.5rem; font-size: 0.66rem; }
+    .roster-table td { padding: 0.6rem 0.5rem; }
 
     /* ── Footer ── */
     .footer { padding: 2rem 0 1rem; font-size: 0.93rem; }
