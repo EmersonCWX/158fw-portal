@@ -604,7 +604,7 @@
                 if (this.value !== 'other') unitCustom.value = '';
                 // Auto-fill fields for 134th FS or 315th FS
                 if (this.value === '134FS' || this.value === '315FS') {
-                    document.getElementById('acType').value = 'F-35';
+                    document.getElementById('acType').value = 'F35';
                     document.getElementById('wakeCat').value = 'M';
                     document.getElementById('equipment').value = 'GRB1DFGHIJS';
                     document.getElementById('pbn').value = 'B2C2D2O2S2';
@@ -788,36 +788,70 @@
                 });
                 const rmk = val('rmk');
                 if (rmk) remarks += `RMK/${rmk}`;
+
+                // Always capture Formation section directly (covers non-134FS/315FS units
+                // where updateRmk() doesn't auto-fill the rmk textarea)
+                const activeToggle = document.querySelector('#formationToggle .fp-toggle.active');
+                const formType = activeToggle ? activeToggle.dataset.val : 'none';
+                if (formType === 'std' && !remarks.includes('STD FORM')) remarks += ' STD FORM';
+                else if (formType === 'nonstd' && !remarks.includes('NONSTD FORM')) remarks += ' NONSTD FORM';
+                const formCs = val('formCallsigns');
+                if (formCs && !remarks.includes(formCs)) remarks += ' ' + formCs;
+                if (document.getElementById('marsaCheck').checked && !remarks.includes('MARSA')) remarks += ' MARSA';
+
                 remarks = remarks.trim();
+
+                // Helper: split a HHMM string into hours + minutes
+                function splitHHMM(hhmm) {
+                    const s = (hhmm || '').replace(/\D/g, '').padStart(4, '0');
+                    return { h: s.slice(0, 2), m: s.slice(2, 4) };
+                }
 
                 // Build query string with all fields
                 const params = new URLSearchParams();
                 params.set('callsign', cs);
                 params.set('flight_rules', val('flightRules'));
-                params.set('aircraft_type_designator', val('acType'));
-                params.set('wake_turbulence_cat', val('wakeCat'));
+                // Aircraft type — VATSIM accepts aircraft_faa or aircraft_short
+                params.set('aircraft_faa', val('acType'));
+                params.set('aircraft_short', val('acType'));
+                // Wake turbulence — include in equipment string suffix per ICAO format
+                const wakeVal = val('wakeCat');
+                if (wakeVal) params.set('wake', wakeVal);
                 params.set('equipment', val('equipment'));
                 params.set('transponder', val('transponder'));
                 params.set('departure', val('depIcao'));
+                // Off block — VATSIM uses departure_time as plain HHMM digits
+                const offBlock = val('offBlock').replace(/\D/g, '');
+                if (offBlock) params.set('departure_time', offBlock);
                 params.set('arrival', val('arrIcao'));
                 params.set('alternate', val('altIcao'));
                 params.set('route', val('route'));
                 params.set('cruise_tas', val('cruiseSpd'));
                 params.set('altitude', val('cruiseAlt'));
-                params.set('enroute_time', val('eet'));
-                params.set('fuel_endurance', val('fuelEnd'));
+                // Enroute time — VATSIM expects enroute_hrs + enroute_mins
+                const eet = splitHHMM(val('eet'));
+                if (val('eet')) { params.set('enroute_hrs', eet.h); params.set('enroute_mins', eet.m); }
+                // Fuel endurance — VATSIM expects fuel_hrs + fuel_mins
+                const fuel = splitHHMM(val('fuelEnd'));
+                if (val('fuelEnd')) { params.set('fuel_hrs', fuel.h); params.set('fuel_mins', fuel.m); }
                 params.set('remarks', remarks);
-                // Also send Field 18 fields individually in case VATSIM reads them separately
-                if (val('pbn')) params.set('pbn', val('pbn'));
-                if (val('nav')) params.set('nav', val('nav'));
-                if (val('rmk')) params.set('rmk', val('rmk'));
-                if (val('com')) params.set('com', val('com'));
-                if (val('opr')) params.set('opr', val('opr'));
-                if (val('sur')) params.set('sur', val('sur'));
-                if (val('orgn')) params.set('orgn', val('orgn'));
-                if (val('per')) params.set('per', val('per'));
-                if (val('code')) params.set('code', val('code'));
-                if (val('reg')) params.set('reg', val('reg'));
+                // Field 18 fields individually
+                if (val('pbn'))      params.set('pbn',  val('pbn'));
+                if (val('nav'))      params.set('nav',  val('nav'));
+                if (val('rmk'))      params.set('rmk',  val('rmk'));
+                if (val('com'))      params.set('com',  val('com'));
+                if (val('opr'))      params.set('opr',  val('opr'));
+                if (val('sur'))      params.set('sur',  val('sur'));
+                if (val('orgn'))     params.set('orgn', val('orgn'));
+                if (val('per'))      params.set('per',  val('per'));
+                if (val('code'))     params.set('code', val('code'));
+                if (val('reg'))      params.set('reg',  val('reg'));
+                if (val('rvr'))      params.set('rvr',  val('rvr'));
+                if (val('sel'))      params.set('sel',  val('sel'));
+                if (val('dat'))      params.set('dat',  val('dat'));
+                if (val('ralt'))     params.set('ralt', val('ralt'));
+                if (val('talt'))     params.set('talt', val('talt'));
+                if (val('eetField')) params.set('eet',  val('eetField'));
                 params.set('voice_type', '/v/');
 
                 const url = 'https://my.vatsim.net/pilots/flightplan?' + params.toString();

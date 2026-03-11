@@ -268,3 +268,70 @@ CREATE POLICY "admin: delete pilot applications"
     );
 
 -- ============================================================
+
+-- -- 9. FLIGHT RECORDS — TABLE & RLS POLICIES ----------------
+-- Stores post-mission flight logs submitted by each pilot.
+-- Run this block in the Supabase SQL Editor if the table does
+-- not yet exist, or if admins cannot see all unit flight records.
+
+CREATE TABLE IF NOT EXISTS public.flight_records (
+    id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_email        TEXT,
+    pilot_callsign    TEXT,
+    mission_date      TEXT,
+    mission_type      TEXT,
+    callsign          TEXT,
+    aircraft          TEXT,
+    tail_number       TEXT,
+    dep_icao          TEXT,
+    takeoff_time      TEXT,
+    arr_icao          TEXT,
+    land_time         TEXT,
+    total_flight_time TEXT,
+    time_mode         TEXT,
+    route             TEXT,
+    obj1_result       TEXT,
+    obj1_notes        TEXT,
+    obj2_result       TEXT,
+    obj2_notes        TEXT,
+    obj3_result       TEXT,
+    obj3_notes        TEXT,
+    debrief_notes     TEXT,
+    vatsim_cid        TEXT,
+    certified         BOOLEAN     DEFAULT FALSE,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.flight_records ENABLE ROW LEVEL SECURITY;
+
+-- Grant table-level privileges
+GRANT INSERT ON public.flight_records TO authenticated;
+GRANT SELECT ON public.flight_records TO authenticated;
+
+-- Each pilot can insert their own records
+DROP POLICY IF EXISTS "member: insert own flight record" ON public.flight_records;
+CREATE POLICY "member: insert own flight record"
+    ON public.flight_records
+    FOR INSERT
+    WITH CHECK (auth.email() = user_email);
+
+-- Each pilot can read their own records
+DROP POLICY IF EXISTS "member: select own flight records" ON public.flight_records;
+CREATE POLICY "member: select own flight records"
+    ON public.flight_records
+    FOR SELECT
+    USING (auth.email() = user_email);
+
+-- Admins can read ALL flight records (unit-wide view)
+DROP POLICY IF EXISTS "admin: select all flight records" ON public.flight_records;
+CREATE POLICY "admin: select all flight records"
+    ON public.flight_records
+    FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.vsaferep_admins
+            WHERE email = auth.email()
+        )
+    );
+
+-- ============================================================

@@ -1124,20 +1124,26 @@
         // ── Flight History ─────────────────────────────────────────────────
         let allFlights = [];
 
+        function flightTimeToMins(t) {
+            if (!t || t === '--:--') return 0;
+            const [h, m] = t.split(':').map(Number);
+            return (isNaN(h) ? 0 : h * 60) + (isNaN(m) ? 0 : m);
+        }
+
         async function loadFlightHistory() {
             document.getElementById('flightHistoryTableBody').innerHTML =
                 '<tr><td colspan="8" class="no-data">Loading...</td></tr>';
             const { data, error } = await _supabase
-                .from('flight_logs')
+                .from('flight_records')
                 .select('*')
-                .order('flight_date', { ascending: false });
+                .order('mission_date', { ascending: false });
             if (error) {
                 document.getElementById('flightHistoryTableBody').innerHTML =
                     `<tr><td colspan="8" class="no-data" style="color:#e85a4a;">Error: ${error.message}</td></tr>`;
                 return;
             }
             allFlights = data || [];
-            const totalMins   = allFlights.reduce((sum, f) => sum + (f.duration_minutes || 0), 0);
+            const totalMins   = allFlights.reduce((sum, f) => sum + flightTimeToMins(f.total_flight_time), 0);
             const uniquePilots = new Set(allFlights.map(f => f.pilot_callsign)).size;
             document.getElementById('statTotalFlights').textContent  = allFlights.length;
             document.getElementById('statFlightCount').textContent   = allFlights.length;
@@ -1162,21 +1168,19 @@
                 return;
             }
             tbody.innerHTML = flights.map(f => {
-                const date = f.flight_date
-                    ? new Date(f.flight_date + 'T12:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                const date = f.mission_date
+                    ? new Date(f.mission_date + 'T12:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
                     : '—';
-                const dur = f.duration_minutes
-                    ? `${Math.floor(f.duration_minutes / 60)}h ${f.duration_minutes % 60}m`
-                    : '—';
+                const dur = f.total_flight_time || '—';
                 return `<tr>
                     <td>${date}</td>
                     <td><strong>${escHtml(f.pilot_callsign || '—')}</strong></td>
                     <td>${escHtml(f.aircraft || 'F-35A')}</td>
-                    <td>${escHtml(f.departure || '—')}</td>
-                    <td>${escHtml(f.arrival || '—')}</td>
-                    <td>${dur}</td>
+                    <td>${escHtml(f.dep_icao || '—')}</td>
+                    <td>${escHtml(f.arr_icao || '—')}</td>
+                    <td>${escHtml(dur)}</td>
                     <td>${escHtml(f.mission_type || '—')}</td>
-                    <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(f.notes || '')}">${escHtml(f.notes || '—')}</td>
+                    <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(f.debrief_notes || '')}">${escHtml(f.debrief_notes || '—')}</td>
                 </tr>`;
             }).join('');
         }
