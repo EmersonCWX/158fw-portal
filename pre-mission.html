@@ -297,6 +297,14 @@
         .radar-link-card:hover { border-color: #a0aab4; background: rgba(160,170,180,0.04); }
         .radar-link-text strong { display: block; color: #e8e8e8; font-size: 0.88rem; }
         .radar-link-text span { color: #888; font-size: 0.78rem; }
+        @media (max-width: 768px) {
+            .page-wrapper { padding: 16px 12px 40px; }
+            .page-content { grid-template-columns: 1fr !important; }
+            .pg-sidebar { position: static !important; top: auto !important; }
+            .page-title-bar h1 { font-size: 1.1rem; }
+            .wx-input-row { flex-wrap: wrap; }
+            .btn-get-status { width: 100%; }
+        }
     </style>
 </head>
 <body>

@@ -176,6 +176,86 @@
             font-weight: 700;
             letter-spacing: 1.5px;
         }
+        /* ── Member-nav hamburger button ── */
+        .member-hamburger {
+            display: none;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 6px;
+            flex-direction: column;
+            gap: 5px;
+            flex-shrink: 0;
+            align-self: center;
+        }
+        .member-hamburger span {
+            display: block;
+            width: 24px;
+            height: 3px;
+            background: #F5E6D3;
+            border-radius: 2px;
+        }
+        /* ── Mobile breakpoint ── */
+        @media (max-width: 768px) {
+            .member-header { padding: 0 1rem; }
+            .member-header-title { display: none; }
+            .member-header-clocks {
+                position: static;
+                transform: none;
+                gap: 10px;
+                flex: 1;
+                justify-content: center;
+            }
+            .member-header-clock-time { font-size: 0.78rem; }
+            .member-header-clock-label { font-size: 0.5rem; }
+            .member-hamburger { display: flex; }
+            .member-nav {
+                display: none;
+                flex-direction: column;
+                position: fixed;
+                top: 60px;
+                left: 0;
+                right: 0;
+                background: #1f2226;
+                border-top: 1px solid #3a3f45;
+                padding: 0.5rem 0;
+                z-index: 9998;
+                box-shadow: 0 4px 16px rgba(0,0,0,0.7);
+                max-height: calc(100vh - 60px);
+                overflow-y: auto;
+            }
+            .member-nav.mobile-open { display: flex; }
+            .member-nav-item { width: 100%; }
+            .member-nav-link {
+                padding: 0.85rem 1.5rem;
+                font-size: 0.85rem;
+                border-radius: 0;
+                width: 100%;
+                text-align: left;
+                border-bottom: 1px solid rgba(255,255,255,0.06);
+            }
+            .member-dropdown-menu {
+                position: static !important;
+                box-shadow: none;
+                background: #161a1e;
+                border: none;
+                border-top: 1px solid #2a2f35;
+                min-width: unset;
+                width: 100%;
+            }
+            .member-dropdown-menu li a { padding: 0.8rem 2.5rem; }
+            /* Common member-page multi-column layouts → single column */
+            .page-content {
+                grid-template-columns: 1fr !important;
+            }
+            .pg-sidebar {
+                position: static !important;
+                top: auto !important;
+            }
+            .grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
     `;
 
     // ── HTML ─────────────────────────────────────────────────────────────────
@@ -233,6 +313,9 @@
                         </ul>
                     </div>
                 </nav>
+                <button class="member-hamburger" id="memberHamburger" aria-label="Open menu">
+                    <span></span><span></span><span></span>
+                </button>
             </div>
         </header>
     `;
@@ -343,7 +426,20 @@
         // Close dropdowns when clicking outside
         document.addEventListener('click', () => {
             document.querySelectorAll('.member-nav-item.open').forEach(el => el.classList.remove('open'));
+            // Also close mobile menu
+            const memberNav = document.getElementById('memberNav');
+            if (memberNav) memberNav.classList.remove('mobile-open');
         });
+
+        // Mobile hamburger toggle
+        const memberHamburgerBtn = document.getElementById('memberHamburger');
+        const memberNavEl = document.getElementById('memberNav');
+        if (memberHamburgerBtn && memberNavEl) {
+            memberHamburgerBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                memberNavEl.classList.toggle('mobile-open');
+            });
+        }
 
         // Logout
         document.getElementById('memberLogoutBtn').addEventListener('click', async (e) => {

@@ -339,6 +339,12 @@
             transition: border-color 0.15s, color 0.15s;
         }
         .btn-reset-briefing:hover { border-color: #e85a4a; color: #e85a4a; }
+        @media (max-width: 768px) {
+            .page-wrapper { padding: 16px 12px 40px; }
+            .page-content { grid-template-columns: 1fr !important; }
+            .pg-sidebar { position: static !important; top: auto !important; }
+            .page-title-bar h1 { font-size: 1.1rem; }
+        }
     </style>
 </head>
 <body>

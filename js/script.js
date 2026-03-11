@@ -1,3 +1,22 @@
+// ── Public header hamburger ──────────────────────────────────────────────────
+(function () {
+    var btn = document.getElementById('headerHamburger');
+    var nav = document.getElementById('headerNav');
+    if (!btn || !nav) return;
+    btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        nav.classList.toggle('mobile-open');
+    });
+    document.addEventListener('click', function (e) {
+        if (!btn.contains(e.target) && !nav.contains(e.target)) {
+            nav.classList.remove('mobile-open');
+        }
+    });
+    nav.querySelectorAll('.header-link').forEach(function (a) {
+        a.addEventListener('click', function () { nav.classList.remove('mobile-open'); });
+    });
+}());
+
 // Mobile Menu Toggle
 const hamburger = document.querySelector('.hamburger');
 const navMenu = document.querySelector('.nav-menu');
@@ -8,7 +27,6 @@ if (hamburger) {
         navMenu.style.flexDirection = 'column';
         navMenu.style.position = 'absolute';
         navMenu.style.top = '100%';
-        navMenu.style.left = '0';
         navMenu.style.right = '0';
         navMenu.style.backgroundColor = 'var(--dark-blue)';
         navMenu.style.padding = '1rem';

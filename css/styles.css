@@ -1310,3 +1310,147 @@ body {
     background: #666;
     color: #fff;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE — v158th FW Public Site
+   Optimised for iPhone 17 Pro Max (430 px) and similar
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Public-header hamburger button (hidden on desktop) ── */
+.header-hamburger {
+    display: none;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    flex-direction: column;
+    gap: 5px;
+    flex-shrink: 0;
+    align-self: center;
+}
+.header-hamburger span {
+    display: block;
+    width: 26px;
+    height: 3px;
+    background: #F5E6D3;
+    border-radius: 2px;
+    transition: all 0.3s;
+}
+
+@media (max-width: 768px) {
+
+    /* ── Public header ── */
+    .header {
+        padding: 0 1rem;
+        height: 60px;
+    }
+    .header-logo { height: 28px; width: 28px; }
+    .header-title { font-size: 0.65rem; letter-spacing: 0; }
+    .header-hamburger { display: flex; }
+
+    .header-nav {
+        display: none;
+        flex-direction: column;
+        position: fixed;
+        top: 60px;
+        left: 0;
+        right: 0;
+        background: #4a4a4a;
+        padding: 0.5rem 0 1rem;
+        z-index: 1999;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.7);
+        max-height: calc(100vh - 60px);
+        overflow-y: auto;
+        gap: 0;
+    }
+    .header-nav.mobile-open { display: flex; }
+
+    .header-link {
+        display: block;
+        width: 100%;
+        padding: 0.85rem 1.5rem;
+        font-size: 0.9rem;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .header-nav .login-btn {
+        display: block;
+        margin: 0.75rem 1.5rem 0;
+        width: calc(100% - 3rem);
+        text-align: center;
+        max-width: none;
+    }
+    .header-nav .login-btn.logged-in {
+        max-width: none;
+    }
+
+    /* ── Hero ── */
+    .hero { margin-top: 60px; min-height: calc(100vh - 60px); }
+    .hero-bg { background-attachment: scroll; }
+    .hero-title { font-size: 1.8rem; letter-spacing: 1px; }
+    .hero-subtitle { font-size: 1.05rem; }
+    .hero-tagline { font-size: 0.88rem; }
+
+    /* ── About page ── */
+    .about-page { margin-top: 60px; padding: 2rem 1rem; }
+    .about-page h2 { font-size: 1.5rem; }
+    .about-content { flex-direction: column; gap: 1.5rem; }
+    .about-text { font-size: 1rem; line-height: 1.7; }
+    .about-logo img { width: 100% !important; max-width: 260px !important; height: auto !important; }
+
+    /* ── Pilot page ── */
+    .pilot-page { margin-top: 60px; padding: 2rem 1rem; }
+    .contact h2 { font-size: 1.5rem; }
+    .contact-content { flex-direction: column; gap: 1.5rem; }
+    .contact-info { font-size: 1rem !important; }
+    .pilot-form { max-width: 100%; }
+
+    /* ── News page ── */
+    .news-page { margin-top: 60px; padding: 2rem 1rem; }
+    .news-page h2 { font-size: 1.5rem; }
+    .news-tile { height: 240px; }
+    .news-tile-title { font-size: 0.95rem; }
+    .article-modal-title { font-size: 1.2rem; }
+    .article-modal-body { padding: 1.25rem; }
+
+    /* ── Roster page ── */
+    .roster-page {
+        height: auto;
+        min-height: calc(100vh - 60px);
+        margin-top: 60px;
+        overflow: visible;
+        background-attachment: scroll;
+    }
+    .roster-page > .container {
+        overflow-y: visible;
+        padding: 1.5rem 0.75rem 3rem;
+    }
+    .roster-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .roster-header h1 { font-size: 1.5rem; letter-spacing: 1px; }
+    .roster-section { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .roster-table { font-size: 0.8rem; min-width: 460px; }
+    .roster-table thead th { padding: 0.5rem 0.65rem; font-size: 0.68rem; }
+    .roster-table td { padding: 0.6rem 0.65rem; }
+
+    /* ── Footer ── */
+    .footer { padding: 2rem 0 1rem; font-size: 0.93rem; }
+    .footer-content { padding: 0 1rem; gap: 1.5rem; }
+    .footer-section { width: 100%; }
+    .footer-bottom { font-size: 0.82rem; padding: 0 1rem; }
+
+    /* ── Partner logos ── */
+    .partner-logos { gap: 1.5rem; padding: 0.9rem 1rem; }
+    .partner-logos img { height: 46px; max-height: 46px; max-width: 140px; }
+
+    /* ── Login modal ── */
+    .modal-overlay { align-items: flex-start; padding-top: 60px; }
+    .modal-container { max-width: calc(100vw - 2rem); }
+    .modal-body { padding: 20px 16px; }
+
+    /* ── General container ── */
+    .container { padding: 0 1rem; }
+}

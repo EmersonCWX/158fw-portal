@@ -199,6 +199,15 @@
             margin-right: 8px;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 768px) {
+            .page-wrapper { padding: 16px 12px 40px; }
+            .page-content { grid-template-columns: 1fr !important; }
+            .pg-sidebar { position: static !important; top: auto !important; }
+            .page-title-bar h1 { font-size: 1.1rem; }
+            .stats-grid { grid-template-columns: 1fr 1fr !important; }
+            .history-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .history-table { min-width: 480px; font-size: 0.8rem; }
+        }
     </style>
 </head>
 <body>

@@ -280,6 +280,13 @@
         .cert-checkbox { width: 16px; height: 16px; accent-color: #4caf50; flex-shrink: 0; margin-top: 3px; cursor: pointer; }
         .cert-text { font-size: 0.82rem; color: #aaa; line-height: 1.6; }
         .cert-text .req-star { color: #ffc107; }
+        @media (max-width: 768px) {
+            .page-wrapper { padding: 16px 12px 40px; }
+            .page-content { grid-template-columns: 1fr !important; }
+            .pg-sidebar { position: static !important; top: auto !important; }
+            .page-title-bar h1 { font-size: 1.1rem; }
+            .debrief-fields-grid { grid-template-columns: 1fr 1fr !important; }
+        }
     </style>
 </head>
 <body>

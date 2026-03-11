@@ -508,6 +508,13 @@
             border: 1px solid #4caf5055;
         }
         .admin-btn-success:hover { background: #4caf5033; }
+        @media (max-width: 768px) {
+            .admin-wrapper { padding: 16px 12px 40px; }
+            .admin-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
+            .admin-grid-2 { grid-template-columns: 1fr !important; }
+            .sie-event-row { grid-template-columns: 1fr auto auto !important; }
+            .news-fields-grid { grid-template-columns: 1fr !important; }
+        }
     </style>
 </head>
 <body>
