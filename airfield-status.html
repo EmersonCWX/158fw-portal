@@ -38,15 +38,26 @@
         .center { text-align: center; }
         .highlight { background: #444; color: #ff0; padding: 2px 6px; border-radius: 4px; }
         @media (max-width: 768px) {
-            html, body { overflow-x: hidden; max-width: 100vw; }
-            .container { margin: 10px; padding: 12px; border-radius: 6px; max-width: calc(100vw - 20px); box-sizing: border-box; }
+            html { overflow-x: clip; }
+            body { overflow-x: hidden; width: 100%; max-width: 100vw; }
+            .container {
+                width: calc(100vw - 20px);
+                max-width: calc(100vw - 20px);
+                margin: 10px;
+                padding: 12px;
+                border-radius: 6px;
+                box-sizing: border-box;
+            }
             .grid { grid-template-columns: 1fr !important; gap: 12px; }
+            .flex-col { min-width: 0; width: 100%; }
+            .section { min-width: 0; max-width: 100%; box-sizing: border-box; overflow: hidden; }
             h1 { font-size: 1.2rem; }
-            .metar, .taf, .pireps { word-break: break-all; overflow-wrap: break-word; white-space: pre-wrap; }
-            .section { max-width: 100%; box-sizing: border-box; }
+            .metar, .taf, .pireps { word-break: break-all; overflow-wrap: break-word; white-space: pre-wrap; font-size: 0.9em; }
             .row { flex-wrap: wrap; gap: 2px; }
-            .row > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-            .table, .ops-table { min-width: unset; width: 100%; font-size: 0.82em; }
+            .row > span { min-width: 0; }
+            .table, .ops-table { width: 100%; font-size: 0.78em; table-layout: fixed; }
+            .table td, .table th, .ops-table td, .ops-table th { word-break: break-word; overflow-wrap: break-word; }
+            #mxg-tail-grid { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)) !important; }
         }
     </style>
 </head>
