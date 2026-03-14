@@ -341,6 +341,10 @@
                     <button class="admin-nav-item" onclick="showPanel('gradesheet')" id="nav-gradesheet">
                         Gradesheet
                     </button>
+                    <button class="admin-nav-item" onclick="showPanel('memberrequests')" id="nav-memberrequests">
+                        Member Requests
+                        <span class="admin-nav-badge" id="navBadgeMemberReqs" style="display:none;"></span>
+                    </button>
                     <button class="admin-nav-item" onclick="showPanel('adminusers')" id="nav-adminusers">
                         Admin Users
                     </button>
@@ -382,6 +386,10 @@
                                     <div class="admin-stat-value" id="statPendingApplicants">—</div>
                                     <div class="admin-stat-label">Pending Applicants</div>
                                 </div>
+                                <div class="admin-stat-card" onclick="showPanel('memberrequests')">
+                                    <div class="admin-stat-value" id="statPendingMembers">—</div>
+                                    <div class="admin-stat-label">Pending Members</div>
+                                </div>
                                 <div class="admin-stat-card" onclick="showPanel('flights')">
                                     <div class="admin-stat-value" id="statTotalFlights">—</div>
                                     <div class="admin-stat-label">Total Flights</div>
@@ -417,6 +425,11 @@
 
                                     <div class="dash-card-label">Gradesheet Editor</div>
                                     <div class="dash-card-meta">Enter &amp; update student grades</div>
+                                </div>
+                                <div class="dash-card" onclick="showPanel('memberrequests')">
+
+                                    <div class="dash-card-label">Member Requests</div>
+                                    <div class="dash-card-meta">Approve or deny new signups</div>
                                 </div>
                                 <div class="dash-card" onclick="showPanel('adminusers')">
 
@@ -599,6 +612,32 @@
                     </div>
                 </div>
 
+                <!-- Member Requests -->
+                <div class="admin-panel" id="panel-memberrequests">
+                    <div class="admin-section">
+                        <div class="admin-section-header">
+                            <h2 class="admin-section-title">Membership Requests</h2>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <select class="admin-filter-select" id="filterMemberReqStatus" onchange="applyMemberReqFilters()">
+                                    <option value="pending">Pending</option>
+                                    <option value="active">Approved</option>
+                                    <option value="denied">Denied</option>
+                                    <option value="">All</option>
+                                </select>
+                                <button class="admin-btn admin-btn-primary" onclick="loadMemberRequests()">&#8635; Refresh</button>
+                            </div>
+                        </div>
+                        <div class="admin-section-body">
+                            <div class="admin-table-wrap">
+                                <table class="admin-table">
+                                    <thead><tr><th>Date</th><th>Callsign</th><th>Email</th><th>VATSIM CID</th><th>Status</th><th>Actions</th></tr></thead>
+                                    <tbody id="memberReqsTableBody"><tr><td colspan="6" class="no-data">Loading...</td></tr></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Admin Users -->
                 <div class="admin-panel" id="panel-adminusers">
                     <div class="admin-section">
@@ -675,6 +714,7 @@
             loadReports();
             loadAdminUsers();
             loadApplicants();
+            loadMemberRequests();
             loadFlightHistory();
             loadAirfieldOps();
             loadSieRsvps();
@@ -803,6 +843,101 @@
             if (error) { showToast('Error: '+error.message,'error'); return; }
             showToast('Admin access revoked.','success'); loadAdminUsers();
         }
+
+        // ── Member Requests ────────────────────────────────────────────────
+        let allMemberReqs = [];
+
+        async function loadMemberRequests() {
+            document.getElementById('memberReqsTableBody').innerHTML = '<tr><td colspan="7" class="no-data">Loading...</td></tr>';
+            const { data, error } = await _supabase
+                .from('members')
+                .select('id, email, callsign, real_name, motivation, status, signup_type, joined_at')
+                .eq('signup_type', 'self')
+                .order('joined_at', { ascending: false });
+            if (error) {
+                document.getElementById('memberReqsTableBody').innerHTML = `<tr><td colspan="6" class="no-data" style="color:#e85a4a;">Error: ${error.message}</td></tr>`;
+                document.getElementById('statPendingMembers').textContent = 'Err';
+                return;
+            }
+            allMemberReqs = data || [];
+            const pending = allMemberReqs.filter(m => m.status === 'pending').length;
+            document.getElementById('statPendingMembers').textContent = pending;
+            const badge = document.getElementById('navBadgeMemberReqs');
+            if (pending > 0) { badge.textContent = pending; badge.style.display = ''; }
+            else { badge.style.display = 'none'; }
+            applyMemberReqFilters();
+        }
+
+        function applyMemberReqFilters() {
+            const sf = document.getElementById('filterMemberReqStatus').value;
+            let filtered = allMemberReqs;
+            if (sf) filtered = filtered.filter(m => m.status === sf);
+            renderMemberReqs(filtered);
+        }
+
+        function renderMemberReqs(members) {
+            const tbody = document.getElementById('memberReqsTableBody');
+            if (!members.length) { tbody.innerHTML = '<tr><td colspan="6" class="no-data">No membership requests found.</td></tr>'; return; }
+            tbody.innerHTML = members.map(m => {
+                const joined = m.joined_at ? new Date(m.joined_at).toLocaleDateString('en-US', {year:'numeric', month:'short', day:'numeric'}) : '—';
+                const status = m.status || 'pending';
+                const bClass = status === 'active' ? 'badge-approved' : status === 'denied' ? 'badge-denied' : 'badge-pending';
+                const statusLabel = status === 'active' ? 'Approved' : status.charAt(0).toUpperCase() + status.slice(1);
+                const cidPreview = m.motivation ? escHtml(m.motivation.substring(0, 20)) : '—';
+                return `<tr>
+                    <td>${joined}</td>
+                    <td>${escHtml(m.callsign || '—')}</td>
+                    <td>${escHtml(m.email || '—')}</td>
+                    <td>${cidPreview}</td>
+                    <td><span class="report-badge ${bClass}">${statusLabel}</span></td>
+                    <td style="white-space:nowrap;">
+                        ${status === 'pending'
+                            ? `<button class="admin-btn" style="font-size:0.72rem;padding:3px 8px;margin-right:4px;background:#4caf5022;color:#4caf50;border:1px solid #4caf5055;" onclick="updateMemberStatus('${m.id}','active')">Approve</button><button class="admin-btn admin-btn-danger" style="font-size:0.72rem;padding:3px 8px;" onclick="updateMemberStatus('${m.id}','denied')">Deny</button>`
+                            : `<button class="admin-btn" style="font-size:0.72rem;padding:3px 8px;background:#242730;color:#888;border:1px solid #3a3f45;" onclick="updateMemberStatus('${m.id}','pending')">Reset</button>`}
+                        <button class="admin-btn" style="font-size:0.72rem;padding:3px 8px;margin-left:4px;background:#242730;color:#888;border:1px solid #3a3f45;" onclick="viewMemberReq('${m.id}')">View</button>
+                    </td></tr>`;
+            }).join('');
+        }
+
+        async function updateMemberStatus(id, status) {
+            const lbl = status === 'active' ? 'Approve' : status === 'denied' ? 'Deny' : 'Reset';
+            if (!confirm(`${lbl} this membership request?`)) return;
+            const { error } = await _supabase.from('members').update(
+                { status, updated_at: new Date().toISOString() }
+            ).eq('id', id);
+            if (error) { showToast('Error: ' + error.message, 'error'); return; }
+            const verb = status === 'active' ? 'approved' : status === 'denied' ? 'denied' : 'reset';
+            showToast(`Member ${verb}.`, 'success');
+            loadMemberRequests();
+        }
+
+        function viewMemberReq(id) {
+            const m = allMemberReqs.find(x => x.id === id);
+            if (!m) return;
+            const status = m.status || 'pending';
+            document.getElementById('modalTitle').textContent = 'Membership Request — ' + escHtml(m.callsign || m.email || 'Unknown');
+            const joined = m.joined_at ? new Date(m.joined_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
+            const bClass = status === 'active' ? 'badge-approved' : status === 'denied' ? 'badge-denied' : 'badge-pending';
+            const statusLabel = status === 'active' ? 'Approved' : status.charAt(0).toUpperCase() + status.slice(1);
+            let html = `<div class="admin-modal-grid">
+                <div class="admin-modal-field"><div class="admin-modal-field-label">Callsign</div><div class="admin-modal-field-value">${escHtml(m.callsign || '—')}</div></div>
+                <div class="admin-modal-field"><div class="admin-modal-field-label">VATSIM CID</div><div class="admin-modal-field-value">${escHtml(m.motivation || '—')}</div></div>
+                <div class="admin-modal-field"><div class="admin-modal-field-label">Email</div><div class="admin-modal-field-value">${escHtml(m.email || '—')}</div></div>
+                <div class="admin-modal-field"><div class="admin-modal-field-label">Submitted</div><div class="admin-modal-field-value">${escHtml(joined)}</div></div>
+            </div>
+            <div class="admin-modal-field"><div class="admin-modal-field-label">Status</div><div class="admin-modal-field-value"><span class="report-badge ${bClass}">${statusLabel}</span></div></div>
+            <div style="margin-top:18px;padding-top:14px;border-top:1px solid #2a2d33;display:flex;justify-content:flex-end;gap:10px;">
+                ${status === 'pending'
+                    ? `<button class="admin-btn admin-btn-danger" onclick="closeModal();updateMemberStatus('${m.id}','denied')">Deny</button>
+                       <button class="admin-btn" style="background:#4caf5022;color:#4caf50;border:1px solid #4caf5055;" onclick="closeModal();updateMemberStatus('${m.id}','active')">Approve</button>`
+                    : ''}
+                <button class="admin-btn admin-btn-primary" onclick="closeModal()">Close</button>
+            </div>`;
+            document.getElementById('modalBody').innerHTML = html;
+            document.getElementById('reportModal').classList.add('open');
+        }
+
+        // ──────────────────────────────────────────────────────────────────────
 
         let allApplicants = [];
 

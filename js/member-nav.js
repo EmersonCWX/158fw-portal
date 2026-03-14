@@ -340,6 +340,19 @@
             return;
         }
 
+        // Verify the member is active (guard against pending / denied accounts)
+        const { data: memberRow } = await _supabase
+            .from('members')
+            .select('status')
+            .eq('id', session.user.id)
+            .maybeSingle();
+
+        if (!memberRow || memberRow.status !== 'active') {
+            await _supabase.auth.signOut();
+            window.location.replace('index.html');
+            return;
+        }
+
         // Inject header
         document.body.insertAdjacentHTML('afterbegin', headerHTML);
         document.body.classList.add('member-page');
@@ -402,9 +415,16 @@
 
         // Populate username
         const user = session.user;
-        const label = (user.user_metadata && user.user_metadata.callsign)
-            ? user.user_metadata.callsign.toUpperCase()
-            : user.email.split('@')[0].toUpperCase();
+        let _callsign = user.user_metadata && user.user_metadata.callsign;
+        if (!_callsign) {
+            const { data: _memberRow } = await _supabase
+                .from('members')
+                .select('callsign')
+                .eq('id', user.id)
+                .maybeSingle();
+            _callsign = _memberRow && _memberRow.callsign;
+        }
+        const label = _callsign ? _callsign.toUpperCase() : user.email.split('@')[0].toUpperCase();
         document.getElementById('memberUserLabel').textContent = label;
 
         // Highlight current page nav link

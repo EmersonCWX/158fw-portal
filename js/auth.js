@@ -59,10 +59,30 @@ if (loginForm) {
 
         const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
 
+        if (error) {
+            setLoginLoading(false);
+            showLoginError(error.message);
+            return;
+        }
+
+        // Check member approval status before allowing access
+        const { data: memberRow } = await _supabase
+            .from('members')
+            .select('status')
+            .eq('id', data.user.id)
+            .maybeSingle();
+
         setLoginLoading(false);
 
-        if (error) {
-            showLoginError(error.message);
+        if (memberRow?.status === 'pending') {
+            await _supabase.auth.signOut();
+            showLoginError('Your account is pending admin review. You\'ll be able to log in once approved.');
+            return;
+        }
+
+        if (memberRow?.status === 'denied') {
+            await _supabase.auth.signOut();
+            showLoginError('Your access request was not approved. Contact wing leadership for assistance.');
             return;
         }
 
@@ -74,10 +94,19 @@ if (loginForm) {
 }
 
 // Update header button to show logged-in state
-function updateAuthUI(user) {
+async function updateAuthUI(user) {
     if (!loginBtn) return;
     if (user) {
-        const label = user.user_metadata?.callsign || user.email.split('@')[0].toUpperCase();
+        let callsign = user.user_metadata?.callsign;
+        if (!callsign) {
+            const { data: memberRow } = await _supabase
+                .from('members')
+                .select('callsign')
+                .eq('id', user.id)
+                .maybeSingle();
+            callsign = memberRow?.callsign;
+        }
+        const label = callsign ? callsign.toUpperCase() : user.email.split('@')[0].toUpperCase();
         loginBtn.textContent = label;
         loginBtn.classList.add('logged-in');
         loginBtn.removeEventListener('click', openLoginModal);
