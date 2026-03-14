@@ -539,24 +539,35 @@
             return Math.floor((local - epoch) / 86400000);
         }
 
+        // Set to true to pause the 12-day phase cycle and use the pinned tails below.
+        // Set to false to resume normal rotation.
+        const PHASE_CYCLE_PAUSED = true;
+        const PHASE_PINNED_TAILS = ['18-5358', '17-5278', '17-5279', '17-5266', '18-5343', '18-5336'];
+
         function computeStatus() {
             const day = dayIndex();
-            const phaseCycle = Math.floor(day / 12);
 
-            // Phase maintenance: deterministic per 12-day cycle; Wing jet excluded
-            const phRng = mkRng(phaseCycle * 7919 + 42);
-            const phaseCount = phRng() < 0.45 ? 1 : 2;
-            const phasePool = shuffle(TAILS.filter(t => !t.wing).map(t => t.id), phRng);
-            const phaseTails = new Set(phasePool.slice(0, phaseCount));
+            let phaseTails;
+            if (PHASE_CYCLE_PAUSED) {
+                // 12-day cycle is paused — use pinned tails
+                phaseTails = new Set(PHASE_PINNED_TAILS);
+            } else {
+                // Normal 12-day phase rotation
+                const phaseCycle = Math.floor(day / 12);
+                const phRng = mkRng(phaseCycle * 7919 + 42);
+                const phaseCount = phRng() < 0.45 ? 1 : 2;
+                const phasePool = shuffle(TAILS.filter(t => !t.wing).map(t => t.id), phRng);
+                phaseTails = new Set(phasePool.slice(0, phaseCount));
+            }
 
-            // Daily active set: 12–16 tails; Wing + phase always included
+            // Daily active set: 12–16 tails; Wing always included, phase tails excluded from active pool
             const dayRng = mkRng(day * 2053 + 137);
             const activeCount = 12 + Math.floor(dayRng() * 5); // 12–16
             const nonSpecial = TAILS.filter(t => !t.wing && !phaseTails.has(t.id)).map(t => t.id);
             const poolShuffled = shuffle(nonSpecial, mkRng(day * 1777 + 55));
-            const needed = Math.max(0, activeCount - 1 - phaseCount);
+            const needed = Math.max(0, activeCount - 1);
             const fromPool = poolShuffled.slice(0, needed);
-            const activeTails = new Set(['17-5265', ...phaseTails, ...fromPool]);
+            const activeTails = new Set(['17-5265', ...fromPool]);
 
             // Regular maintenance: 1–2 from active non-phase non-wing tails
             const mxRng = mkRng(day * 3571 + 99);
@@ -566,7 +577,7 @@
 
             const map = {};
             for (const t of TAILS) {
-                if (phaseTails.has(t.id))       map[t.id] = 'phase';
+                if (phaseTails.has(t.id))        map[t.id] = 'phase';
                 else if (!activeTails.has(t.id)) map[t.id] = 'inactive';
                 else if (maintTails.has(t.id))   map[t.id] = 'maint';
                 else                              map[t.id] = 'ready';
