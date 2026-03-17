@@ -370,7 +370,14 @@
                             </div>
                             <div class="summary-field">
                                 <span class="summary-label">Mission Type</span>
-                                <input type="text" class="summary-input" id="missionType" placeholder="e.g. CAS, SEAD, DCA…">
+                                <select class="summary-input" id="missionType">
+                                    <option value="">— Select —</option>
+                                    <option value="CAS">CAS</option>
+                                    <option value="OCA/DCA">OCA/DCA</option>
+                                    <option value="SEAD/DEAD">SEAD/DEAD</option>
+                                    <option value="XC">XC</option>
+                                    <option value="TNG">TNG</option>
+                                </select>
                             </div>
                             <div class="summary-field">
                                 <span class="summary-label">Callsign</span>
@@ -378,11 +385,13 @@
                             </div>
                             <div class="summary-field">
                                 <span class="summary-label">Aircraft</span>
-                                <input type="text" class="summary-input" id="missionAcft" placeholder="e.g. F-35A">
+                                <input type="text" class="summary-input" id="missionAcft" value="F-35A" readonly style="color:#4caf50;cursor:default;">
                             </div>
                             <div class="summary-field">
                                 <span class="summary-label">Tail #</span>
-                                <input type="text" class="summary-input" id="missionTail" placeholder="e.g. 18-5265">
+                                <select class="summary-input" id="missionTail">
+                                    <option value="">Loading…</option>
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -471,7 +480,7 @@
                             </div>
                             <div class="fl-field">
                                 <label class="fl-label" id="lblToTime" for="flToTime">7. T/O TIME (Z) <span class="req-star">*</span></label>
-                                <input type="text" class="fl-input" id="flToTime" placeholder="HH:MM" maxlength="5">
+                                <input type="text" class="fl-input" id="flToTime" placeholder="HHMM or HH:MM" maxlength="5">
                             </div>
                             <div class="fl-field">
                                 <label class="fl-label" for="flArrIcao">8. ARR ICAO <span class="req-star">*</span></label>
@@ -479,7 +488,7 @@
                             </div>
                             <div class="fl-field">
                                 <label class="fl-label" id="lblLandTime" for="flLandTime">9. LAND TIME (Z) <span class="req-star">*</span></label>
-                                <input type="text" class="fl-input" id="flLandTime" placeholder="HH:MM" maxlength="5">
+                                <input type="text" class="fl-input" id="flLandTime" placeholder="HHMM or HH:MM" maxlength="5">
                             </div>
                         </div>
                         <div style="margin-top:14px;max-width:200px;">
@@ -572,6 +581,100 @@
         // Set mission date
         document.getElementById('missionDate').textContent = new Date().toISOString().slice(0, 10);
 
+        // ── MXG Tail Dropdown ──
+        (async function populateTailDropdown() {
+            const TAILS = [
+                { id: '17-5265', wing: true },
+                { id: '17-5266' }, { id: '17-5277' }, { id: '17-5278' }, { id: '17-5279' },
+                { id: '17-5280' }, { id: '17-5284' },
+                { id: '18-5336' }, { id: '18-5337' }, { id: '18-5338' }, { id: '18-5339' },
+                { id: '18-5340' }, { id: '18-5341' }, { id: '18-5343' }, { id: '18-5344' },
+                { id: '18-5349' }, { id: '18-5358' }, { id: '18-5359' }, { id: '18-5360' },
+                { id: '18-5361' }
+            ];
+
+            function mkRng(seed) {
+                let s = (seed ^ 0xDEADBEEF) >>> 0 || 1;
+                return function () { s ^= s << 13; s ^= s >> 17; s ^= s << 5; s = s >>> 0; return s / 4294967296; };
+            }
+            function shuffle(arr, rng) {
+                const a = arr.slice();
+                for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const tmp = a[i]; a[i] = a[j]; a[j] = tmp; }
+                return a;
+            }
+            function dayIndex() {
+                const now = new Date();
+                const local = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                return Math.floor((local - new Date(2025, 0, 1)) / 86400000);
+            }
+
+            const PHASE_CYCLE_PAUSED = true;
+            const PHASE_PINNED_TAILS = ['18-5358', '17-5278', '17-5279', '17-5266', '18-5343', '18-5336'];
+
+            function computeStatus() {
+                const day = dayIndex();
+                const phaseTails = PHASE_CYCLE_PAUSED
+                    ? new Set(PHASE_PINNED_TAILS)
+                    : (() => {
+                        const phRng = mkRng(Math.floor(day / 12) * 7919 + 42);
+                        const phaseCount = phRng() < 0.45 ? 1 : 2;
+                        return new Set(shuffle(TAILS.filter(t => !t.wing).map(t => t.id), phRng).slice(0, phaseCount));
+                    })();
+
+                const dayRng = mkRng(day * 2053 + 137);
+                const activeCount = 12 + Math.floor(dayRng() * 5);
+                const nonSpecial = TAILS.filter(t => !t.wing && !phaseTails.has(t.id)).map(t => t.id);
+                const poolShuffled = shuffle(nonSpecial, mkRng(day * 1777 + 55));
+                const activeTails = new Set(['17-5265', ...poolShuffled.slice(0, Math.max(0, activeCount - 1))]);
+
+                const mxRng = mkRng(day * 3571 + 99);
+                const maintCount = mxRng() < 0.5 ? 1 : 2;
+                const maintTails = new Set(shuffle(poolShuffled.slice(0, Math.max(0, activeCount - 1)), mxRng).slice(0, maintCount));
+
+                const map = {};
+                for (const t of TAILS) {
+                    if (phaseTails.has(t.id))        map[t.id] = 'phase';
+                    else if (!activeTails.has(t.id)) map[t.id] = 'inactive';
+                    else if (maintTails.has(t.id))   map[t.id] = 'maint';
+                    else                              map[t.id] = 'ready';
+                }
+                return map;
+            }
+
+            const mxgStatus = computeStatus();
+
+            // Fetch off-station tails from today's flight records
+            const offStation = { '18-5344': true, '18-5339': true };
+            try {
+                const today = new Date().toISOString().slice(0, 10);
+                const { data: flights } = await _supabase
+                    .from('flight_records')
+                    .select('tail_number, arr_icao')
+                    .eq('mission_date', today)
+                    .not('tail_number', 'is', null)
+                    .not('arr_icao', 'is', null);
+                if (flights) {
+                    for (const f of flights) {
+                        if (f.tail_number && f.arr_icao && f.arr_icao.toUpperCase() !== 'KBTV') {
+                            offStation[f.tail_number.trim()] = true;
+                        }
+                    }
+                }
+            } catch (_) { /* silently ignore */ }
+
+            const sel = document.getElementById('missionTail');
+            sel.innerHTML = '<option value="">— Select Tail —</option>';
+            for (const t of TAILS) {
+                const st = mxgStatus[t.id];
+                const isOff = offStation[t.id];
+                if (st === 'phase' || st === 'maint' || st === 'inactive') continue;
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = isOff ? `${t.id}  (Off Station)` : t.id;
+                sel.appendChild(opt);
+            }
+        })();
+
         // Session reference — populated once on load
         let _session = null;
         let currentMode = 'ZULU';
@@ -608,9 +711,9 @@
         // ── Flight Time Auto-Calculation ──
         function calcFlightTime() {
             const parse = t => {
-                const parts = t.trim().split(':');
-                if (parts.length !== 2) return null;
-                const h = parseInt(parts[0], 10), m = parseInt(parts[1], 10);
+                const s = t.trim().replace(':', '');
+                if (!/^\d{3,4}$/.test(s)) return null;
+                const h = parseInt(s.slice(0, -2), 10), m = parseInt(s.slice(-2), 10);
                 if (isNaN(h) || isNaN(m) || h > 23 || m > 59) return null;
                 return h * 60 + m;
             };
@@ -704,11 +807,11 @@
                 return;
             }
             showStatus('✓ Record Saved', '#4caf50');
+            clearForm();
         });
 
         // ── Clear ──
-        document.getElementById('btnClear').addEventListener('click', () => {
-            if (!confirm('Clear all debrief data?')) return;
+        function clearForm() {
             ['missionType','missionCallsign','missionAcft','missionTail','debriefNotes',
              'flDepIcao','flToTime','flArrIcao','flLandTime','flRoute','flVatsimCid',
              'obj1notes','obj2notes','obj3notes'].forEach(id => {
@@ -723,6 +826,11 @@
                 item.classList.remove('done');
             });
             updateChecklist();
+        }
+
+        document.getElementById('btnClear').addEventListener('click', () => {
+            if (!confirm('Clear all debrief data?')) return;
+            clearForm();
         });
     </script>
 </body>
