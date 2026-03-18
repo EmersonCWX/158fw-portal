@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wing Roster | v158th Fighter Wing</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/member-nav.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #12151a url('assets/20260316213536_1.jpg') center center / cover fixed;
+            color: #e8e8e8;
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 12, 16, 0.72);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .page-wrapper { position: relative; z-index: 1; }
+
+        .page-wrapper {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 80px 24px 60px;
+        }
+
+        /* ── Title ── */
+        .gs-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 8px;
+            letter-spacing: 0.3px;
+        }
+        .gs-desc {
+            color: #888;
+            font-size: 0.91rem;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        /* ── Filter bar ── */
+        .gs-filter-label {
+            font-size: 0.75rem;
+            color: #777;
+            font-weight: 600;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            display: block;
+            margin-bottom: 7px;
+        }
+        .gs-filter-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+        .gs-filter-input {
+            background: #1f2226;
+            border: 1px solid #3a3f45;
+            color: #e8e8e8;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-family: inherit;
+            width: 240px;
+            transition: border-color 0.15s;
+        }
+        .gs-filter-input::placeholder { color: #444; }
+        .gs-filter-input:focus { outline: none; border-color: #6060b0; }
+        .gs-clear-btn {
+            background: transparent;
+            border: 1px solid #3a3f45;
+            color: #777;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            font-family: inherit;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .gs-clear-btn:hover { border-color: #aaa; color: #ccc; }
+
+        /* ── Certification badges ── */
+        .cbadge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.63rem;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin: 1px;
+        }
+        .cbadge-IP    { background: #4a1515; color: #e74c3c; }
+        .cbadge-FORM  { background: #38185a; color: #b07fe8; }
+        .cbadge-ADV   { background: #163825; color: #4caf50; }
+        .cbadge-VI    { background: #103a28; color: #2ecc71; }
+        .cbadge-CBT   { background: #162535; color: #7bb3cc; }
+        .cbadge-FAC   { background: #2a1f00; color: #f0a500; }
+        .cbadge-FORMP { background: #2a1040; color: #d4a0ff; }
+        .cbadge-A2A   { background: #1a2a10; color: #a0e060; }
+        .cbadge-AAR   { background: #102030; color: #60c0e0; }
+
+        /* ── Table ── */
+        .gs-table-wrap {
+            overflow-x: auto;
+            border: 1px solid #2a2d32;
+            border-bottom: none;
+            border-radius: 6px 6px 0 0;
+            background: #1a1d22;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        table.gs-table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        .gs-table thead tr th {
+            background: #1a1d22;
+            color: #555;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            padding: 11px 14px;
+            border-bottom: 2px solid #2a2d32;
+            border-right: 1px solid #222529;
+            text-align: left;
+            white-space: nowrap;
+        }
+        .gs-table thead tr th:last-child { border-right: none; }
+
+        /* Body cells */
+        .gs-table tbody td {
+            padding: 10px 14px;
+            font-size: 0.86rem;
+            border-bottom: 1px solid #1e2126;
+            border-right: 1px solid #1e2126;
+            color: #ccc;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+        .gs-table tbody td:last-child { border-right: none; }
+
+        .gs-table tbody td.col-callsign {
+            font-weight: 700;
+            font-size: 0.92rem;
+            color: #e8e8e8;
+            letter-spacing: 0.5px;
+        }
+
+        .gs-table tbody td.col-flight {
+            font-family: monospace;
+            color: #4caf50;
+            font-size: 0.88rem;
+        }
+
+        .gs-table tbody td.col-cid a {
+            color: #7bb3cc;
+            text-decoration: none;
+            font-family: monospace;
+        }
+        .gs-table tbody td.col-cid a:hover { text-decoration: underline; }
+
+        .gs-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
+
+        /* ── Status bar ── */
+        .gs-statusbar {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 9px 16px;
+            background: #161a1f;
+            border: 1px solid #2a2d32;
+            border-radius: 0 0 6px 6px;
+            font-size: 0.77rem;
+            color: #555;
+            flex-wrap: wrap;
+        }
+        .gs-statusbar .sep { color: #2a2d32; }
+
+        /* ── Loading / empty ── */
+        .gs-loading, .gs-empty {
+            padding: 50px 20px;
+            text-align: center;
+            color: #555;
+            font-size: 0.88rem;
+            letter-spacing: 0.5px;
+        }
+        .spin {
+            display: inline-block;
+            width: 16px; height: 16px;
+            border: 2px solid #2a2d32;
+            border-top-color: #4a7aab;
+            border-radius: 50%;
+            animation: spin 0.75s linear infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Admin-editable cert cell ── */
+        .cert-cell-admin {
+            cursor: pointer;
+            border-radius: 4px;
+            padding: 4px 6px;
+            transition: background 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            min-width: 40px;
+        }
+        .cert-cell-admin:hover { background: rgba(255,255,255,0.04); }
+        .cert-edit-hint {
+            font-size: 0.6rem;
+            color: #3a3f45;
+            letter-spacing: 0.5px;
+            margin-left: 2px;
+        }
+        .cert-cell-admin:hover .cert-edit-hint { color: #666; }
+
+        /* ── Cert edit modal ── */
+        .gs-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 9000;
+            align-items: center;
+            justify-content: center;
+        }
+        .gs-modal-overlay.open { display: flex; }
+        .gs-modal {
+            background: #1f2226;
+            border: 1px solid #3a3f45;
+            border-radius: 8px;
+            padding: 24px 28px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+        }
+        .gs-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #2a2d32;
+        }
+        .gs-modal-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #e8e8e8;
+        }
+        .gs-modal-subtitle {
+            font-size: 0.72rem;
+            color: #555;
+            font-weight: 400;
+            margin-top: 2px;
+        }
+        .gs-modal-close {
+            background: none;
+            border: none;
+            color: #555;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: inherit;
+            align-self: flex-start;
+        }
+        .gs-modal-close:hover { color: #aaa; background: rgba(255,255,255,0.05); }
+        .cert-toggle-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .cert-toggle-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 8px 14px;
+            border-radius: 5px;
+            border: 1px solid #3a3f45;
+            background: #12151a;
+            color: #666;
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.15s;
+        }
+        .cert-toggle-btn:hover { border-color: #666; color: #aaa; }
+        .cert-toggle-btn.active { border-color: transparent; }
+        .cert-toggle-btn.saving { opacity: 0.5; pointer-events: none; }
+        .cert-toggle-btn .check { font-size: 0.75rem; }
+        .modal-status {
+            margin-top: 16px;
+            font-size: 0.75rem;
+            color: #555;
+            min-height: 18px;
+        }
+        .modal-status.err { color: #e74c3c; }
+        .modal-status.ok  { color: #4caf50; }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+            .page-wrapper { padding: 70px 10px 40px; }
+            .gs-title { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="page-wrapper">
+
+        <h1 class="gs-title">v158th FW Wing Roster</h1>
+        <p class="gs-desc">Active members of the v158th Fighter Wing.</p>
+
+        <label class="gs-filter-label" for="filterInput">Filter by Callsign</label>
+        <div class="gs-filter-row">
+            <input type="text" id="filterInput" class="gs-filter-input" placeholder="Search callsign...">
+            <button class="gs-clear-btn" id="clearBtn">Clear</button>
+        </div>
+
+        <!-- Loading state -->
+        <div id="gsLoading" class="gs-loading">
+            <span class="spin"></span> Loading roster&hellip;
+        </div>
+
+        <!-- Main content -->
+        <div id="gsContent" style="display:none;">
+            <div class="gs-table-wrap">
+                <table class="gs-table" id="rosterTable">
+                    <thead>
+                        <tr>
+                            <th>Callsign</th>
+                            <th id="certsHdr">Certifications</th>
+                            <th>Total Flight Time</th>
+                            <th>VATSIM CID</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rosterBody">
+                    </tbody>
+                </table>
+            </div>
+            <div class="gs-statusbar">
+                <span id="memberCount"></span>
+                <span class="sep">|</span>
+                <span id="totalFlightTime"></span>
+                <span class="sep" id="adminSep" style="display:none;">|</span>
+                <span id="adminBadge" style="display:none;color:#f5c518;font-weight:700;"></span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Cert edit modal (admin only) -->
+    <div class="gs-modal-overlay" id="certModal" role="dialog" aria-modal="true">
+        <div class="gs-modal">
+            <div class="gs-modal-header">
+                <div>
+                    <div class="gs-modal-title" id="certModalTitle">Edit Certifications</div>
+                    <div class="gs-modal-subtitle" id="certModalSub"></div>
+                </div>
+                <button class="gs-modal-close" id="certModalClose" aria-label="Close">&times;</button>
+            </div>
+            <div class="cert-toggle-grid" id="certToggleGrid"></div>
+            <div class="modal-status" id="certModalStatus"></div>
+        </div>
+    </div>
+
+    <script>
+    const SUPABASE_URL      = 'https://gcumgpfyfqtfwbskkngt.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdW1ncGZ5ZnF0Zndic2trbmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDczMTAsImV4cCI6MjA4ODM4MzMxMH0.OSY0XEPQp-WsFWuiGrUG5fcLIVMI3c8AxBEv2shFftg';
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: { persistSession: true, autoRefreshToken: true, storageKey: 'v158fw-auth' }
+    });
+
+    const ALL_CERTS = ['IP', 'FORM', 'FORM+', 'ADV', 'V/I', 'A2A', 'AAR', 'CBT', 'FAC'];
+
+    const CERT_LABELS = {
+        'IP':    'Instructor Pilot',
+        'FORM':  '2 Ship Formation Certified',
+        'FORM+': '4 Ship Formation Certified',
+        'ADV':   'Advanced Qualified (Combat+Mission)',
+        'V/I':   'All Weather Certified',
+        'A2A':   'Air to Air',
+        'AAR':   'Air Refueling Qualified',
+        'CBT':   'Combat Qualified (A2A+A2G)',
+        'FAC':   'Forward Air Controller',
+    };
+
+    const CERT_CLASS = {
+        'IP':    'cbadge-IP',
+        'FORM':  'cbadge-FORM',
+        'FORM+': 'cbadge-FORMP',
+        'ADV':   'cbadge-ADV',
+        'V/I':   'cbadge-VI',
+        'A2A':   'cbadge-A2A',
+        'AAR':   'cbadge-AAR',
+        'CBT':   'cbadge-CBT',
+        'FAC':   'cbadge-FAC',
+    };
+
+    // Colors for the toggle buttons in the modal (active state)
+    const CERT_ACTIVE_STYLE = {
+        'IP':    { bg: '#4a1515', color: '#e74c3c', border: '#7a2020' },
+        'FORM':  { bg: '#38185a', color: '#b07fe8', border: '#5a2890' },
+        'FORM+': { bg: '#2a1040', color: '#d4a0ff', border: '#4a2070' },
+        'ADV':   { bg: '#163825', color: '#4caf50', border: '#1e5a30' },
+        'V/I':   { bg: '#103a28', color: '#2ecc71', border: '#1a5a3a' },
+        'A2A':   { bg: '#1a2a10', color: '#a0e060', border: '#2a4a18' },
+        'AAR':   { bg: '#102030', color: '#60c0e0', border: '#183848' },
+        'CBT':   { bg: '#162535', color: '#7bb3cc', border: '#1e3a55' },
+        'FAC':   { bg: '#2a1f00', color: '#f0a500', border: '#4a3500' },
+    };
+
+    const STATS_URL = 'https://stats.vatsim.net/stats/';
+
+    // Known VATSIM CIDs copied from roster.html
+    const KNOWN_CIDS = {
+        'Sabre':  '1627852',
+        'Smore':  '1582344',
+        'Venus':  '1490208',
+        'Veix':   '1731294',
+        'Magma':  '1935951',
+    };
+
+    let allMembers    = [];
+    let certsMap      = {};   // certsMap[member_id] = Set of cert strings
+    let flightMap     = {};   // flightMap[email] = total minutes
+    let currentFilter = '';
+    let isAdmin       = false;
+
+    // Currently open modal state
+    let modalMemberId   = null;
+    let modalCallsign   = '';
+
+    function toMinutes(t) {
+        if (!t || t === '--:--') return 0;
+        const [h, m] = t.split(':').map(Number);
+        return (isNaN(h) ? 0 : h * 60) + (isNaN(m) ? 0 : m);
+    }
+
+    function minutesToHHMM(mins) {
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    }
+
+    function escapeHtml(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    // ── Init ────────────────────────────────────────────────────────────────
+    async function init() {
+        const { data: { session } } = await db.auth.getSession();
+        if (!session) { window.location.replace('index.html'); return; }
+
+        // Check admin role via vSAFREP Admins table
+        const { data: adminRow } = await db
+            .from('vsaferep_admins')
+            .select('email')
+            .eq('email', session.user.email)
+            .maybeSingle();
+        isAdmin = !!adminRow;
+
+        // Load active members
+        const { data: members, error: membersErr } = await db
+            .from('members')
+            .select('id, callsign, email, vatsim_id, status')
+            .eq('status', 'active')
+            .order('callsign', { ascending: true });
+
+        if (membersErr || !members) {
+            document.getElementById('gsLoading').innerHTML =
+                '<span style="color:#e74c3c;">Error loading roster.</span>';
+            return;
+        }
+        allMembers = members;
+
+        // Load certifications
+        const { data: certs } = await db
+            .from('member_certifications')
+            .select('member_id, certification');
+        if (certs) {
+            for (const c of certs) {
+                if (!certsMap[c.member_id]) certsMap[c.member_id] = new Set();
+                certsMap[c.member_id].add(c.certification);
+            }
+        }
+
+        // Load flight totals
+        const { data: flights } = await db
+            .from('flight_records')
+            .select('user_email, total_flight_time');
+        if (flights) {
+            for (const f of flights) {
+                if (!f.user_email) continue;
+                if (!flightMap[f.user_email]) flightMap[f.user_email] = 0;
+                flightMap[f.user_email] += toMinutes(f.total_flight_time);
+            }
+        }
+
+        // Update certs header hint for admins
+        if (isAdmin) {
+            document.getElementById('certsHdr').innerHTML =
+                'Certifications <span style="color:#3a3f45;font-size:0.58rem;font-weight:400;letter-spacing:0;">✎ click to edit</span>';
+            document.getElementById('adminSep').style.display = '';
+            const badge = document.getElementById('adminBadge');
+            badge.textContent = '★ Admin — cert editing enabled';
+            badge.style.display = '';
+        }
+
+        renderRows();
+        updateStatusBar();
+
+        document.getElementById('gsLoading').style.display = 'none';
+        document.getElementById('gsContent').style.display = 'block';
+    }
+
+    // ── Render rows ──────────────────────────────────────────────────────────
+    function renderRows() {
+        const tbody  = document.getElementById('rosterBody');
+        const filter = currentFilter.toLowerCase().trim();
+        const shown  = filter
+            ? allMembers.filter(m => (m.callsign || '').toLowerCase().includes(filter))
+            : allMembers;
+
+        if (!shown.length) {
+            tbody.innerHTML = `<tr><td colspan="4" class="gs-empty">No members match the current filter.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = shown.map(m => {
+            const certs = certsMap[m.id] ? [...certsMap[m.id]] : [];
+            const badgeHtml = certs.length
+                ? certs.map(c => `<span class="cbadge ${CERT_CLASS[c] || 'cbadge-CBT'}" title="${escapeHtml(CERT_LABELS[c] || c)}">${escapeHtml(c)}</span>`).join('')
+                : '<span style="color:#333;font-size:0.75rem;">—</span>';
+
+            let certCell;
+            if (isAdmin) {
+                certCell = `<td id="certcell-${escapeHtml(m.id)}">
+                    <span class="cert-cell-admin" onclick="openCertModal('${escapeHtml(m.id)}','${escapeHtml(m.callsign || m.id)}')" title="Edit certifications">
+                        ${badgeHtml}
+                        <span class="cert-edit-hint">✎</span>
+                    </span>
+                </td>`;
+            } else {
+                certCell = `<td>${badgeHtml}</td>`;
+            }
+
+            const totalMins  = flightMap[m.email] || 0;
+            const flightDisp = totalMins > 0
+                ? minutesToHHMM(totalMins) + ' hrs'
+                : '<span style="color:#444;">—</span>';
+
+            const cid = m.vatsim_id ? m.vatsim_id.trim() : (KNOWN_CIDS[m.callsign] || null);
+            const cidDisp = cid
+                ? `<a href="${STATS_URL}${encodeURIComponent(cid)}" target="_blank" rel="noopener noreferrer">${escapeHtml(cid)}</a>`
+                : '<span style="color:#444;">—</span>';
+
+            return `<tr>
+                <td class="col-callsign">${escapeHtml(m.callsign || '—')}</td>
+                ${certCell}
+                <td class="col-flight">${flightDisp}</td>
+                <td class="col-cid">${cidDisp}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    // ── Refresh a single cert cell in the table ──────────────────────────────
+    function refreshCertCell(memberId, callsign) {
+        const cell = document.getElementById(`certcell-${memberId}`);
+        if (!cell) return;
+        const certs = certsMap[memberId] ? [...certsMap[memberId]] : [];
+        const badgeHtml = certs.length
+            ? certs.map(c => `<span class="cbadge ${CERT_CLASS[c] || 'cbadge-CBT'}" title="${escapeHtml(CERT_LABELS[c] || c)}">${escapeHtml(c)}</span>`).join('')
+            : '<span style="color:#333;font-size:0.75rem;">—</span>';
+        cell.innerHTML = `<span class="cert-cell-admin" onclick="openCertModal('${escapeHtml(memberId)}','${escapeHtml(callsign)}')" title="Edit certifications">
+            ${badgeHtml}
+            <span class="cert-edit-hint">✎</span>
+        </span>`;
+    }
+
+    // ── Status bar ───────────────────────────────────────────────────────────
+    function updateStatusBar() {
+        const totalWingMins = allMembers.reduce((sum, m) => sum + (flightMap[m.email] || 0), 0);
+        document.getElementById('memberCount').textContent =
+            `${allMembers.length} active member${allMembers.length !== 1 ? 's' : ''}`;
+        document.getElementById('totalFlightTime').textContent =
+            totalWingMins > 0
+                ? `Wing total: ${minutesToHHMM(totalWingMins)} hrs`
+                : 'No flight records yet';
+    }
+
+    // ── Cert modal ───────────────────────────────────────────────────────────
+    function openCertModal(memberId, callsign) {
+        if (!isAdmin) return;
+        modalMemberId = memberId;
+        modalCallsign = callsign;
+
+        document.getElementById('certModalTitle').textContent = 'Edit Certifications';
+        document.getElementById('certModalSub').textContent   = callsign;
+        document.getElementById('certModalStatus').textContent = '';
+        document.getElementById('certModalStatus').className  = 'modal-status';
+
+        const memberCerts = certsMap[memberId] || new Set();
+        const grid = document.getElementById('certToggleGrid');
+
+        grid.innerHTML = ALL_CERTS.map(cert => {
+            const has = memberCerts.has(cert);
+            const style = has
+                ? `background:${CERT_ACTIVE_STYLE[cert].bg};color:${CERT_ACTIVE_STYLE[cert].color};border-color:${CERT_ACTIVE_STYLE[cert].border};`
+                : '';
+            return `<button class="cert-toggle-btn${has ? ' active' : ''}"
+                            style="${style}"
+                            data-cert="${escapeHtml(cert)}"
+                            onclick="toggleCert('${escapeHtml(cert)}', this)">
+                        <span class="check">${has ? '✔' : ''}</span>${escapeHtml(cert)}
+                    </button>`;
+        }).join('');
+
+        document.getElementById('certModal').classList.add('open');
+    }
+
+    async function toggleCert(cert, btn) {
+        if (!modalMemberId || btn.classList.contains('saving')) return;
+
+        const memberCerts = certsMap[modalMemberId] || new Set();
+        const hasCert = memberCerts.has(cert);
+        const statusEl = document.getElementById('certModalStatus');
+
+        btn.classList.add('saving');
+        statusEl.textContent = (hasCert ? 'Removing ' : 'Adding ') + cert + '…';
+        statusEl.className = 'modal-status';
+
+        if (hasCert) {
+            const { error } = await db
+                .from('member_certifications')
+                .delete()
+                .eq('member_id', modalMemberId)
+                .eq('certification', cert);
+
+            if (error) {
+                statusEl.textContent = 'Error: ' + error.message;
+                statusEl.className = 'modal-status err';
+                btn.classList.remove('saving');
+                return;
+            }
+            memberCerts.delete(cert);
+            certsMap[modalMemberId] = memberCerts;
+
+            // Reset button to inactive style
+            btn.classList.remove('active', 'saving');
+            btn.style.cssText = '';
+            btn.querySelector('.check').textContent = '';
+
+        } else {
+            const { error } = await db
+                .from('member_certifications')
+                .insert({ member_id: modalMemberId, certification: cert });
+
+            if (error) {
+                statusEl.textContent = 'Error: ' + error.message;
+                statusEl.className = 'modal-status err';
+                btn.classList.remove('saving');
+                return;
+            }
+            memberCerts.add(cert);
+            certsMap[modalMemberId] = memberCerts;
+
+            // Activate button style
+            btn.classList.remove('saving');
+            btn.classList.add('active');
+            const s = CERT_ACTIVE_STYLE[cert];
+            btn.style.cssText = `background:${s.bg};color:${s.color};border-color:${s.border};`;
+            btn.querySelector('.check').textContent = '✔';
+        }
+
+        statusEl.textContent = cert + (hasCert ? ' removed.' : ' added.');
+        statusEl.className = 'modal-status ok';
+
+        // Update the table row without re-rendering everything
+        refreshCertCell(modalMemberId, modalCallsign);
+    }
+
+    // Close modal
+    document.getElementById('certModalClose').addEventListener('click', () => {
+        document.getElementById('certModal').classList.remove('open');
+    });
+    document.getElementById('certModal').addEventListener('click', e => {
+        if (e.target === e.currentTarget)
+            document.getElementById('certModal').classList.remove('open');
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape')
+            document.getElementById('certModal').classList.remove('open');
+    });
+
+    // Filter
+    document.getElementById('filterInput').addEventListener('input', e => {
+        currentFilter = e.target.value;
+        renderRows();
+    });
+    document.getElementById('clearBtn').addEventListener('click', () => {
+        document.getElementById('filterInput').value = '';
+        currentFilter = '';
+        renderRows();
+    });
+
+    init();
+    </script>
+</body>
+</html>

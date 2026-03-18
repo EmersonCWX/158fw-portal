@@ -18,9 +18,20 @@ CREATE TABLE IF NOT EXISTS public.members (
                             CHECK (role IN ('member', 'admin')),
     status      TEXT        NOT NULL DEFAULT 'pending'
                             CHECK (status IN ('pending', 'active', 'inactive')),
+    vatsim_id   TEXT,                          -- VATSIM CID
     joined_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Add vatsim_id to existing deployments
+ALTER TABLE public.members ADD COLUMN IF NOT EXISTS vatsim_id TEXT;
+
+-- Populate known CIDs from roster (update by callsign)
+UPDATE public.members SET vatsim_id = '1627852' WHERE callsign = 'Sabre';
+UPDATE public.members SET vatsim_id = '1582344' WHERE callsign = 'Smore';
+UPDATE public.members SET vatsim_id = '1490208' WHERE callsign = 'Venus';
+UPDATE public.members SET vatsim_id = '1731294' WHERE callsign = 'Veix';
+UPDATE public.members SET vatsim_id = '1935951' WHERE callsign = 'Magma';
 
 COMMENT ON TABLE public.members IS
     'Extended profile for each invited/registered member of the 158th FW.';
@@ -514,6 +525,55 @@ CREATE POLICY "admin: delete vsaferep reports"
     ON public.vsaferep_reports
     FOR DELETE
     USING (
+        EXISTS (
+            SELECT 1 FROM public.vsaferep_admins
+            WHERE email = auth.email()
+        )
+    );
+
+-- ============================================================
+
+-- ── 13. MEMBER CERTIFICATIONS ────────────────────────────────
+-- Stores per-member certifications (IP, FAC, CBT, etc.).
+-- Used by members-roster.html (read / admin write) and
+-- gradesheet.html (read).
+
+CREATE TABLE IF NOT EXISTS public.member_certifications (
+    id              UUID    PRIMARY KEY DEFAULT gen_random_uuid(),
+    member_id       UUID    NOT NULL REFERENCES public.members(id) ON DELETE CASCADE,
+    certification   TEXT    NOT NULL,
+    granted_by      TEXT,               -- admin email who granted it (optional)
+    granted_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (member_id, certification)
+);
+
+COMMENT ON TABLE public.member_certifications IS
+    'v158th FW pilot certifications (IP, FAC, CBT, etc.) per member.';
+
+ALTER TABLE public.member_certifications ENABLE ROW LEVEL SECURITY;
+
+GRANT SELECT ON public.member_certifications TO authenticated;
+GRANT INSERT, DELETE ON public.member_certifications TO authenticated;
+
+-- Any authenticated member can read all certifications
+DROP POLICY IF EXISTS "member: read all certifications" ON public.member_certifications;
+CREATE POLICY "member: read all certifications"
+    ON public.member_certifications
+    FOR SELECT
+    USING (auth.uid() IS NOT NULL);
+
+-- Only vSAFREP admins can grant or revoke certifications
+DROP POLICY IF EXISTS "admin: write certifications" ON public.member_certifications;
+CREATE POLICY "admin: write certifications"
+    ON public.member_certifications
+    FOR ALL
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.vsaferep_admins
+            WHERE email = auth.email()
+        )
+    )
+    WITH CHECK (
         EXISTS (
             SELECT 1 FROM public.vsaferep_admins
             WHERE email = auth.email()
