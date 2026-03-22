@@ -63,6 +63,15 @@
                         </div>
                     </a>
 
+                    <!-- Article 4 -->
+                    <a class="news-tile" href="#" data-story="redflag" style="background-image: url('assets/News Images/Red Flag cover.jpg')">
+                        <div class="news-tile-overlay">
+                            <div class="news-tile-date">March 22, 2026</div>
+                            <div class="news-tile-title">v158th FW Attends vRed Flag 26-1</div>
+                            <span class="news-tile-link">&#8594; SEE MORE</span>
+                        </div>
+                    </a>
+
                 </div>
             </div>
             <div class="news-carousel-dots" id="newsCarouselDots"></div>
@@ -165,6 +174,22 @@
         </div>
     </template>
 
+    <!-- Story: Red Flag 26-1 -->
+    <template id="story-redflag">
+        <div class="story-photos"
+             data-photos="assets/News Images/Red Flag cover.jpg|assets/News Images/Red flag 2.jpg|assets/News Images/Red flag 3.jpg|assets/News Images/Red flag 4.jpg"></div>
+        <div class="story-date">March 22, 2026</div>
+        <div class="story-title">v158th FW Attends vRed Flag 26-1</div>
+        <div class="story-body">
+            <p class="article-byline">v158th Fighter Wing Public Affairs &mdash; Nellis AFB, NV</p>
+            <p>F-35A Lightning IIs assigned to the v134th Fighter Squadron, Vermont Air National Guard, deployed to Nellis Air Force Base, Nevada, to participate in vRed Flag 26-1, one of VATSIM's premier large-force employment exercises.</p>
+            <p>The v158th Fighter Wing joined a multinational coalition of virtual aircrews to sharpen advanced air combat tactics, techniques, and procedures in a contested, degraded, and operationally limited environment. The exercise ran from March 20 through March 21, 2026.</p>
+            <p>"vRed Flag is our capstone exercise in becoming a combat coded unit. We were able to learn and hone our skills as red air and now are able to bring that home to teach to the next," said Lt Col. Marceline Johanson, v158th FW WG/CV. "The level of integration here with jamming, surface-to-air threats, and full IADS replication is exactly what prepares us for a real-world high-end fight."</p>
+            <p>Throughout the exercise, v158th FW pilots flew as part of an aggressor package conducting defensive counter-air, acting as a sophisticated simulated adversary.</p>
+            <p>The v158th FW's participation in vRed Flag 26-1 marks continued investment in Large Force Employment training and reinforces the wing's commitment to maintaining the highest levels of combat readiness.</p>
+        </div>
+    </template>
+
     <!-- Story: ZSEA -->
     <template id="story-zsea">
         <div class="story-photos"
@@ -229,7 +254,13 @@
         var tiles     = Array.from(track.querySelectorAll('.news-tile'));
         var current   = 0;
 
-        // Build dots
+        // Clone first slide and append so last→first wraps with a smooth slide
+        var cloneFirst = tiles[0].cloneNode(true);
+        cloneFirst.setAttribute('aria-hidden', 'true');
+        cloneFirst.removeAttribute('data-story'); // prevent modal on clone
+        track.appendChild(cloneFirst);
+
+        // Build dots (real tiles only)
         var dots = tiles.map(function (_, i) {
             var dot = document.createElement('button');
             dot.className = 'news-carousel-dot' + (i === 0 ? ' active' : '');
@@ -239,30 +270,35 @@
             return dot;
         });
 
-        function syncDots() {
-            dots.forEach(function (d, i) { d.classList.toggle('active', i === current); });
+        function syncDots(index) {
+            var d = index % tiles.length; // clone maps back to dot 0
+            dots.forEach(function (dot, i) { dot.classList.toggle('active', i === d); });
         }
         function setWidths() {
             var w = carousel.clientWidth;
-            tiles.forEach(function (t) { t.style.width = w + 'px'; });
+            track.querySelectorAll('.news-tile').forEach(function (t) { t.style.width = w + 'px'; });
         }
         function goTo(index) {
             current = index;
             track.style.transform = 'translateX(' + (-current * carousel.clientWidth) + 'px)';
-            syncDots();
+            syncDots(current);
         }
         function next() {
-            var nextIndex = (current + 1) % tiles.length;
-            if (nextIndex === 0) {
-                track.style.transition = 'none';
-                track.style.transform  = 'translateX(0)';
-                current = 0;
-                syncDots();
-                requestAnimationFrame(function () {
-                    requestAnimationFrame(function () { track.style.transition = ''; });
+            var nextIndex = current + 1; // may go to clone at tiles.length
+            track.style.transform = 'translateX(' + (-nextIndex * carousel.clientWidth) + 'px)';
+            syncDots(nextIndex);
+            current = nextIndex;
+            if (nextIndex === tiles.length) {
+                // After sliding to the clone, silently snap back to real slide 0
+                track.addEventListener('transitionend', function handler() {
+                    track.removeEventListener('transitionend', handler);
+                    track.style.transition = 'none';
+                    current = 0;
+                    track.style.transform = 'translateX(0)';
+                    requestAnimationFrame(function () {
+                        requestAnimationFrame(function () { track.style.transition = ''; });
+                    });
                 });
-            } else {
-                goTo(nextIndex);
             }
         }
         setWidths();
