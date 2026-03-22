@@ -32,6 +32,7 @@ UPDATE public.members SET vatsim_id = '1582344' WHERE callsign = 'Smore';
 UPDATE public.members SET vatsim_id = '1490208' WHERE callsign = 'Venus';
 UPDATE public.members SET vatsim_id = '1731294' WHERE callsign = 'Veix';
 UPDATE public.members SET vatsim_id = '1935951' WHERE callsign = 'Magma';
+UPDATE public.members SET vatsim_id = '1924410' WHERE callsign = 'Gyro';
 
 COMMENT ON TABLE public.members IS
     'Extended profile for each invited/registered member of the 158th FW.';
