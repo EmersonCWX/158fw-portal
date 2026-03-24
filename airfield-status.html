@@ -303,10 +303,31 @@
             } else if ((hours > 21 || (hours === 21 && minutes >= 30)) || (hours < 8 || (hours === 8 && minutes < 30))) {
                 isTerminated = true;
             }
-            // Set VFR/IFR/MVFR/LIFR status and color
+            // Extract ceiling (lowest BKN or OVC layer, in feet) and visibility (SM)
+            let ceiling = 99999;
+            if (metarObj.clouds && Array.isArray(metarObj.clouds)) {
+                for (const cloud of metarObj.clouds) {
+                    if ((cloud.type === 'BKN' || cloud.type === 'OVC') && cloud.altitude != null) {
+                        const layerFt = cloud.altitude * 100;
+                        if (layerFt < ceiling) ceiling = layerFt;
+                    }
+                }
+            }
+            let visibility = 99;
+            if (metarObj.visibility && metarObj.visibility.value != null) {
+                visibility = metarObj.visibility.value; // SM for US stations
+            }
+
+            // Set ops status — custom thresholds take priority over AVWX flight rules
             let fieldStatus = 'VFR';
             let statusClass = 'green';
-            if (metarObj && metarObj.flight_rules) {
+            if (ceiling < 1200 && visibility < 5) {
+                fieldStatus = 'Stop Ops/Wx Recall';
+                statusClass = 'red';
+            } else if (ceiling < 5000 && visibility < 5) {
+                fieldStatus = 'Restricted';
+                statusClass = 'yellow';
+            } else if (metarObj && metarObj.flight_rules) {
                 if (metarObj.flight_rules === 'LIFR') { fieldStatus = 'LIFR'; statusClass = 'red'; }
                 else if (metarObj.flight_rules === 'IFR') { fieldStatus = 'IFR'; statusClass = 'red'; }
                 else if (metarObj.flight_rules === 'MVFR') { fieldStatus = 'MVFR'; statusClass = 'yellow'; }

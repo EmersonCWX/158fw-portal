@@ -892,30 +892,51 @@
         const reportId = crypto.randomUUID();
         const shortId  = 'AVN-' + reportId.slice(0, 6).toUpperCase();
 
+        // Pack all aviation-specific fields into the description block
+        // since the shared table only has generic columns.
+        const occType    = document.getElementById('occurrenceType').value || '';
+        const acType     = document.getElementById('aircraftType').value.trim();
+        const callsign   = document.getElementById('flightCallsign').value.trim();
+        const depBase    = document.getElementById('departureBase').value.trim();
+        const phase      = document.getElementById('phaseOfFlight').value;
+        const msnType    = document.getElementById('missionType').value;
+        const sysFx      = document.getElementById('systemAffected').value;
+        const corrAct    = document.getElementById('correctiveActions').value.trim();
+        const rawDesc    = document.getElementById('occurrenceDescription').value.trim();
+
+        const boolLabel = v => v === true ? 'Yes' : v === false ? 'No' : 'Unknown';
+
+        const descBlock = [
+            `OCCURRENCE TYPE: ${occType}`,
+            `AIRCRAFT: ${acType || 'N/A'}  CALLSIGN: ${callsign || 'N/A'}`,
+            `DEPARTURE BASE: ${depBase || 'N/A'}`,
+            `PHASE OF FLIGHT: ${phase || 'N/A'}`,
+            `MISSION TYPE: ${msnType || 'N/A'}`,
+            `SYSTEM AFFECTED: ${sysFx || 'N/A'}`,
+            `EMERGENCY DECLARED: ${boolLabel(toggleState.emerg)}`,
+            `CREW INJURIES: ${boolLabel(toggleState.injury)}`,
+            `DIVERTED: ${boolLabel(toggleState.divert)}`,
+            ``,
+            `DESCRIPTION:`,
+            rawDesc,
+            ``,
+            `CORRECTIVE ACTIONS:`,
+            corrAct || 'None provided',
+        ].join('\n');
+
         const payload = {
-            id                  : reportId,
-            report_type         : 'aviation',
-            occurrence_type     : document.getElementById('occurrenceType').value || null,
-            aircraft_type       : document.getElementById('aircraftType').value.trim() || null,
-            flight_callsign     : document.getElementById('flightCallsign').value.trim() || null,
-            description         : document.getElementById('occurrenceDescription').value.trim() || null,
-            incident_date       : document.getElementById('incidentDate').value || null,
-            incident_time       : document.getElementById('incidentTime').value.trim() || null,
-            departure_base      : document.getElementById('departureBase').value.trim() || null,
-            location            : document.getElementById('incidentLocation').value.trim() || null,
-            phase_of_flight     : document.getElementById('phaseOfFlight').value || null,
-            mission_type        : document.getElementById('missionType').value || null,
-            system_affected     : document.getElementById('systemAffected').value || null,
-            emergency_declared  : toggleState.emerg,
-            crew_injuries       : toggleState.injury,
-            aircraft_damage     : toggleState.damage,
-            diverted            : toggleState.divert,
-            corrective_actions  : document.getElementById('correctiveActions').value.trim() || null,
-            reporter_name       : document.getElementById('reporterName').value.trim() || null,
-            reporter_email      : document.getElementById('reporterEmail').value.trim() || null,
-            unit                : document.getElementById('reporterUnit').value.trim() || null,
-            duty_position       : document.getElementById('reporterDuty').value || null,
-            short_id            : shortId
+            id             : reportId,
+            report_type    : 'aviation',
+            description    : descBlock,
+            observed_date  : document.getElementById('incidentDate').value || null,
+            observed_time  : document.getElementById('incidentTime').value.trim() || null,
+            location       : document.getElementById('incidentLocation').value.trim() || null,
+            category       : occType || null,
+            reporter_name  : document.getElementById('reporterName').value.trim() || null,
+            reporter_email : document.getElementById('reporterEmail').value.trim() || null,
+            unit           : document.getElementById('reporterUnit').value.trim() || null,
+            duty_position  : document.getElementById('reporterDuty').value || null,
+            short_id       : shortId
         };
 
         try {
