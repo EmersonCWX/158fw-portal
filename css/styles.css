@@ -746,7 +746,7 @@ body {
     height: calc(100vh - 70px);
     margin-top: 70px;
     overflow: hidden;
-    background-image: linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)), url('../assets/20240503183002_1.jpg');
+    background-image: linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)), url('../assets/20260316195225_1.jpg');
     background-size: 100% auto;
     background-position: center top;
     background-repeat: no-repeat;
@@ -1056,6 +1056,32 @@ body {
     font-size: 1.1rem;
     padding: 4rem 0;
     grid-column: 1 / -1;
+}
+
+/* Archived Stories */
+.news-archived-section {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid #333;
+}
+
+.news-archived-section h3 {
+    font-size: 1rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 1.5rem;
+}
+
+.news-archived-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+}
+
+.news-archived-grid .news-tile {
+    flex: 0 0 280px;
+    height: 180px;
 }
 
 /* Article Modal */
