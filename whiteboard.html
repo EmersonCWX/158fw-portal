@@ -103,6 +103,14 @@
         .sb-plus { margin-left: auto; font-size: .68rem; color: #555; }
 
         #statusbar { position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); background: rgba(20,23,27,.92); border: 1px solid #3a3f45; border-radius: 3px; padding: 4px 16px; font-size: .7rem; color: #666; letter-spacing: .7px; pointer-events: none; z-index: 8001; backdrop-filter: blur(4px); white-space: nowrap; }
+        /* Line info popup */
+        #line-popup { display:none; position:fixed; z-index:9100; background:#1f2226; border:1px solid #3a3f45; border-radius:5px; padding:10px 14px; min-width:165px; box-shadow:0 6px 28px rgba(0,0,0,.8); }
+        #line-popup.vis { display:block; }
+        .lp-row { display:flex; justify-content:space-between; align-items:baseline; gap:18px; padding:4px 0; border-bottom:1px solid #2a2d32; }
+        .lp-row:last-child { border-bottom:none; }
+        .lp-lbl { font-size:.6rem; font-weight:700; color:#666; letter-spacing:1px; text-transform:uppercase; white-space:nowrap; }
+        .lp-val { font-size:.83rem; font-weight:700; color:#e8e8e8; font-family:"Courier New",monospace; }
+        .lp-note { font-size:.63rem; color:#555; padding:4px 0 0; }
     </style>
 </head>
 <body>
@@ -163,6 +171,7 @@
 </div>
 
 <div id="statusbar">DRAW &nbsp;|&nbsp; D=Draw &nbsp; E=Erase &nbsp; T=Text &nbsp; P=Pan &nbsp; Ctrl+Z=Undo</div>
+<div id="line-popup"></div>
 
 <script>
 const SB_URL = 'https://gcumgpfyfqtfwbskkngt.supabase.co';
@@ -180,7 +189,7 @@ let _ignoreRemote = false;
 let tool='draw', penColor='#ffffff', penWidth=2;
 let strokes=[], labels=[], magnets=[], aircraft=[], holds=[], mapMode='off', sidebarOpen=false;
 let acSize=50;
-let painting=false, curStroke=[], curStrokeGeo=null, ctrlSmooth=false;
+let painting=false, curStroke=[], curStrokeGeo=null, ctrlSmooth=false, altStraight=false;
 let selectedAcIds=new Set(), groupDragOffsets=null;
 let txtPos=null;
 let dragMag=null, dragOX=0, dragOY=0, dragMoved=false;
@@ -211,7 +220,11 @@ function drawStroke(s){
     }
     if(!pts||pts.length<2) return;
     ctx.save();
-    ctx.beginPath(); ctx.lineCap='round'; ctx.lineJoin='round'; ctx.lineWidth=s.width;
+    let lw=s.width;
+    if(s.erase&&s.eraseZoom!=null&&s.geoPoints&&mapMode!=='off'&&map){
+        lw=s.width*Math.pow(2,map.getZoom()-s.eraseZoom);
+    }
+    ctx.beginPath(); ctx.lineCap='round'; ctx.lineJoin='round'; ctx.lineWidth=lw;
     if(s.erase){ ctx.globalCompositeOperation='destination-out'; ctx.strokeStyle='rgba(0,0,0,1)'; }
     else        { ctx.globalCompositeOperation='source-over';    ctx.strokeStyle=s.color; }
     ctx.moveTo(pts[0][0],pts[0][1]);
@@ -242,6 +255,78 @@ canvas.addEventListener('mouseleave', pu);
 canvas.addEventListener('touchstart', pd, {passive:false});
 canvas.addEventListener('touchmove',  pm, {passive:false});
 canvas.addEventListener('touchend',   pu);
+canvas.addEventListener('contextmenu', onCanvasRightClick);
+
+// ── Line info (right-click) ─────────────────────────────────────────────────
+function _ptSegDist(px,py,ax,ay,bx,by){
+    const dx=bx-ax,dy=by-ay,len2=dx*dx+dy*dy;
+    if(len2===0) return Math.hypot(px-ax,py-ay);
+    const t=Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/len2));
+    return Math.hypot(px-(ax+t*dx),py-(ay+t*dy));
+}
+function _strokePxPts(s){
+    if(s.geoPoints&&mapMode!=='off'&&map)
+        return s.geoPoints.map(ll=>{ const p=map.latLngToContainerPoint(L.latLng(ll.lat,ll.lng)); return [p.x,p.y]; });
+    return s.points;
+}
+function _haversineNM(lat1,lon1,lat2,lon2){
+    const R=3440.065,toR=Math.PI/180;
+    const dLat=(lat2-lat1)*toR,dLon=(lon2-lon1)*toR;
+    const a=Math.sin(dLat/2)**2+Math.cos(lat1*toR)*Math.cos(lat2*toR)*Math.sin(dLon/2)**2;
+    return R*2*Math.asin(Math.sqrt(a));
+}
+function _bearing(lat1,lon1,lat2,lon2){
+    const toR=Math.PI/180;
+    const y=Math.sin((lon2-lon1)*toR)*Math.cos(lat2*toR);
+    const x=Math.cos(lat1*toR)*Math.sin(lat2*toR)-Math.sin(lat1*toR)*Math.cos(lat2*toR)*Math.cos((lon2-lon1)*toR);
+    return ((Math.atan2(y,x)*180/Math.PI)+360)%360;
+}
+function onCanvasRightClick(e){
+    if(painting) return;
+    e.preventDefault();
+    const [mx,my]=evtXY(e);
+    let found=null;
+    for(let i=strokes.length-1;i>=0;i--){
+        const s=strokes[i]; if(s.erase) continue;
+        const pts=_strokePxPts(s); if(!pts||pts.length<2) continue;
+        for(let j=0;j<pts.length-1;j++){
+            if(_ptSegDist(mx,my,pts[j][0],pts[j][1],pts[j+1][0],pts[j+1][1])<=9){ found=s; break; }
+        }
+        if(found) break;
+    }
+    if(found) _showLinePopup(e.clientX,e.clientY,found);
+    else _hideLinePopup();
+}
+function _showLinePopup(cx,cy,s){
+    const pop=document.getElementById('line-popup');
+    let html='';
+    const geo=s.geoPoints;
+    if(geo&&geo.length>=2){
+        let dist=0;
+        for(let i=0;i<geo.length-1;i++) dist+=_haversineNM(geo[i].lat,geo[i].lng,geo[i+1].lat,geo[i+1].lng);
+        const bFwd=_bearing(geo[0].lat,geo[0].lng,geo[geo.length-1].lat,geo[geo.length-1].lng);
+        const bBack=(bFwd+180)%360;
+        const fmt=n=>String(Math.round(n)).padStart(3,'0');
+        html='<div class="lp-row"><span class="lp-lbl">Distance</span><span class="lp-val">'+dist.toFixed(1)+' NM</span></div>'+
+             '<div class="lp-row"><span class="lp-lbl">Bearing</span><span class="lp-val">'+fmt(bFwd)+'&deg;</span></div>'+
+             '<div class="lp-row"><span class="lp-lbl">Back Brg</span><span class="lp-val">'+fmt(bBack)+'&deg;</span></div>';
+    } else {
+        const pts=s.points; if(!pts||pts.length<2){ _hideLinePopup(); return; }
+        let px=0; for(let i=0;i<pts.length-1;i++) px+=Math.hypot(pts[i+1][0]-pts[i][0],pts[i+1][1]-pts[i][1]);
+        html='<div class="lp-row"><span class="lp-lbl">Distance</span><span class="lp-val">'+Math.round(px)+' px</span></div>'+
+             '<div class="lp-note">Enable map for NM &amp; bearing</div>';
+    }
+    pop.innerHTML=html;
+    const W=175,vw=window.innerWidth,vh=window.innerHeight;
+    let left=cx+14,top=cy-8;
+    if(left+W>vw-8) left=cx-W-8;
+    if(top+100>vh-8) top=vh-108;
+    pop.style.left=left+'px'; pop.style.top=top+'px';
+    pop.classList.add('vis');
+}
+function _hideLinePopup(){ document.getElementById('line-popup').classList.remove('vis'); }
+document.addEventListener('mousedown',e=>{ if(!e.target.closest('#line-popup')) _hideLinePopup(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') _hideLinePopup(); });
 
 // Chaikin corner-cutting smoothing (pts = [[x,y],...] or [[a,b],...])
 function chaikin(pts, iterations){
@@ -262,23 +347,42 @@ function chaikin(pts, iterations){
 function pd(e){
     if(tool==='text'){ e.preventDefault(); placeTxtCursor(e); return; }
     if(tool!=='draw'&&tool!=='erase') return;
-    e.preventDefault(); painting=true; ctrlSmooth=false;
+    e.preventDefault(); painting=true; ctrlSmooth=false; altStraight=false;
     const xy=evtXY(e); curStroke=[xy];
     const ll=xyToLL(xy[0],xy[1]); curStrokeGeo=ll?[{lat:ll.lat,lng:ll.lng}]:null;
 }
 function pm(e){
     if(!painting) return;
     e.preventDefault();
-    if(e.ctrlKey||e.metaKey) ctrlSmooth=true;
-    const xy=evtXY(e); curStroke.push(xy);
+    if(e.altKey){ altStraight=true; }
+    else if(e.ctrlKey||e.metaKey) ctrlSmooth=true;
+    const xy=evtXY(e);
+    if(altStraight){
+        // Keep only start point + current point for live preview
+        redraw();
+        drawStroke({color:penColor, width:tool==='erase'?30:penWidth, erase:tool==='erase', points:[curStroke[0],xy]});
+        return;
+    }
+    curStroke.push(xy);
     if(curStrokeGeo){ const ll=xyToLL(xy[0],xy[1]); if(ll) curStrokeGeo.push({lat:ll.lat,lng:ll.lng}); }
     redraw();
     const previewPts=ctrlSmooth?chaikin(curStroke,2):curStroke;
     drawStroke({color:penColor, width:tool==='erase'?30:penWidth, erase:tool==='erase', points:previewPts});
 }
-function pu(){
+function pu(e){
     if(!painting) return;
     painting=false;
+    if(altStraight){
+        // Straight line: just start + end
+        const endXY=e&&(e.changedTouches?evtXY(e):evtXY(e))||curStroke[curStroke.length-1];
+        const pts=[curStroke[0],endXY];
+        const geo0=xyToLL(pts[0][0],pts[0][1]), geo1=xyToLL(pts[1][0],pts[1][1]);
+        const s={color:penColor,width:tool==='erase'?30:penWidth,erase:tool==='erase',points:pts};
+        if(tool==='erase'&&mapMode!=='off'&&map) s.eraseZoom=map.getZoom();
+        if(geo0&&geo1) s.geoPoints=[{lat:geo0.lat,lng:geo0.lng},{lat:geo1.lat,lng:geo1.lng}];
+        strokes.push(s); save();
+        altStraight=false; curStroke=[]; curStrokeGeo=null; ctrlSmooth=false; redraw(); return;
+    }
     if(curStroke.length>1){
         let pts=curStroke, geo=curStrokeGeo;
         if(ctrlSmooth){
@@ -286,10 +390,11 @@ function pu(){
             if(geo&&geo.length>1) geo=chaikin(geo.map(g=>[g.lat,g.lng]),3).map(p=>({lat:p[0],lng:p[1]}));
         }
         const s={color:penColor,width:tool==='erase'?30:penWidth,erase:tool==='erase',points:pts};
+        if(tool==='erase'&&mapMode!=='off'&&map) s.eraseZoom=map.getZoom();
         if(geo) s.geoPoints=geo;
         strokes.push(s); save();
     }
-    curStroke=[]; curStrokeGeo=null; ctrlSmooth=false;
+    curStroke=[]; curStrokeGeo=null; ctrlSmooth=false; altStraight=false;
 }
 
 // Text tool
@@ -785,10 +890,10 @@ document.addEventListener('keydown',e=>{
 });
 
 // Status
-const HINTS={draw:'DRAW -- D=Draw  E=Erase  T=Text  P=Pan  H=Insert Hold  Ctrl+Z=Undo  |  Hold Ctrl while drawing = smooth line  |  Ctrl+Click aircraft to select  Esc=Deselect',erase:'ERASE -- drag to erase',text:'TEXT -- click to place label, Enter to commit',pan:'PAN -- drag to pan the map | Aircraft: Ctrl+Click=Select  Ctrl+Scroll=Resize selected'};
+const HINTS={draw:'DRAW -- D=Draw  E=Erase  T=Text  P=Pan  H=Insert Hold  Ctrl+Z=Undo  |  Hold Ctrl = smooth  |  Hold Alt = straight line  |  Ctrl+Click aircraft to select  Esc=Deselect',erase:'ERASE -- drag to erase',text:'TEXT -- click to place label, Enter to commit  |  Ctrl+Scroll over label = resize',pan:'PAN -- drag to pan the map | Aircraft: Ctrl+Click=Select  Ctrl+Scroll=Resize selected'};
 function updateStatus(){ document.getElementById('statusbar').textContent=HINTS[tool]||''; }
 
-// Ctrl+Scroll to resize F-35 tokens (selected only, or all if no selection); also resizes holds when hovering over them
+// Ctrl+Scroll to resize F-35 tokens (selected only, or all if no selection); also resizes holds when hovering over them; also resizes text labels
 board.addEventListener('wheel', e=>{
     if(!e.ctrlKey) return;
     e.preventDefault();
@@ -799,6 +904,22 @@ board.addEventListener('wheel', e=>{
         const hid=overHold.id.replace('hld-','');
         const h=holds.find(h=>h.id===hid); if(h){ h.size=Math.max(40,Math.min(600,(h.size||holdSize)+delta*4)); renderHolds(); save(); }
         return;
+    }
+    // check if cursor is over a text label (canvas-rendered, so use mouse coords)
+    if(e.target===canvas){
+        const r=canvas.getBoundingClientRect();
+        const mx=e.clientX-r.left, my=e.clientY-r.top;
+        for(let i=labels.length-1;i>=0;i--){
+            const lb=labels[i];
+            let lx=lb.x, ly=lb.y;
+            if(lb.lat!=null&&mapMode!=='off'&&map){ const p=map.latLngToContainerPoint(L.latLng(lb.lat,lb.lng)); lx=p.x; ly=p.y; }
+            const sz=lb.size||16;
+            const approxW=lb.text.length*sz*0.6;
+            if(mx>=lx-8&&mx<=lx+approxW+8&&my>=ly-sz-4&&my<=ly+8){
+                lb.size=Math.max(8,Math.min(160,(lb.size||16)+delta));
+                redraw(); save(); return;
+            }
+        }
     }
     if(selectedAcIds.size>0){
         selectedAcIds.forEach(sid=>{
@@ -837,7 +958,7 @@ document.getElementById('wbLabel').addEventListener('input',save);
 // ── Collab helpers ────────────────────────────────────────────────
 function wbStateObj(){
     return {label:document.getElementById('wbLabel').value,
-        strokes:strokes.map(s=>({color:s.color,width:s.width,erase:!!s.erase,points:s.points,geoPoints:s.geoPoints||null})),
+        strokes:strokes.map(s=>({color:s.color,width:s.width,erase:!!s.erase,eraseZoom:s.eraseZoom??null,points:s.points,geoPoints:s.geoPoints||null})),
         labels, magnets:magnets.map(m=>({id:m.id,callsign:m.callsign,rank:m.rank,x:m.x,y:m.y,color:m.color,lat:m.lat,lng:m.lng})),
         aircraft:aircraft.map(a=>({id:a.id,x:a.x,y:a.y,color:a.color,angle:a.angle||0,size:a.size||acSize,refZoom:a.refZoom??null,lat:a.lat,lng:a.lng})),
         holds:holds.map(h=>({id:h.id,x:h.x,y:h.y,color:h.color,angle:h.angle||0,size:h.size||holdSize,turns:h.turns||'RT',refZoom:h.refZoom??null,lat:h.lat,lng:h.lng})),
