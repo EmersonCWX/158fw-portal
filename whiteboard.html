@@ -48,6 +48,16 @@
         .wb-dot { background: #fff; border-radius: 50%; }
 
         #board { position: fixed; top: 110px; left: 0; right: 0; bottom: 0; overflow: hidden; }
+
+        /* Presence bar */
+        #presence-bar { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+        .presence-dot { display: flex; align-items: center; gap: 5px; background: rgba(76,175,80,.12); border: 1px solid rgba(76,175,80,.4); border-radius: 20px; padding: 2px 8px 2px 5px; font-size: .68rem; font-weight: 700; color: #4caf50; letter-spacing: .4px; white-space: nowrap; }
+        .presence-dot::before { content: ''; width: 7px; height: 7px; background: #4caf50; border-radius: 50%; animation: pulse-green 2s infinite; flex-shrink: 0; }
+        .presence-count { color: #666; font-size: .68rem; letter-spacing: .4px; white-space: nowrap; }
+        @keyframes pulse-green { 0%,100%{opacity:1;} 50%{opacity:.4;} }
+        .collab-indicator { width: 8px; height: 8px; border-radius: 50%; background: #e85a4a; flex-shrink: 0; transition: background .3s; }
+        .collab-indicator.synced { background: #4caf50; }
+        .collab-indicator.syncing { background: #ffd700; animation: pulse-green 1s infinite; }
         #board-bg { position: absolute; inset: 0; background-color: #fff; z-index: 0; }
         #wb-map { position: absolute; inset: 0; z-index: 1; opacity: 0; pointer-events: none; transition: opacity .35s; }
         #wb-map.vis { opacity: 1; pointer-events: all; }
@@ -132,6 +142,11 @@
     <button class="wb-btn" id="btn-hold" onclick="placeHoldCenter()" title="Insert Holding Pattern [H]">HOLD</button>
     <button class="wb-btn" onclick="undo()"      title="Undo Ctrl+Z">UNDO</button>
     <button class="wb-btn" onclick="clearAll()"  style="color:#e85a4a;border-color:rgba(232,90,74,.35);">CLEAR</button>
+    <div class="wb-div"></div>
+    <div id="presence-bar">
+        <div class="collab-indicator" id="collab-dot" title="Sync status"></div>
+        <div id="presence-pills"></div>
+    </div>
 </div>
 
 <div id="board">
@@ -155,6 +170,13 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const _sb = supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession:true, autoRefreshToken:true, storageKey:'v158fw-auth' } });
 
 const STORE = 'v158fw-wb3';
+const WB_ROW_ID = 'main';
+let _myPresenceId = 'user_' + Math.random().toString(36).slice(2,8);
+let _myName = null;
+let _remoteViewers = {};
+const PRESENCE_COLORS = ['#5a8fc4','#4caf50','#ffd700','#ff8c00','#e85a4a','#c8a820','#a0aab4','#ffffff'];
+let _myColor = PRESENCE_COLORS[Math.floor(Math.random()*PRESENCE_COLORS.length)];
+let _ignoreRemote = false;
 let tool='draw', penColor='#ffffff', penWidth=2;
 let strokes=[], labels=[], magnets=[], aircraft=[], holds=[], mapMode='off', sidebarOpen=false;
 let acSize=50;
@@ -795,7 +817,10 @@ board.addEventListener('wheel', e=>{
 
 // Save/Load
 function save(){
-    try{ localStorage.setItem(STORE,JSON.stringify({label:document.getElementById('wbLabel').value, strokes:strokes.map(s=>({color:s.color,width:s.width,erase:!!s.erase,points:s.points,geoPoints:s.geoPoints||null})), labels, magnets:magnets.map(m=>({id:m.id,callsign:m.callsign,rank:m.rank,x:m.x,y:m.y,color:m.color,lat:m.lat,lng:m.lng})), aircraft:aircraft.map(a=>({id:a.id,x:a.x,y:a.y,color:a.color,angle:a.angle||0,size:a.size||acSize,refZoom:a.refZoom??null,lat:a.lat,lng:a.lng})), holds:holds.map(h=>({id:h.id,x:h.x,y:h.y,color:h.color,angle:h.angle||0,size:h.size||holdSize,turns:h.turns||'RT',refZoom:h.refZoom??null,lat:h.lat,lng:h.lng})), acSize, mapMode})); } catch(e){}
+    try{ localStorage.setItem(STORE,JSON.stringify(wbStateObj())); } catch(e){}
+    _ignoreRemote=true;
+    clearTimeout(save._irt); save._irt=setTimeout(()=>{ _ignoreRemote=false; },1500);
+    scheduleSaveRemote();
 }
 function load(){
     try{
@@ -809,10 +834,114 @@ function load(){
 }
 document.getElementById('wbLabel').addEventListener('input',save);
 
+// ── Collab helpers ────────────────────────────────────────────────
+function wbStateObj(){
+    return {label:document.getElementById('wbLabel').value,
+        strokes:strokes.map(s=>({color:s.color,width:s.width,erase:!!s.erase,points:s.points,geoPoints:s.geoPoints||null})),
+        labels, magnets:magnets.map(m=>({id:m.id,callsign:m.callsign,rank:m.rank,x:m.x,y:m.y,color:m.color,lat:m.lat,lng:m.lng})),
+        aircraft:aircraft.map(a=>({id:a.id,x:a.x,y:a.y,color:a.color,angle:a.angle||0,size:a.size||acSize,refZoom:a.refZoom??null,lat:a.lat,lng:a.lng})),
+        holds:holds.map(h=>({id:h.id,x:h.x,y:h.y,color:h.color,angle:h.angle||0,size:h.size||holdSize,turns:h.turns||'RT',refZoom:h.refZoom??null,lat:h.lat,lng:h.lng})),
+        acSize, mapMode};
+}
+function applyRemoteState(d){
+    if(!d) return;
+    const prevMap=mapMode;
+    if(d.label!=null) document.getElementById('wbLabel').value=d.label;
+    if(d.strokes) strokes=d.strokes;
+    if(d.labels)  labels=d.labels;
+    if(d.magnets) magnets=d.magnets;
+    if(d.aircraft)aircraft=d.aircraft;
+    if(d.holds)   holds=d.holds;
+    if(d.acSize)  acSize=d.acSize;
+    renderMagnets(); renderAircraft(); renderHolds(); redraw();
+    if(d.mapMode&&d.mapMode!==prevMap) setTimeout(()=>setMap(d.mapMode),100);
+}
+async function saveRemote(){
+    setSyncDot('syncing');
+    try{
+        const state=wbStateObj();
+        await _sb.from('whiteboard_state').upsert({id:WB_ROW_ID,state,updated_at:new Date().toISOString()});
+        setSyncDot('synced');
+    } catch(e){ setSyncDot('error'); }
+}
+let _saveTimer=null;
+function scheduleSaveRemote(){
+    clearTimeout(_saveTimer);
+    _saveTimer=setTimeout(saveRemote,800);
+}
+async function loadRemote(){
+    try{
+        const {data,error}=await _sb.from('whiteboard_state').select('state').eq('id',WB_ROW_ID).single();
+        if(!error&&data?.state){ applyRemoteState(data.state); setSyncDot('synced'); return true; }
+    } catch(e){}
+    return false;
+}
+function setSyncDot(s){
+    const d=document.getElementById('collab-dot'); if(!d) return;
+    d.className='collab-indicator'+(s==='synced'?' synced':s==='syncing'?' syncing':'');
+    d.title=s==='synced'?'Synced':s==='syncing'?'Saving\u2026':'Offline';
+}
+function renderPresence(){
+    const el=document.getElementById('presence-pills'); if(!el) return;
+    const viewers=Object.values(_remoteViewers);
+    if(viewers.length===0){ el.innerHTML=''; return; }
+    el.innerHTML=viewers.map(v=>
+        `<span class="presence-dot" style="background:${v.color}22;border-color:${v.color}88;color:${v.color}" title="${v.name} is viewing">${v.name}</span>`
+    ).join('');
+}
+let _collabChannel=null;
+function initCollab(){
+    _sb.auth.getSession().then(({data})=>{
+        const user=data?.session?.user;
+        _myName=user?.user_metadata?.full_name||user?.email?.split('@')[0]||('Guest-'+_myPresenceId.slice(-4));
+        startCollabChannel();
+    }).catch(()=>{ _myName='Guest-'+_myPresenceId.slice(-4); startCollabChannel(); });
+}
+function startCollabChannel(){
+    _collabChannel=_sb.channel('whiteboard:'+WB_ROW_ID,{config:{presence:{key:_myPresenceId}}});
+    _collabChannel.on('postgres_changes',{event:'UPDATE',schema:'public',table:'whiteboard_state',filter:'id=eq.'+WB_ROW_ID},
+        payload=>{
+            if(_ignoreRemote) return;
+            applyRemoteState(payload.new?.state);
+            setSyncDot('synced');
+        }
+    );
+    _collabChannel
+        .on('presence',{event:'sync'},()=>{
+            const state=_collabChannel.presenceState();
+            _remoteViewers={};
+            Object.entries(state).forEach(([key,presArr])=>{
+                if(key===_myPresenceId) return;
+                const p=presArr[0]; if(p) _remoteViewers[key]={name:p.name||key,color:p.color||'#a0aab4'};
+            });
+            renderPresence();
+        })
+        .on('presence',{event:'join'},({key,newPresences})=>{
+            if(key===_myPresenceId) return;
+            const p=newPresences[0]; if(p) _remoteViewers[key]={name:p.name||key,color:p.color||'#a0aab4'};
+            renderPresence();
+        })
+        .on('presence',{event:'leave'},({key})=>{
+            delete _remoteViewers[key]; renderPresence();
+        });
+    _collabChannel.subscribe(async status=>{
+        if(status==='SUBSCRIBED'){
+            await _collabChannel.track({name:_myName,color:_myColor});
+        }
+    });
+}
+
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // Init
-initMap(); load(); sizeCanvas(); renderMagnets(); renderAircraft(); renderHolds(); redraw(); loadRoster(); setTool('draw'); updateStatus();
+initMap(); sizeCanvas();
+(async()=>{
+    const gotRemote = await loadRemote();
+    if(!gotRemote) load();
+    renderMagnets(); renderAircraft(); renderHolds(); redraw();
+    loadRoster(); setTool('draw'); updateStatus();
+    initCollab();
+})();
 window.addEventListener('resize',()=>{ sizeCanvas(); if(map) map.invalidateSize(); });
 </script>
 </body>
