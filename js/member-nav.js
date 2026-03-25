@@ -286,6 +286,7 @@
                             <li><a href="airfield-status.html">Airfield Status</a></li>
                             <li><a href="pre-mission.html">Pre-Mission</a></li>
                             <li><a href="post-mission.html">Post Mission</a></li>
+                            <li><a href="whiteboard.html">Whiteboard</a></li>
                         </ul>
                     </div>
                     <!-- Roster -->

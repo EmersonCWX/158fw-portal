@@ -1,0 +1,819 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whiteboard | v158th FW</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/member-nav.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { overflow: hidden; height: 100%; }
+        body { background: #fff; color: #1a1a1a; font-family: "Segoe UI", Arial, sans-serif; height: 100vh; }
+
+        .wb-toolbar {
+            position: fixed; top: 60px; left: 0; right: 0; height: 50px;
+            background: #1f2226; border-bottom: 1px solid #3a3f45;
+            display: flex; align-items: center; padding: 0 10px; gap: 5px;
+            z-index: 8000; overflow-x: auto; overflow-y: hidden; scrollbar-width: none;
+        }
+        .wb-toolbar::-webkit-scrollbar { display: none; }
+        .wb-div { width: 1px; height: 28px; background: #3a3f45; flex-shrink: 0; margin: 0 3px; }
+        .wb-label { background: #12151a; border: 1px solid #3a3f45; color: #fff; padding: 5px 10px; font-size: 0.78rem; font-family: inherit; border-radius: 3px; outline: none; width: 170px; flex-shrink: 0; transition: border-color 0.2s; }
+        .wb-label:focus { border-color: #a0aab4; }
+        .wb-label::placeholder { color: #555; font-size: 0.72rem; }
+        .wb-btn { background: transparent; border: 1px solid #3a3f45; color: #999; padding: 4px 9px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.7px; text-transform: uppercase; cursor: pointer; font-family: inherit; border-radius: 3px; display: flex; align-items: center; gap: 4px; white-space: nowrap; flex-shrink: 0; transition: background .15s, color .15s, border-color .15s; height: 30px; }
+        .wb-btn:hover { background: rgba(160,170,180,.08); color: #ddd; border-color: #666; }
+        .t-draw   { color: #5a8fc4; border-color: #5a8fc4; background: rgba(90,143,196,.12) !important; }
+        .t-erase  { color: #e85a4a; border-color: #e85a4a; background: rgba(232,90,74,.12)  !important; }
+        .t-text   { color: #ffd700; border-color: #ffd700; background: rgba(255,215,0,.10)   !important; }
+        .t-pan    { color: #4caf50; border-color: #4caf50; background: rgba(76,175,80,.12)   !important; }
+        .t-hold   { color: #ff8c00; border-color: #ff8c00; background: rgba(255,140,0,.12)   !important; }
+        .hold-token { position: absolute; cursor: grab; user-select: none; pointer-events: all; transform-origin: center center; }
+        .hold-token.drag { cursor: grabbing; opacity: .88; z-index: 999; }
+        .hold-token .m-x { display: none; position: absolute; top: -10px; right: -10px; width: 22px; height: 22px; background: #e85a4a; border: none; border-radius: 50%; color: #fff; font-size: .8rem; font-weight: 700; cursor: pointer; align-items: center; justify-content: center; line-height: 1; box-shadow: 0 1px 4px rgba(0,0,0,.5); }
+        .hold-token:hover .m-x { display: flex; }
+        .t-on     { color: #a0aab4; border-color: #a0aab4; background: rgba(160,170,180,.12) !important; }
+
+        .wb-colors { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
+        .wb-sw { width: 20px; height: 20px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; flex-shrink: 0; transition: border-color .12s, transform .1s; }
+        .wb-sw:hover { transform: scale(1.2); }
+        .wb-sw.on { border-color: #fff; transform: scale(1.15); }
+
+        .wb-widths { display: flex; gap: 3px; align-items: center; flex-shrink: 0; }
+        .wb-w { width: 26px; height: 26px; border-radius: 3px; flex-shrink: 0; background: transparent; border: 1px solid #3a3f45; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .12s, border-color .12s; }
+        .wb-w:hover, .wb-w.on { background: rgba(160,170,180,.12); border-color: #a0aab4; }
+        .wb-dot { background: #fff; border-radius: 50%; }
+
+        #board { position: fixed; top: 110px; left: 0; right: 0; bottom: 0; overflow: hidden; }
+        #board-bg { position: absolute; inset: 0; background-color: #fff; z-index: 0; }
+        #wb-map { position: absolute; inset: 0; z-index: 1; opacity: 0; pointer-events: none; transition: opacity .35s; }
+        #wb-map.vis { opacity: 1; pointer-events: all; }
+        .leaflet-pane   { z-index: 1 !important; }
+        .leaflet-control { z-index: 2 !important; }
+
+        #cv { position: absolute; inset: 0; z-index: 10; cursor: crosshair; touch-action: none; }
+        #cv.m-erase  { cursor: cell; }
+        #cv.m-pan    { cursor: default; pointer-events: none; }
+        #cv.m-select { cursor: default; pointer-events: none; }
+        #cv.m-text   { cursor: text; }
+
+        #txt-wrap { display: none; position: absolute; z-index: 15; }
+        #txt-wrap.vis { display: block; }
+        #txt-field { background: rgba(0,0,0,.7); border: 1px solid #a0aab4; color: #fff; font-size: 1rem; font-family: "Segoe UI", Arial, sans-serif; padding: 4px 8px; outline: none; border-radius: 3px; min-width: 120px; }
+
+        #mag-layer { position: absolute; inset: 0; z-index: 20; pointer-events: none; }
+
+        .magnet { position: absolute; border-radius: 4px; padding: 4px 10px; cursor: grab; user-select: none; border: 1.5px solid; box-shadow: 0 2px 8px rgba(0,0,0,.6); min-width: 52px; text-align: center; pointer-events: all; line-height: 1.2; transition: box-shadow .12s; }
+        .magnet:hover { box-shadow: 0 4px 18px rgba(0,0,0,.85); }
+        .magnet.drag  { cursor: grabbing; opacity: .88; z-index: 999; box-shadow: 0 8px 28px rgba(0,0,0,.9); }
+        .m-rank { display: block; font-size: .56rem; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; opacity: .75; }
+        .m-call { display: block; font-size: .8rem;  font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+        .m-x { display: none; position: absolute; top: -7px; right: -7px; width: 15px; height: 15px; background: #e85a4a; border: none; border-radius: 50%; color: #fff; font-size: .65rem; font-weight: 700; cursor: pointer; align-items: center; justify-content: center; line-height: 1; }
+        .magnet:hover .m-x { display: flex; }
+        .ac-token { position: absolute; cursor: grab; user-select: none; pointer-events: all; }
+        .ac-token.drag { cursor: grabbing; opacity: .88; z-index: 999; }
+        .ac-token .f35-img { height: auto; display: block; pointer-events: none; -webkit-user-drag: none; }
+        .ac-token .m-x { display: none; position: absolute; top: -10px; right: -10px; width: 22px; height: 22px; background: #e85a4a; border: none; border-radius: 50%; color: #fff; font-size: .8rem; font-weight: 700; cursor: pointer; align-items: center; justify-content: center; line-height: 1; box-shadow: 0 1px 4px rgba(0,0,0,.5); }
+        .ac-token:hover .m-x { display: flex; }
+        .ac-token.ac-sel { outline: 2px solid #fff; outline-offset: 3px; filter: drop-shadow(0 0 8px rgba(255,255,255,.55)); }
+
+        #sidebar { position: fixed; top: 110px; right: -258px; bottom: 0; width: 240px; background: #191c1f; border-left: 1px solid #3a3f45; z-index: 7990; display: flex; flex-direction: column; transition: right .22s ease; }
+        #sidebar.open { right: 0; }
+        .sb-head { padding: 11px 14px; background: #2a2d32; border-bottom: 1px solid #3a3f45; font-size: .68rem; font-weight: 700; color: #888; letter-spacing: 1.5px; text-transform: uppercase; flex-shrink: 0; }
+        .sb-scroll { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+        .sb-scroll::-webkit-scrollbar { width: 5px; }
+        .sb-scroll::-webkit-scrollbar-thumb { background: #3a3f45; border-radius: 3px; }
+        .sb-pill { background: #2a2d32; border: 1px solid #3a3f45; border-radius: 3px; padding: 7px 10px; cursor: grab; display: flex; align-items: center; gap: 8px; transition: background .12s, border-color .12s; }
+        .sb-pill:hover { background: rgba(160,170,180,.1); border-color: #a0aab4; }
+        .sb-rank { font-size: .63rem; color: #777; flex-shrink: 0; }
+        .sb-call { font-size: .8rem; font-weight: 700; color: #ddd; text-transform: uppercase; letter-spacing: .5px; }
+        .sb-plus { margin-left: auto; font-size: .68rem; color: #555; }
+
+        #statusbar { position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); background: rgba(20,23,27,.92); border: 1px solid #3a3f45; border-radius: 3px; padding: 4px 16px; font-size: .7rem; color: #666; letter-spacing: .7px; pointer-events: none; z-index: 8001; backdrop-filter: blur(4px); white-space: nowrap; }
+    </style>
+</head>
+<body>
+
+<div id="memberNavMount"></div>
+
+<div class="wb-toolbar">
+    <input class="wb-label" id="wbLabel" type="text" placeholder="Mission / Event name...">
+    <div class="wb-div"></div>
+    <button class="wb-btn t-draw" id="btn-draw"  onclick="setTool('draw')"  title="Draw [D]">DRAW</button>
+    <button class="wb-btn"        id="btn-erase" onclick="setTool('erase')" title="Erase [E]">ERASE</button>
+    <button class="wb-btn"        id="btn-text"  onclick="setTool('text')"  title="Text [T]">TEXT</button>
+    <button class="wb-btn"        id="btn-pan"   onclick="setTool('pan')"   title="Pan [P]">PAN</button>
+    <div class="wb-div"></div>
+    <div class="wb-colors">
+        <div class="wb-sw on" style="background:#fff"     data-c="#ffffff" onclick="pickColor(this)" title="White"></div>
+        <div class="wb-sw"    style="background:#e85a4a"  data-c="#e85a4a" onclick="pickColor(this)" title="Red - Threat"></div>
+        <div class="wb-sw"    style="background:#5a8fc4"  data-c="#5a8fc4" onclick="pickColor(this)" title="Blue - Friendly"></div>
+        <div class="wb-sw"    style="background:#4caf50"  data-c="#4caf50" onclick="pickColor(this)" title="Green"></div>
+        <div class="wb-sw"    style="background:#ffd700"  data-c="#ffd700" onclick="pickColor(this)" title="Yellow - Caution"></div>
+        <div class="wb-sw"    style="background:#ff8c00"  data-c="#ff8c00" onclick="pickColor(this)" title="Orange"></div>
+        <div class="wb-sw"    style="background:#888"     data-c="#888888" onclick="pickColor(this)" title="Gray"></div>
+    </div>
+    <div class="wb-widths">
+        <button class="wb-w on" data-w="2"  onclick="pickWidth(this)" title="Fine">  <div class="wb-dot" style="width:3px;height:3px;"></div></button>
+        <button class="wb-w"    data-w="5"  onclick="pickWidth(this)" title="Medium"><div class="wb-dot" style="width:7px;height:7px;"></div></button>
+        <button class="wb-w"    data-w="10" onclick="pickWidth(this)" title="Thick"> <div class="wb-dot" style="width:12px;height:12px;"></div></button>
+        <button class="wb-w"    data-w="20" onclick="pickWidth(this)" title="Marker"><div class="wb-dot" style="width:16px;height:16px;"></div></button>
+    </div>
+    <div class="wb-div"></div>
+    <button class="wb-btn t-on"  id="btn-map-off"    onclick="setMap('off')"      title="No map">MAP OFF</button>
+    <button class="wb-btn"       id="btn-map-aip"     onclick="setMap('aip')"      title="Street + AERO overlay">Street + Aero</button>
+    <button class="wb-btn"       id="btn-map-satop"   onclick="setMap('satop')"    title="Satellite + AERO overlay">SAT+AERO</button>
+    <div class="wb-div"></div>
+    <button class="wb-btn" id="btn-roster" onclick="toggleSidebar()">ROSTER</button>
+    <button class="wb-btn" id="btn-aircraft" onmousedown="startAcToolbarDrag(event)" ontouchstart="startAcToolbarDrag(event)" title="Drag onto board · Click = place center · Right-click = rotate 45°">AIRCRAFT</button>
+    <button class="wb-btn" id="btn-hold" onclick="placeHoldCenter()" title="Insert Holding Pattern [H]">HOLD</button>
+    <button class="wb-btn" onclick="undo()"      title="Undo Ctrl+Z">UNDO</button>
+    <button class="wb-btn" onclick="clearAll()"  style="color:#e85a4a;border-color:rgba(232,90,74,.35);">CLEAR</button>
+</div>
+
+<div id="board">
+    <div id="board-bg"></div>
+    <div id="wb-map"></div>
+    <canvas id="cv"></canvas>
+    <div id="txt-wrap"><input id="txt-field" type="text" placeholder="Label... then Enter"></div>
+    <div id="mag-layer"></div>
+</div>
+
+<div id="sidebar">
+    <div class="sb-head">&#129522; Roster &mdash; Drag or Click</div>
+    <div class="sb-scroll" id="rosterList"><div style="color:#555;font-size:.75rem;padding:16px;text-align:center">Loading roster&hellip;</div></div>
+</div>
+
+<div id="statusbar">DRAW &nbsp;|&nbsp; D=Draw &nbsp; E=Erase &nbsp; T=Text &nbsp; P=Pan &nbsp; Ctrl+Z=Undo</div>
+
+<script>
+const SB_URL = 'https://gcumgpfyfqtfwbskkngt.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdW1ncGZ5ZnF0Zndic2trbmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDczMTAsImV4cCI6MjA4ODM4MzMxMH0.OSY0XEPQp-WsFWuiGrUG5fcLIVMI3c8AxBEv2shFftg';
+const _sb = supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession:true, autoRefreshToken:true, storageKey:'v158fw-auth' } });
+
+const STORE = 'v158fw-wb3';
+let tool='draw', penColor='#ffffff', penWidth=2;
+let strokes=[], labels=[], magnets=[], aircraft=[], holds=[], mapMode='off', sidebarOpen=false;
+let acSize=50;
+let painting=false, curStroke=[], curStrokeGeo=null, ctrlSmooth=false;
+let selectedAcIds=new Set(), groupDragOffsets=null;
+let txtPos=null;
+let dragMag=null, dragOX=0, dragOY=0, dragMoved=false;
+let map=null, lStreet=null, lSat=null, lAip=null;
+
+const canvas=document.getElementById('cv'), ctx=canvas.getContext('2d');
+const DPR=window.devicePixelRatio||1;
+const board=document.getElementById('board');
+
+function sizeCanvas(){
+    const w=board.clientWidth, h=board.clientHeight;
+    canvas.width=w*DPR; canvas.height=h*DPR;
+    canvas.style.width=w+'px'; canvas.style.height=h+'px';
+    ctx.scale(DPR,DPR); redraw();
+}
+
+function redraw(){
+    const w=board.clientWidth, h=board.clientHeight;
+    ctx.clearRect(0,0,w,h);
+    strokes.forEach(drawStroke);
+    labels.forEach(drawLabel);
+}
+
+function drawStroke(s){
+    let pts=s.points;
+    if(s.geoPoints&&mapMode!=='off'&&map){
+        pts=s.geoPoints.map(ll=>{ const p=map.latLngToContainerPoint(L.latLng(ll.lat,ll.lng)); return [p.x,p.y]; });
+    }
+    if(!pts||pts.length<2) return;
+    ctx.save();
+    ctx.beginPath(); ctx.lineCap='round'; ctx.lineJoin='round'; ctx.lineWidth=s.width;
+    if(s.erase){ ctx.globalCompositeOperation='destination-out'; ctx.strokeStyle='rgba(0,0,0,1)'; }
+    else        { ctx.globalCompositeOperation='source-over';    ctx.strokeStyle=s.color; }
+    ctx.moveTo(pts[0][0],pts[0][1]);
+    for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0],pts[i][1]);
+    ctx.stroke(); ctx.restore();
+}
+
+function drawLabel(lb){
+    let x=lb.x, y=lb.y;
+    if(lb.lat!=null&&mapMode!=='off'&&map){ const p=map.latLngToContainerPoint(L.latLng(lb.lat,lb.lng)); x=p.x; y=p.y; }
+    ctx.save();
+    ctx.globalCompositeOperation='source-over';
+    ctx.font='bold '+(lb.size||16)+'px "Segoe UI",Arial,sans-serif';
+    ctx.fillStyle=lb.color||'#fff';
+    ctx.shadowColor='rgba(0,0,0,.8)'; ctx.shadowBlur=4;
+    ctx.fillText(lb.text,x,y); ctx.restore();
+}
+
+function evtXY(e){
+    const r=canvas.getBoundingClientRect(), src=e.touches?e.touches[0]:e;
+    return [src.clientX-r.left, src.clientY-r.top];
+}
+
+canvas.addEventListener('mousedown',  pd);
+canvas.addEventListener('mousemove',  pm);
+canvas.addEventListener('mouseup',    pu);
+canvas.addEventListener('mouseleave', pu);
+canvas.addEventListener('touchstart', pd, {passive:false});
+canvas.addEventListener('touchmove',  pm, {passive:false});
+canvas.addEventListener('touchend',   pu);
+
+// Chaikin corner-cutting smoothing (pts = [[x,y],...] or [[a,b],...])
+function chaikin(pts, iterations){
+    let p=pts;
+    for(let i=0;i<iterations;i++){
+        const out=[p[0]];
+        for(let j=0;j<p.length-1;j++){
+            const ax=p[j][0],ay=p[j][1],bx=p[j+1][0],by=p[j+1][1];
+            out.push([ax*.75+bx*.25, ay*.75+by*.25]);
+            out.push([ax*.25+bx*.75, ay*.25+by*.75]);
+        }
+        out.push(p[p.length-1]);
+        p=out;
+    }
+    return p;
+}
+
+function pd(e){
+    if(tool==='text'){ e.preventDefault(); placeTxtCursor(e); return; }
+    if(tool!=='draw'&&tool!=='erase') return;
+    e.preventDefault(); painting=true; ctrlSmooth=false;
+    const xy=evtXY(e); curStroke=[xy];
+    const ll=xyToLL(xy[0],xy[1]); curStrokeGeo=ll?[{lat:ll.lat,lng:ll.lng}]:null;
+}
+function pm(e){
+    if(!painting) return;
+    e.preventDefault();
+    if(e.ctrlKey||e.metaKey) ctrlSmooth=true;
+    const xy=evtXY(e); curStroke.push(xy);
+    if(curStrokeGeo){ const ll=xyToLL(xy[0],xy[1]); if(ll) curStrokeGeo.push({lat:ll.lat,lng:ll.lng}); }
+    redraw();
+    const previewPts=ctrlSmooth?chaikin(curStroke,2):curStroke;
+    drawStroke({color:penColor, width:tool==='erase'?30:penWidth, erase:tool==='erase', points:previewPts});
+}
+function pu(){
+    if(!painting) return;
+    painting=false;
+    if(curStroke.length>1){
+        let pts=curStroke, geo=curStrokeGeo;
+        if(ctrlSmooth){
+            pts=chaikin(curStroke,3);
+            if(geo&&geo.length>1) geo=chaikin(geo.map(g=>[g.lat,g.lng]),3).map(p=>({lat:p[0],lng:p[1]}));
+        }
+        const s={color:penColor,width:tool==='erase'?30:penWidth,erase:tool==='erase',points:pts};
+        if(geo) s.geoPoints=geo;
+        strokes.push(s); save();
+    }
+    curStroke=[]; curStrokeGeo=null; ctrlSmooth=false;
+}
+
+// Text tool
+const txtWrap=document.getElementById('txt-wrap'), txtField=document.getElementById('txt-field');
+function placeTxtCursor(e){
+    const [x,y]=evtXY(e); txtPos={x,y};
+    const br=board.getBoundingClientRect(), src=e.touches?e.touches[0]:e;
+    txtWrap.style.left=(src.clientX-br.left)+'px';
+    txtWrap.style.top=(src.clientY-br.top-34)+'px';
+    txtWrap.classList.add('vis'); txtField.value='';
+    setTimeout(()=>txtField.focus(),0);
+}
+txtField.addEventListener('keydown', e=>{ if(e.key==='Enter') commitTxt(); if(e.key==='Escape') txtWrap.classList.remove('vis'); });
+txtField.addEventListener('blur', ()=>{ if(txtField.value.trim()) commitTxt(); else txtWrap.classList.remove('vis'); });
+function commitTxt(){
+    const t=txtField.value.trim();
+    if(t&&txtPos){
+        const lb={id:Date.now(),text:t,x:txtPos.x,y:txtPos.y,color:penColor,size:Math.max(12,penWidth*4)};
+        const ll=xyToLL(txtPos.x,txtPos.y); if(ll){lb.lat=ll.lat;lb.lng=ll.lng;}
+        labels.push(lb); save(); redraw();
+    }
+    txtWrap.classList.remove('vis'); txtPos=null;
+}
+
+// Tools
+const TBMAP={draw:'btn-draw',erase:'btn-erase',text:'btn-text',pan:'btn-pan'};
+const TCLS ={draw:'t-draw',  erase:'t-erase',  text:'t-text',  pan:'t-pan', hold:'t-hold'};
+function setTool(t){
+    tool=t;
+    canvas.className=''; canvas.classList.add('m-'+t);
+    if(map){ if(t==='pan'){map.dragging.enable();map.scrollWheelZoom.enable();}else{map.dragging.disable();map.scrollWheelZoom.disable();} }
+    Object.entries(TBMAP).forEach(([k,id])=>{ document.getElementById(id).className='wb-btn'+(k===t?' '+TCLS[t]:''); });
+    updateStatus();
+}
+
+function pickColor(el){ penColor=el.dataset.c; document.querySelectorAll('.wb-sw').forEach(s=>s.classList.remove('on')); el.classList.add('on'); }
+function pickWidth(el){ penWidth=parseInt(el.dataset.w); document.querySelectorAll('.wb-w').forEach(b=>b.classList.remove('on')); el.classList.add('on'); }
+
+// Map
+// Paste your free OpenAIP API key from https://www.openaip.net/  (create free account → API Keys)
+const OPENAIP_KEY = '259ad3a9e03d3cb1360a3ab212aa8c48';
+
+// Geo helpers
+function xyToLL(x,y){ if(mapMode==='off'||!map) return null; return map.containerPointToLatLng(L.point(x,y)); }
+
+function initMap(){
+    map=L.map('wb-map',{center:[44.47,-73.15],zoom:10,zoomControl:true,attributionControl:false});
+    lStreet=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{maxZoom:19});
+    lSat   =L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19});
+    lAip   =OPENAIP_KEY
+        ? L.tileLayer('https://api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png?apiKey='+OPENAIP_KEY,{maxZoom:14,attribution:'OpenAIP'})
+        : null;
+    map.dragging.disable(); map.scrollWheelZoom.disable();
+    map.on('move zoom',()=>{ redraw(); updateMagnetPositions(); updateAircraftPositions(); updateHoldPositions(); });
+}
+
+function setMap(mode){
+    const needsAip=mode==='aip'||mode==='satop';
+    if(needsAip&&!lAip){ alert('OpenAIP key missing.'); return; }
+    mapMode=mode;
+    const el=document.getElementById('wb-map');
+    if(lStreet&&map.hasLayer(lStreet)) map.removeLayer(lStreet);
+    if(lSat   &&map.hasLayer(lSat))    map.removeLayer(lSat);
+    if(lAip   &&map.hasLayer(lAip))    map.removeLayer(lAip);
+    ['off','aip','satop'].forEach(m=>{
+        const b=document.getElementById('btn-map-'+m); if(b) b.className='wb-btn'+(m===mode?' t-pan':'');
+    });
+    document.getElementById('btn-map-off').className='wb-btn'+(mode==='off'?' t-on':'');
+    if(mode==='off'){ el.classList.remove('vis'); if(tool==='pan') setTool('draw'); }
+    else{
+        if(mode==='aip')    { lStreet.addTo(map); lAip.addTo(map); }
+        if(mode==='satop'){ lSat.addTo(map); lAip.addTo(map); }
+        el.classList.add('vis'); map.invalidateSize();
+    }
+    save();
+}
+
+// Magnets
+const RC=[['vcol','#c8a820'],['col','#c8a820'],['ltcol','#5a8fc4'],['maj','#5a8fc4'],['capt','#4caf50'],['1lt','#a0aab4'],['2lt','#a0aab4']];
+function rankColor(r){ if(!r) return '#6a7280'; const s=r.toLowerCase().replace(/[^a-z]/g,''); for(const [k,c] of RC) if(s.includes(k)) return c; return '#6a7280'; }
+
+const MAG_COLORS=['#e85a4a','#5a8fc4','#4caf50','#ffd700','#ff8c00','#c8a820','#a0aab4','#ffffff'];
+function cycleMagColor(id){
+    const m=magnets.find(m=>m.id===id); if(!m) return;
+    const idx=MAG_COLORS.indexOf(m.color);
+    m.color=MAG_COLORS[(idx+1)%MAG_COLORS.length];
+    const el=document.getElementById('mg-'+id);
+    if(el){ el.style.background=m.color+'22'; el.style.borderColor=m.color; el.style.color=m.color; }
+    save();
+}
+
+function renderMagnets(){ const l=document.getElementById('mag-layer'); l.innerHTML=''; magnets.forEach(m=>l.appendChild(buildMag(m))); }
+
+function buildMag(m){
+    const el=document.createElement('div');
+    el.className='magnet'; el.id='mg-'+m.id;
+    el.style.left=m.x+'px'; el.style.top=m.y+'px';
+    el.style.background=m.color+'22'; el.style.borderColor=m.color; el.style.color=m.color;
+    el.innerHTML='<button class="m-x" onclick="removeMag(\''+m.id+'\')">x</button>'+(m.rank?'<span class="m-rank">'+esc(m.rank)+'</span>':'')+'<span class="m-call">'+esc(m.callsign)+'</span>';
+    el.addEventListener('mousedown', e=>startDragMag(e,m.id));
+    el.addEventListener('touchstart', e=>startDragMag(e,m.id), {passive:false});
+    return el;
+}
+
+function placeMag(callsign,rank){
+    const w=board.clientWidth, h=board.clientHeight;
+    const x=w/2-35+(Math.random()-.5)*140, y=h/2-18+(Math.random()-.5)*100;
+    const id=callsign.replace(/\s+/g,'')+'_'+Date.now();
+    const m={id,callsign,rank:rank||'',x,y,color:rankColor(rank)};
+    const ll=xyToLL(x,y); if(ll){m.lat=ll.lat;m.lng=ll.lng;}
+    magnets.push(m); renderMagnets(); save();
+}
+
+function removeMag(id){ magnets=magnets.filter(m=>m.id!==id); renderMagnets(); save(); }
+
+function updateMagnetPositions(){
+    magnets.forEach(m=>{
+        if(m.lat!=null&&mapMode!=='off'&&map){
+            const p=map.latLngToContainerPoint(L.latLng(m.lat,m.lng));
+            m.x=p.x; m.y=p.y;
+        }
+        const el=document.getElementById('mg-'+m.id);
+        if(el){el.style.left=m.x+'px';el.style.top=m.y+'px';}
+    });
+}
+
+function startDragMag(e,id){
+    if(e.target.classList.contains('m-x')) return;
+    e.preventDefault(); e.stopPropagation();
+    const m=magnets.find(m=>m.id===id); if(!m) return;
+    dragMag=m; dragMoved=false;
+    const src=e.touches?e.touches[0]:e, rect=board.getBoundingClientRect();
+    dragOX=src.clientX-rect.left-m.x; dragOY=src.clientY-rect.top-m.y;
+    document.getElementById('mg-'+id)?.classList.add('drag');
+}
+
+document.addEventListener('mousemove', moveMag);
+document.addEventListener('touchmove', moveMag, {passive:false});
+function moveMag(e){
+    if(!dragMag) return;
+    dragMoved=true;
+    const src=e.touches?e.touches[0]:e, rect=board.getBoundingClientRect();
+    dragMag.x=Math.max(0,Math.min(board.clientWidth-60, src.clientX-rect.left-dragOX));
+    dragMag.y=Math.max(0,Math.min(board.clientHeight-30,src.clientY-rect.top-dragOY));
+    const el=document.getElementById('mg-'+dragMag.id);
+    if(el){ el.style.left=dragMag.x+'px'; el.style.top=dragMag.y+'px'; }
+}
+
+function endMag(){
+    if(!dragMag) return;
+    document.getElementById('mg-'+dragMag.id)?.classList.remove('drag');
+    if(!dragMoved) cycleMagColor(dragMag.id);
+    else{ const ll=xyToLL(dragMag.x,dragMag.y); if(ll){dragMag.lat=ll.lat;dragMag.lng=ll.lng;} }
+    dragMag=null; save();
+}
+document.addEventListener('mouseup', endMag);
+document.addEventListener('touchend', endMag);
+
+// Sidebar drag-to-place
+let sbDrag=null;
+function startSbDrag(e,callsign,rank){
+    if(e.button!==undefined&&e.button!==0) return;
+    e.preventDefault();
+    const src=e.touches?e.touches[0]:e, color=rankColor(rank);
+    const ghost=document.createElement('div');
+    ghost.className='magnet';
+    ghost.style.cssText='position:fixed;pointer-events:none;z-index:99999;opacity:.85;transition:none;cursor:grabbing;';
+    ghost.style.background=color+'22'; ghost.style.borderColor=color; ghost.style.color=color;
+    ghost.innerHTML=(rank?'<span class="m-rank">'+esc(rank)+'</span>':'')+'<span class="m-call">'+esc(callsign)+'</span>';
+    ghost.style.left=(src.clientX-35)+'px'; ghost.style.top=(src.clientY-18)+'px';
+    document.body.appendChild(ghost);
+    sbDrag={callsign,rank,ghost,moved:false};
+}
+document.addEventListener('mousemove',moveSbDrag);
+document.addEventListener('touchmove',moveSbDrag,{passive:false});
+function moveSbDrag(e){
+    if(!sbDrag) return;
+    sbDrag.moved=true;
+    const src=e.touches?e.touches[0]:e;
+    sbDrag.ghost.style.left=(src.clientX-35)+'px'; sbDrag.ghost.style.top=(src.clientY-18)+'px';
+}
+document.addEventListener('mouseup',endSbDrag);
+document.addEventListener('touchend',endSbDrag);
+function endSbDrag(e){
+    if(!sbDrag) return;
+    const {callsign,rank,ghost,moved}=sbDrag; sbDrag=null;
+    document.body.removeChild(ghost);
+    if(!moved){ placeMag(callsign,rank); return; }
+    const src=e.changedTouches?e.changedTouches[0]:e;
+    const br=board.getBoundingClientRect();
+    const bx=src.clientX-br.left-35, by=src.clientY-br.top-18;
+    if(bx>=-35&&by>=-18&&bx<board.clientWidth&&by<board.clientHeight){
+        const id=callsign.replace(/\s+/g,'')+'_'+Date.now();
+        const mx=Math.max(0,Math.min(board.clientWidth-60,bx)), my=Math.max(0,Math.min(board.clientHeight-30,by));
+        const m={id,callsign,rank:rank||'',x:mx,y:my,color:rankColor(rank)};
+        const ll=xyToLL(mx,my); if(ll){m.lat=ll.lat;m.lng=ll.lng;}
+        magnets.push(m); renderMagnets(); save();
+    }
+}
+
+// Sidebar
+function toggleSidebar(){
+    sidebarOpen=!sidebarOpen;
+    document.getElementById('sidebar').classList.toggle('open',sidebarOpen);
+    document.getElementById('btn-roster').className='wb-btn'+(sidebarOpen?' t-on':'');
+}
+
+async function loadRoster(){
+    const list=document.getElementById('rosterList');
+    try{
+        const {data,error}=await _sb.from('active_members').select('id,callsign,rank').order('callsign');
+        if(error||!data?.length){ list.innerHTML='<div style="color:#555;font-size:.75rem;padding:16px;text-align:center">No members found.</div>'; return; }
+        list.innerHTML='';
+        data.forEach(m=>{
+            const color=rankColor(m.rank||''), pill=document.createElement('div');
+            pill.className='sb-pill';
+            pill.innerHTML='<span class="sb-rank" style="color:'+color+'">'+esc(m.rank||'')+'</span><span class="sb-call">'+esc(m.callsign||m.id)+'</span><span class="sb-plus">&#8680; drag</span>';
+            pill.addEventListener('mousedown',e=>startSbDrag(e,m.callsign||m.id,m.rank||''));
+            pill.addEventListener('touchstart',e=>startSbDrag(e,m.callsign||m.id,m.rank||''),{passive:false});
+            list.appendChild(pill);
+        });
+    } catch(err){ list.innerHTML='<div style="color:#555;font-size:.75rem;padding:16px;text-align:center">Error loading roster.</div>'; }
+}
+
+// Aircraft tokens
+const COLOR_FILTERS={
+  '#e85a4a':'brightness(0) saturate(100%) invert(49%) sepia(88%) saturate(534%) hue-rotate(314deg) brightness(97%)',
+  '#5a8fc4':'brightness(0) saturate(100%) invert(61%) sepia(28%) saturate(879%) hue-rotate(175deg) brightness(91%)',
+  '#4caf50':'brightness(0) saturate(100%) invert(57%) sepia(57%) saturate(452%) hue-rotate(79deg) brightness(97%)',
+  '#ffd700':'brightness(0) saturate(100%) invert(85%) sepia(84%) saturate(730%) hue-rotate(1deg) brightness(107%)',
+  '#ff8c00':'brightness(0) saturate(100%) invert(54%) sepia(90%) saturate(1147%) hue-rotate(13deg) brightness(103%)',
+  '#c8a820':'brightness(0) saturate(100%) invert(70%) sepia(47%) saturate(573%) hue-rotate(14deg) brightness(92%)',
+  '#a0aab4':'brightness(0) saturate(0%) invert(68%)',
+  '#ffffff':'brightness(0) invert(1)',
+};
+function acFilter(color){ return COLOR_FILTERS[color]||COLOR_FILTERS['#e85a4a']; }
+let dragAc=null, dragAcOX=0, dragAcOY=0, dragAcMoved=false, acToolbarDrag=null;
+let dragHold=null, dragHoldOX=0, dragHoldOY=0, dragHoldMoved=false;
+let holdSize=160;
+
+function renderAircraft(){ document.querySelectorAll('.ac-token').forEach(el=>el.remove()); aircraft.forEach(a=>document.getElementById('mag-layer').appendChild(buildAcToken(a))); }
+
+function acScaledSize(a){
+    if(a.refZoom!=null&&mapMode!=='off'&&map){
+        return Math.max(10,Math.min(300,Math.round(a.size*Math.pow(2,map.getZoom()-a.refZoom))));
+    }
+    return a.size||acSize;
+}
+function updateAircraftPositions(){
+    aircraft.forEach(a=>{
+        if(a.lat!=null&&mapMode!=='off'&&map){
+            const p=map.latLngToContainerPoint(L.latLng(a.lat,a.lng));
+            a.x=p.x; a.y=p.y;
+        }
+        const el=document.getElementById('act-'+a.id);
+        if(el){
+            el.style.left=a.x+'px';el.style.top=a.y+'px';
+            const img=el.querySelector('.f35-img');
+            if(img) img.style.width=acScaledSize(a)+'px';
+        }
+    });
+}
+
+// Holding pattern tokens
+function holdScaledSize(h){
+    if(h.refZoom!=null&&mapMode!=='off'&&map)
+        return Math.max(40,Math.min(600,Math.round(h.size*Math.pow(2,map.getZoom()-h.refZoom))));
+    return h.size||holdSize;
+}
+function holdSVG(h,w){
+    const ht=Math.round(w/2), col=h.color||'#ffffff';
+    return `<svg viewBox="0 0 200 100" width="${w}" height="${ht}" style="display:block;pointer-events:none;overflow:visible">`+
+        `<path d="M50 4 L150 4 A46 46 0 0 1 150 96 L50 96 A46 46 0 0 1 50 4 Z" fill="${col}18" stroke="${col}" stroke-width="3" stroke-linejoin="round"/>`+
+        `</svg>`;
+}
+function buildHoldToken(h){
+    const w=holdScaledSize(h), ht=Math.round(w/2);
+    const el=document.createElement('div');
+    el.className='hold-token'; el.id='hld-'+h.id;
+    el.style.left=(h.x-w/2)+'px'; el.style.top=(h.y-ht/2)+'px';
+    if(h.angle) el.style.transform='rotate('+h.angle+'deg)';
+    el.innerHTML='<button class="m-x" onclick="removeHold(\''+h.id+'\')" title="Delete">x</button>'+holdSVG(h,w);
+    el.addEventListener('mousedown', e=>startDragHold(e,h.id));
+    el.addEventListener('touchstart', e=>startDragHold(e,h.id), {passive:false});
+    el.addEventListener('contextmenu', e=>{ e.preventDefault(); rotateHold(h.id); });
+    return el;
+}
+function renderHolds(){ document.querySelectorAll('.hold-token').forEach(el=>el.remove()); holds.forEach(h=>document.getElementById('mag-layer').appendChild(buildHoldToken(h))); }
+function updateHoldPositions(){
+    holds.forEach(h=>{
+        if(h.lat!=null&&mapMode!=='off'&&map){
+            const p=map.latLngToContainerPoint(L.latLng(h.lat,h.lng));
+            h.x=p.x; h.y=p.y;
+        }
+        const el=document.getElementById('hld-'+h.id);
+        if(el){
+            const w=holdScaledSize(h), ht=Math.round(w/2);
+            el.style.left=(h.x-w/2)+'px'; el.style.top=(h.y-ht/2)+'px';
+            const svg=el.querySelector('svg'); if(svg){ svg.setAttribute('width',w); svg.setAttribute('height',ht); }
+        }
+    });
+}
+function placeHoldCenter(){
+    placeHold(board.clientWidth/2, board.clientHeight/2);
+}
+function placeHold(x,y){
+    const id='hld_'+Date.now();
+    const h={id,x,y,color:penColor,angle:0,size:holdSize,turns:'RT',refZoom:(mapMode!=='off'&&map?map.getZoom():null)};
+    const ll=xyToLL(x,y); if(ll){h.lat=ll.lat;h.lng=ll.lng;}
+    holds.push(h); renderHolds(); save();
+}
+function removeHold(id){ holds=holds.filter(h=>h.id!==id); renderHolds(); save(); }
+function rotateHold(id){
+    const h=holds.find(h=>h.id===id); if(!h) return;
+    h.angle=((h.angle||0)+45)%360;
+    const el=document.getElementById('hld-'+id); if(el) el.style.transform='rotate('+h.angle+'deg)'; save();
+}
+function cycleHoldColor(id){
+    const h=holds.find(h=>h.id===id); if(!h) return;
+    const idx=MAG_COLORS.indexOf(h.color); h.color=MAG_COLORS[(idx+1)%MAG_COLORS.length];
+    renderHolds(); save();
+}
+function toggleHoldTurns(id){
+    const h=holds.find(h=>h.id===id); if(!h) return;
+    h.turns=h.turns==='RT'?'LT':'RT'; renderHolds(); save();
+}
+function startDragHold(e,id){
+    if(e.target.classList.contains('m-x')) return;
+    if(e.button&&e.button!==0) return;
+    e.preventDefault(); e.stopPropagation();
+    const h=holds.find(h=>h.id===id); if(!h) return;
+    dragHold=h; dragHoldMoved=false;
+    const src=e.touches?e.touches[0]:e, rect=board.getBoundingClientRect();
+    dragHoldOX=src.clientX-rect.left-h.x; dragHoldOY=src.clientY-rect.top-h.y;
+    document.getElementById('hld-'+id)?.classList.add('drag');
+}
+document.addEventListener('mousemove', moveHold);
+document.addEventListener('touchmove', moveHold, {passive:false});
+function moveHold(e){
+    if(!dragHold) return; dragHoldMoved=true;
+    const src=e.touches?e.touches[0]:e, rect=board.getBoundingClientRect();
+    dragHold.x=Math.max(0,Math.min(board.clientWidth,src.clientX-rect.left-dragHoldOX));
+    dragHold.y=Math.max(0,Math.min(board.clientHeight,src.clientY-rect.top-dragHoldOY));
+    const w=holdScaledSize(dragHold), ht=Math.round(w/2);
+    const el=document.getElementById('hld-'+dragHold.id);
+    if(el){ el.style.left=(dragHold.x-w/2)+'px'; el.style.top=(dragHold.y-ht/2)+'px'; }
+}
+document.addEventListener('mouseup', endHold);
+document.addEventListener('touchend', endHold);
+function endHold(){
+    if(!dragHold) return;
+    document.getElementById('hld-'+dragHold.id)?.classList.remove('drag');
+    if(!dragHoldMoved) cycleHoldColor(dragHold.id);
+    else{ const ll=xyToLL(dragHold.x,dragHold.y); if(ll){dragHold.lat=ll.lat;dragHold.lng=ll.lng;} }
+    dragHold=null; save();
+}
+
+function buildAcToken(a){
+    const el=document.createElement('div');
+    el.className='ac-token'; el.id='act-'+a.id;
+    el.style.left=a.x+'px'; el.style.top=a.y+'px';
+    if(a.angle) el.style.transform='rotate('+a.angle+'deg)';
+    el.innerHTML='<button class="m-x" onclick="removeAc(\''+a.id+'\')" >x</button><img src="assets/F-35 Stick.png" class="f35-img" draggable="false" style="width:'+acScaledSize(a)+'px;filter:'+acFilter(a.color)+'">';
+    el.addEventListener('mousedown', e=>startDragAc(e,a.id));
+    el.addEventListener('touchstart', e=>startDragAc(e,a.id), {passive:false});
+    el.addEventListener('contextmenu', e=>{ e.preventDefault(); rotateAc(a.id); });
+    return el;
+}
+
+function placeAc(x,y){
+    const id='ac_'+Date.now();
+    const a={id,x,y,color:'#e85a4a',angle:0,size:acSize,refZoom:(mapMode!=='off'&&map?map.getZoom():null)};
+    const ll=xyToLL(x,y); if(ll){a.lat=ll.lat;a.lng=ll.lng;}
+    aircraft.push(a); renderAircraft(); save();
+}
+function removeAc(id){ aircraft=aircraft.filter(a=>a.id!==id); renderAircraft(); save(); }
+
+function cycleAcColor(id){
+    const a=aircraft.find(a=>a.id===id); if(!a) return;
+    const idx=MAG_COLORS.indexOf(a.color);
+    a.color=MAG_COLORS[(idx+1)%MAG_COLORS.length];
+    const el=document.getElementById('act-'+id);
+    if(el){ el.querySelector('.f35-img').style.filter=acFilter(a.color); } save();
+}
+function rotateAc(id){
+    const a=aircraft.find(a=>a.id===id); if(!a) return;
+    a.angle=((a.angle||0)+45)%360;
+    const el=document.getElementById('act-'+id); if(el) el.style.transform='rotate('+a.angle+'deg)'; save();
+}
+
+function selectAc(id,additive){
+    if(!additive){selectedAcIds.clear();aircraft.forEach(a=>document.getElementById('act-'+a.id)?.classList.remove('ac-sel'));}
+    if(selectedAcIds.has(id)){selectedAcIds.delete(id);document.getElementById('act-'+id)?.classList.remove('ac-sel');}
+    else{selectedAcIds.add(id);document.getElementById('act-'+id)?.classList.add('ac-sel');}
+}
+function startDragAc(e,id){
+    if(e.target.classList.contains('m-x')) return;
+    if(e.button&&e.button!==0) return;
+    e.preventDefault(); e.stopPropagation();
+    if(e.ctrlKey||e.metaKey){ selectAc(id,true); return; }
+    const a=aircraft.find(a=>a.id===id); if(!a) return;
+    if(!selectedAcIds.has(id)){selectedAcIds.clear();aircraft.forEach(a=>document.getElementById('act-'+a.id)?.classList.remove('ac-sel'));}
+    dragAc=a; dragAcMoved=false;
+    const src=e.touches?e.touches[0]:e, rect=board.getBoundingClientRect();
+    dragAcOX=src.clientX-rect.left-a.x; dragAcOY=src.clientY-rect.top-a.y;
+    document.getElementById('act-'+id)?.classList.add('drag');
+    if(selectedAcIds.has(id)){
+        groupDragOffsets={};
+        selectedAcIds.forEach(sid=>{ const sa=aircraft.find(a=>a.id===sid); if(sa) groupDragOffsets[sid]={dx:sa.x-a.x,dy:sa.y-a.y}; });
+    }
+}
+document.addEventListener('mousemove',moveAc);
+document.addEventListener('touchmove',moveAc,{passive:false});
+function moveAc(e){
+    if(!dragAc) return; dragAcMoved=true;
+    const src=e.touches?e.touches[0]:e, rect=board.getBoundingClientRect();
+    const nx=Math.max(0,Math.min(board.clientWidth-40,src.clientX-rect.left-dragAcOX));
+    const ny=Math.max(0,Math.min(board.clientHeight-55,src.clientY-rect.top-dragAcOY));
+    dragAc.x=nx; dragAc.y=ny;
+    const el=document.getElementById('act-'+dragAc.id);
+    if(el){ el.style.left=nx+'px'; el.style.top=ny+'px'; }
+    if(selectedAcIds.has(dragAc.id)&&groupDragOffsets){
+        selectedAcIds.forEach(sid=>{
+            if(sid===dragAc.id) return;
+            const sa=aircraft.find(a=>a.id===sid); if(!sa) return;
+            const off=groupDragOffsets[sid]||{dx:0,dy:0};
+            sa.x=Math.max(0,Math.min(board.clientWidth-40,nx+off.dx));
+            sa.y=Math.max(0,Math.min(board.clientHeight-55,ny+off.dy));
+            const sel=document.getElementById('act-'+sid);
+            if(sel){sel.style.left=sa.x+'px';sel.style.top=sa.y+'px';}
+        });
+    }
+}
+function endAc(){
+    if(!dragAc) return;
+    document.getElementById('act-'+dragAc.id)?.classList.remove('drag');
+    if(!dragAcMoved){ cycleAcColor(dragAc.id); }
+    else{
+        const setLL=(a)=>{ const ll=xyToLL(a.x,a.y); if(ll){a.lat=ll.lat;a.lng=ll.lng;} };
+        setLL(dragAc);
+        if(selectedAcIds.has(dragAc.id)) selectedAcIds.forEach(sid=>{ const sa=aircraft.find(a=>a.id===sid); if(sa) setLL(sa); });
+    }
+    dragAc=null; groupDragOffsets=null; save();
+}
+document.addEventListener('mouseup',endAc);
+document.addEventListener('touchend',endAc);
+
+function startAcToolbarDrag(e){
+    if(e.button!==undefined&&e.button!==0) return;
+    e.preventDefault();
+    const src=e.touches?e.touches[0]:e, ghost=document.createElement('div');
+    const half=Math.round(acSize/2);
+    ghost.style.cssText='position:fixed;pointer-events:none;z-index:99999;opacity:.88;transform:translate(-'+half+'px,-'+half+'px);';
+    ghost.innerHTML='<img src="assets/F-35 Stick.png" class="f35-img" draggable="false" style="width:'+acSize+'px;filter:'+acFilter('#e85a4a')+'">';
+    ghost.style.left=src.clientX+'px'; ghost.style.top=src.clientY+'px';
+    document.body.appendChild(ghost);
+    acToolbarDrag={ghost,moved:false};
+}
+function moveAcGhost(e){
+    if(!acToolbarDrag) return; acToolbarDrag.moved=true;
+    const src=e.touches?e.touches[0]:e;
+    acToolbarDrag.ghost.style.left=src.clientX+'px'; acToolbarDrag.ghost.style.top=src.clientY+'px';
+}
+document.addEventListener('mousemove',moveAcGhost);
+document.addEventListener('touchmove',moveAcGhost,{passive:false});
+function endAcGhost(e){
+    if(!acToolbarDrag) return;
+    const {ghost,moved}=acToolbarDrag; acToolbarDrag=null; document.body.removeChild(ghost);
+    const src=e.changedTouches?e.changedTouches[0]:e;
+    const br=board.getBoundingClientRect();
+    const bx=src.clientX-br.left-20, by=src.clientY-br.top-27;
+    if(bx>=-20&&by>=-27&&bx<board.clientWidth&&by<board.clientHeight){
+        placeAc(Math.max(0,Math.min(board.clientWidth-40,bx)),Math.max(0,Math.min(board.clientHeight-55,by)));
+    } else if(!moved){ placeAc(board.clientWidth/2-20,board.clientHeight/2-27); }
+}
+document.addEventListener('mouseup',endAcGhost);
+document.addEventListener('touchend',endAcGhost);
+
+// Undo / Clear
+function undo(){ if(labels.length) labels.pop(); else if(strokes.length) strokes.pop(); redraw(); save(); }
+function clearAll(){ if(!confirm('Clear all drawings, labels, aircraft, and holds?')) return; strokes=[]; labels=[]; aircraft=[]; holds=[]; selectedAcIds.clear(); renderAircraft(); renderHolds(); redraw(); save(); }
+
+// Keyboard
+document.addEventListener('keydown',e=>{
+    if(['INPUT','TEXTAREA'].includes(e.target.tagName)) return;
+    if(e.key==='d'||e.key==='D') setTool('draw');
+    if(e.key==='e'||e.key==='E') setTool('erase');
+    if(e.key==='t'||e.key==='T') setTool('text');
+    if(e.key==='p'||e.key==='P') setTool('pan');
+    if(e.key==='h'||e.key==='H') placeHoldCenter();
+    if((e.ctrlKey||e.metaKey)&&e.key==='z'){ e.preventDefault(); undo(); }
+    if(e.key==='Escape'){ selectedAcIds.clear(); aircraft.forEach(a=>document.getElementById('act-'+a.id)?.classList.remove('ac-sel')); }
+});
+
+// Status
+const HINTS={draw:'DRAW -- D=Draw  E=Erase  T=Text  P=Pan  H=Insert Hold  Ctrl+Z=Undo  |  Hold Ctrl while drawing = smooth line  |  Ctrl+Click aircraft to select  Esc=Deselect',erase:'ERASE -- drag to erase',text:'TEXT -- click to place label, Enter to commit',pan:'PAN -- drag to pan the map | Aircraft: Ctrl+Click=Select  Ctrl+Scroll=Resize selected'};
+function updateStatus(){ document.getElementById('statusbar').textContent=HINTS[tool]||''; }
+
+// Ctrl+Scroll to resize F-35 tokens (selected only, or all if no selection); also resizes holds when hovering over them
+board.addEventListener('wheel', e=>{
+    if(!e.ctrlKey) return;
+    e.preventDefault();
+    const delta=e.deltaY<0?6:-6;
+    // check if cursor is over a hold token
+    const overHold=e.target?.closest?.('.hold-token');
+    if(overHold){
+        const hid=overHold.id.replace('hld-','');
+        const h=holds.find(h=>h.id===hid); if(h){ h.size=Math.max(40,Math.min(600,(h.size||holdSize)+delta*4)); renderHolds(); save(); }
+        return;
+    }
+    if(selectedAcIds.size>0){
+        selectedAcIds.forEach(sid=>{
+            const a=aircraft.find(a=>a.id===sid); if(!a) return;
+            a.size=Math.max(20,Math.min(200,(a.size||acSize)+delta));
+            const img=document.querySelector('#act-'+sid+' .f35-img');
+            if(img) img.style.width=a.size+'px';
+        });
+    } else {
+        acSize=Math.max(20,Math.min(200,acSize+delta));
+        aircraft.forEach(a=>{ a.size=acSize; });
+        document.querySelectorAll('.f35-img').forEach(img=>img.style.width=acSize+'px');
+    }
+    save();
+},{passive:false});
+
+// Save/Load
+function save(){
+    try{ localStorage.setItem(STORE,JSON.stringify({label:document.getElementById('wbLabel').value, strokes:strokes.map(s=>({color:s.color,width:s.width,erase:!!s.erase,points:s.points,geoPoints:s.geoPoints||null})), labels, magnets:magnets.map(m=>({id:m.id,callsign:m.callsign,rank:m.rank,x:m.x,y:m.y,color:m.color,lat:m.lat,lng:m.lng})), aircraft:aircraft.map(a=>({id:a.id,x:a.x,y:a.y,color:a.color,angle:a.angle||0,size:a.size||acSize,refZoom:a.refZoom??null,lat:a.lat,lng:a.lng})), holds:holds.map(h=>({id:h.id,x:h.x,y:h.y,color:h.color,angle:h.angle||0,size:h.size||holdSize,turns:h.turns||'RT',refZoom:h.refZoom??null,lat:h.lat,lng:h.lng})), acSize, mapMode})); } catch(e){}
+}
+function load(){
+    try{
+        const raw=localStorage.getItem(STORE); if(!raw) return;
+        const d=JSON.parse(raw);
+        if(d.label) document.getElementById('wbLabel').value=d.label;
+        if(d.strokes) strokes=d.strokes; if(d.labels) labels=d.labels; if(d.magnets) magnets=d.magnets; if(d.aircraft) aircraft=d.aircraft; if(d.holds) holds=d.holds;
+        if(d.acSize) acSize=d.acSize;
+        if(d.mapMode&&d.mapMode!=='off') setTimeout(()=>setMap(d.mapMode),150);
+    } catch(e){}
+}
+document.getElementById('wbLabel').addEventListener('input',save);
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// Init
+initMap(); load(); sizeCanvas(); renderMagnets(); renderAircraft(); renderHolds(); redraw(); loadRoster(); setTool('draw'); updateStatus();
+window.addEventListener('resize',()=>{ sizeCanvas(); if(map) map.invalidateSize(); });
+</script>
+</body>
+</html>
