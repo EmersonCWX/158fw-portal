@@ -613,7 +613,7 @@
         const mxgStatus = computeStatus();
 
         // Fetch today's off-station tails from flight_records
-        const offStation = { '18-5341': 'OFF STATION', '18-5339': 'OFF STATION' }; // tail_number -> arr_icao
+        const offStation = {}; // tail_number -> arr_icao
         try {
             const today = new Date().toISOString().slice(0, 10);
             const _sbMxg = supabase.createClient(
