@@ -45,14 +45,6 @@
                         </div>
                     </a>
 
-                </div>
-            </div>
-            <div class="news-carousel-dots" id="newsCarouselDots"></div>
-
-            <!-- Archived Stories -->
-            <section class="news-archived-section">
-                <h3>Archived Stories</h3>
-                <div class="news-archived-grid">
                     <a class="news-tile" href="#" data-story="greenland" style="background-image: url('assets/News Images/Baltic Cover.jpg')">
                         <div class="news-tile-overlay">
                             <div class="news-tile-date">January 26, 2025</div>
@@ -60,6 +52,7 @@
                             <span class="news-tile-link">&#8594; SEE MORE</span>
                         </div>
                     </a>
+
                     <a class="news-tile" href="#" data-story="longdrive" style="background-image: url('assets/News Images/Long Drive.jpg')">
                         <div class="news-tile-overlay">
                             <div class="news-tile-date">March 25, 2025</div>
@@ -67,10 +60,95 @@
                             <span class="news-tile-link">&#8594; SEE MORE</span>
                         </div>
                     </a>
+
                 </div>
+            </div>
+            <div class="news-carousel-dots" id="newsCarouselDots"></div>
+
+            <!-- Press Releases -->
+            <section class="news-archived-section news-press-releases">
+                <h3>v158th FW Press Releases</h3>
+                <ul class="press-release-list">
+                    <li class="press-release-item" data-story="nightflying">
+                        <span class="press-release-date">Mar. 28, 2026</span>
+                        <span class="press-release-item-body">
+                            <span class="press-release-title">v158th FW to Conduct Night Flying Operations</span>
+                            <span class="press-release-snippet">The Virtual Vermont Air National Guard 158th Fighter Wing will conduct night flying operations from Apr. 14&ndash;17 and Apr. 28&ndash;May 1, with flights concluding by 9:30 p.m. each night.</span>
+                        </span>
+                    </li>
+                </ul>
             </section>
         </div>
     </main>
+
+    <style>
+        .news-press-releases {
+            margin-bottom: 2rem;
+        }
+
+        .press-release-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            border-top: 1px solid #2e2e2e;
+        }
+
+        .press-release-item {
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+            padding: 1rem 0.5rem;
+            border-bottom: 1px solid #2e2e2e;
+            transition: background 0.15s;
+        }
+
+        .press-release-item:hover {
+            background: #1e1e1e;
+        }
+
+        .press-release-item[data-story] {
+            cursor: pointer;
+        }
+
+        .press-release-item-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .press-release-snippet {
+            font-size: 0.82rem;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .press-release-date {
+            flex-shrink: 0;
+            font-size: 0.78rem;
+            color: #666;
+            letter-spacing: 0.5px;
+            min-width: 105px;
+        }
+
+        .press-release-title {
+            font-size: 0.95rem;
+            color: #ccc;
+            line-height: 1.4;
+        }
+
+        .press-release-tag {
+            flex-shrink: 0;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: #a8c8a0;
+            background: rgba(168, 200, 160, 0.1);
+            border: 1px solid rgba(168, 200, 160, 0.25);
+            padding: 0.2rem 0.6rem;
+        }
+    </style>
     <footer class="footer">
         <div class="container">
             <div class="footer-content">
@@ -181,6 +259,19 @@
             <p>“We’re always looking for experiences where we get to collaborate, learn, and most importantly, have fun.,” said Johanson. “vRed Flag 26-1 has been the perfect example of this, and we look forward to working together with our team, partners, and community in the future.”</p>
             <p>The Airmen of the 158th Fighter Wing stood out as top performers during this most advanced Red Flag exercise, providing 66% to 100% of the RedFor Package over the course of the event.</p>
             <p>The v158th FW's participation in vRed Flag 26-1 marks continued investment in Large Force Employment training and reinforces the wing's commitment to maintaining the highest levels of combat readiness.</p>
+        </div>
+    </template>
+
+    <!-- Story: Night Flying -->
+    <template id="story-nightflying">
+        <div class="story-photos" data-photos=""></div>
+        <div class="story-date">Mar. 28, 2026</div>
+        <div class="story-title">v158th FW to Conduct Night Flying Operations</div>
+        <div class="story-body">
+            <p class="article-byline">v158th Fighter Wing Public Affairs - South Burlington, Vt.</p>
+            <p>SOUTH BURLINGTON, Vt. &ndash; The Virtual Vermont Air National Guard 158th Fighter Wing will conduct night flying operations from Tuesday, Apr. 14, to Friday, Apr. 17, and again from Tuesday, Apr. 28, to Friday, May. 1.</p>
+            <p>Flights are scheduled with one launch period in the afternoon and one in the evening and are scheduled to conclude by 9:30 p.m. each night.</p>
+            <p>&ldquo;Proficiency in night operations is a cornerstone of our combat readiness,&rdquo; said vCol. Marceline J., the 158th Fighter Wing Deputy Commander.</p>
         </div>
     </template>
 
@@ -342,6 +433,7 @@
             btnPrev.style.display = multi ? '' : 'none';
             btnNext.style.display = multi ? '' : 'none';
             galDots.style.display = multi ? '' : 'none';
+            document.getElementById('articleGallery').style.display = photos.length ? '' : 'none';
         }
 
         function goGallery(index) {
@@ -361,7 +453,7 @@
             var titleNode  = nodes.querySelector('.story-title');
             var bodyNode   = nodes.querySelector('.story-body');
 
-            var photos = photosNode && photosNode.dataset.photos ? photosNode.dataset.photos.split('|') : [];
+            var photos = photosNode && photosNode.dataset.photos ? photosNode.dataset.photos.split('|').filter(Boolean) : [];
             var fits   = photosNode && photosNode.dataset.fits ? photosNode.dataset.fits.split('|') : [];
             buildGallery(photos, fits);
 
@@ -382,7 +474,7 @@
         btnPrev.addEventListener('click', function () { goGallery(galCurrent - 1); });
         btnNext.addEventListener('click', function () { goGallery(galCurrent + 1); });
 
-        document.querySelectorAll('.news-tile[data-story]').forEach(function (tile) {
+        document.querySelectorAll('.news-tile[data-story], .press-release-item[data-story]').forEach(function (tile) {
             tile.addEventListener('click', function (e) {
                 e.preventDefault();
                 openStory(tile.dataset.story);
