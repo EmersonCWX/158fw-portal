@@ -643,31 +643,11 @@
                 }
             } catch (e) { console.warn('VATSIM live feed unavailable:', e); }
 
-            // Phase 3 – for remaining members, try VATSIM stats API
+            // Phase 3 – fallback to localStorage, then HTML badge state
+            // (VATSIM stats API blocks browser requests via CORS, so skip it)
             for (const cid of memberMap.keys()) {
                 if (results.has(cid)) continue;
-                try {
-                    const url = 'https://api.vatsim.net/v2/members/' + cid + '/stats';
-                    const res = await fetch(url);
-                    if (res.ok) {
-                        const apiData = await res.json();
-                        let lastDate = null;
-                        const fields = ['last_connection','last_login','last_logon','updated_at','lastratingchange'];
-                        for (const f of fields) {
-                            if (apiData[f]) {
-                                const d = new Date(apiData[f]);
-                                if (!isNaN(d) && (!lastDate || d > lastDate)) lastDate = d;
-                            }
-                        }
-                        if (lastDate) {
-                            results.set(cid, lastDate >= cutoff);
-                            if (lastDate >= cutoff) localStorage.setItem('vatsim_lastseen_' + cid, lastDate.getTime());
-                            continue;
-                        }
-                    }
-                } catch (e) { console.warn('API check failed for ' + cid + ':', e); }
 
-                // Phase 3b – fallback to localStorage, then HTML badge state
                 const stored = localStorage.getItem('vatsim_lastseen_' + cid);
                 if (stored) {
                     results.set(cid, Number(stored) >= cutoff.getTime());
