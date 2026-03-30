@@ -145,7 +145,7 @@
                             <td class="roster-callsign">Venus</td>
                             <td>O-2</td>
                             <td>1490208</td>
-                            <td><span class="roster-badge badge-active">Active</span></td>
+                            <td><span class="roster-badge badge-inactive">Inactive</span></td>
                         </tr>
                         <tr>
                             <td>A/WG</td>
@@ -177,9 +177,9 @@
                         </tr>
                         <tr>
                             <td>A/WG</td>
-                            <td class="roster-callsign">&mdash;</td>
-                            <td>&mdash;</td>
-                            <td>&mdash;</td>
+                            <td class="roster-callsign">Magma</td>
+                            <td>O-1</td>
+                            <td>1935951</td>
                             <td><span class="roster-badge badge-active">Active</span></td>
                         </tr>
                     </tbody>
@@ -207,16 +207,16 @@
                         </tr>
                         <tr>
                             <td>B/WG</td>
-                            <td class="roster-callsign">&mdash;</td>
-                            <td>&mdash;</td>
-                            <td>&mdash;</td>
+                            <td class="roster-callsign">Jamaica</td>
+                            <td>O-1</td>
+                            <td>1860514</td>
                             <td><span class="roster-badge badge-active">Active</span></td>
                         </tr>
                         <tr>
                             <td>B/WG</td>
-                            <td class="roster-callsign">&mdash;</td>
-                            <td>&mdash;</td>
-                            <td>&mdash;</td>
+                            <td class="roster-callsign">Nuke</td>
+                            <td>O-2</td>
+                            <td>1768379</td>
                             <td><span class="roster-badge badge-active">Active</span></td>
                         </tr>
                         <tr>
@@ -418,23 +418,23 @@
                         </tr>
                         <tr>
                             <td>A/WG</td>
-                            <td class="roster-callsign">Magma</td>
-                            <td>O-1</td>
-                            <td>1935951</td>
+                            <td class="roster-callsign">&mdash;</td>
+                            <td>&mdash;</td>
+                            <td>&mdash;</td>
                             <td><span class="roster-badge badge-active">Active</span></td>
                         </tr>
                         <tr>
                             <td>A/WG</td>
-                            <td class="roster-callsign">Nuke</td>
-                            <td>O-2</td>
-                            <td>1768379</td>
+                            <td class="roster-callsign">&mdash;</td>
+                            <td>&mdash;</td>
+                            <td>&mdash;</td>
                             <td><span class="roster-badge badge-active">Active</span></td>
                         </tr>
                         <tr>
                             <td>A/WG</td>
-                            <td class="roster-callsign">Jamaica</td>
-                            <td>O-1</td>
-                            <td>1860514</td>
+                            <td class="roster-callsign">&mdash;</td>
+                            <td>&mdash;</td>
+                            <td>&mdash;</td>
                             <td><span class="roster-badge badge-active">Active</span></td>
                         </tr>
                         <tr>
@@ -598,8 +598,8 @@
     <script>
         (async function initVatsimIntegration() {
             const STATS_URL = 'https://stats.vatsim.net/stats/';
-            const DAYS_45   = 45 * 24 * 60 * 60 * 1000;
-            const cutoff    = new Date(Date.now() - DAYS_45);
+            const DAYS_30   = 30 * 24 * 60 * 60 * 1000;
+            const cutoff    = new Date(Date.now() - DAYS_30);
             const memberMap = new Map();
 
             // Phase 1 – scan tables, wrap numeric VATSIM IDs in links
@@ -667,12 +667,14 @@
                     }
                 } catch (e) { console.warn('API check failed for ' + cid + ':', e); }
 
-                // Phase 3b – fallback to localStorage last-seen
+                // Phase 3b – fallback to localStorage, then HTML badge state
                 const stored = localStorage.getItem('vatsim_lastseen_' + cid);
                 if (stored) {
                     results.set(cid, Number(stored) >= cutoff.getTime());
                 } else {
-                    results.set(cid, true);
+                    const htmlEntries = memberMap.get(cid);
+                    const htmlBadge = htmlEntries && htmlEntries[0] ? htmlEntries[0].statusCell.querySelector('.roster-badge') : null;
+                    results.set(cid, htmlBadge ? !htmlBadge.classList.contains('badge-inactive') : true);
                 }
             }
 
