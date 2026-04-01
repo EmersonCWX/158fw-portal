@@ -319,10 +319,125 @@
         .modal-status.err { color: #e74c3c; }
         .modal-status.ok  { color: #4caf50; }
 
+        /* ── Callsign clickable button ── */
+        .callsign-btn {
+            background: none;
+            border: none;
+            color: #e8e8e8;
+            font-weight: 700;
+            font-size: 0.92rem;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            padding: 0;
+            font-family: inherit;
+            transition: color 0.15s;
+            text-align: left;
+        }
+        .callsign-btn:hover { color: #7bb3cc; text-decoration: underline; text-decoration-color: #3a5070; }
+
+        /* ── Currency modal ── */
+        .curr-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            z-index: 9001;
+            align-items: center;
+            justify-content: center;
+        }
+        .curr-modal-overlay.open { display: flex; }
+        .curr-modal {
+            background: #1a1d22;
+            border: 1px solid #3a3f45;
+            border-radius: 10px;
+            padding: 24px 28px;
+            max-width: 560px;
+            width: 94%;
+            max-height: 88vh;
+            overflow-y: auto;
+            box-shadow: 0 12px 50px rgba(0,0,0,0.7);
+        }
+        .curr-modal-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #2a2d32;
+        }
+        .curr-modal-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #e8e8e8;
+        }
+        .curr-modal-subtitle {
+            font-size: 0.73rem;
+            color: #555;
+            margin-top: 3px;
+        }
+        .curr-modal-close {
+            background: none;
+            border: none;
+            color: #555;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: inherit;
+        }
+        .curr-modal-close:hover { color: #aaa; background: rgba(255,255,255,0.05); }
+        .curr-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+        .curr-row {
+            display: grid;
+            grid-template-columns: 160px 1fr auto;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 12px;
+            border-radius: 6px;
+            background: #1f2226;
+            border: 1px solid #2a2d32;
+        }
+        .curr-label {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #a0b0c0;
+            white-space: nowrap;
+        }
+        .curr-bar-wrap {
+            height: 6px;
+            background: #12151a;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .curr-bar {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+        .curr-status {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-align: right;
+            white-space: nowrap;
+            min-width: 80px;
+        }
+        .curr-meta {
+            font-size: 0.68rem;
+            color: #555;
+            margin-top: 2px;
+        }
+        .curr-load { text-align:center; padding:30px; color:#555; font-style:italic; font-size:0.85rem; }
+
         /* ── Responsive ── */
         @media (max-width: 768px) {
             .page-wrapper { padding: 70px 10px 40px; }
             .gs-title { font-size: 1.2rem; }
+            .curr-row { grid-template-columns: 140px 1fr auto; }
         }
     </style>
 </head>
@@ -369,6 +484,20 @@
             </div>
         </div>
 
+    </div>
+
+    <!-- Currency modal -->
+    <div class="curr-modal-overlay" id="currModal" role="dialog" aria-modal="true">
+        <div class="curr-modal">
+            <div class="curr-modal-header">
+                <div>
+                    <div class="curr-modal-title" id="currModalTitle">Pilot Currencies</div>
+                    <div class="curr-modal-subtitle" id="currModalSub"></div>
+                </div>
+                <button class="curr-modal-close" id="currModalClose" aria-label="Close">&times;</button>
+            </div>
+            <div id="currModalBody"><div class="curr-load">Loading currencies&hellip;</div></div>
+        </div>
     </div>
 
     <!-- Cert edit modal (admin only) -->
@@ -586,7 +715,7 @@
                 : '<span style="color:#444;">—</span>';
 
             return `<tr>
-                <td class="col-callsign">${escapeHtml(m.callsign || '—')}</td>
+                <td class="col-callsign"><button class="callsign-btn" onclick="openCurrencyModal('${escapeHtml(m.id)}','${escapeHtml(m.callsign || '—')}')">${escapeHtml(m.callsign || '—')}</button></td>
                 ${certCell}
                 <td class="col-flight">${flightDisp}</td>
                 <td class="col-cid">${cidDisp}</td>
@@ -710,16 +839,120 @@
         refreshCertCell(modalMemberId, modalCallsign);
     }
 
-    // Close modal
+    // ── Currency definitions ─────────────────────────────────────────────────
+    const CURRENCIES = [
+        { key: 'night',              label: 'Night',               days: 60,  exDays: 75  },
+        { key: 'pfo',                label: 'PFO',                 days: 60,  exDays: 90  },
+        { key: 'precision_approach', label: 'Precision Approach',  days: 30,  exDays: 45  },
+        { key: 'aar',                label: 'AAR',                 days: 180, exDays: 180 },
+        { key: 'acbt',               label: 'ACBT',                days: 60,  exDays: 90  },
+        { key: 'act',                label: 'ACT',                 days: 60,  exDays: 90  },
+        { key: 'weapons_delivery',   label: 'Weapons Delivery',    days: 60,  exDays: 90  },
+        { key: 'lowat',              label: 'LOWAT',               days: 60,  exDays: 90  },
+        { key: 'night_lowat',        label: 'Night LOWAT',         days: 60,  exDays: 90  },
+    ];
+
+    async function openCurrencyModal(memberId, callsign) {
+        document.getElementById('currModalTitle').textContent = callsign + ' - Currencies';
+        document.getElementById('currModalSub').textContent = 'Pilot currency status';
+        document.getElementById('currModalBody').innerHTML = '<div class="curr-load">Loading currencies&hellip;</div>';
+        document.getElementById('currModal').classList.add('open');
+
+        const { data, error } = await db
+            .from('pilot_currencies')
+            .select('currency_type, last_accomplished, exception_granted')
+            .eq('member_id', memberId);
+
+        const map = {};
+        if (data) data.forEach(r => { map[r.currency_type] = r; });
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const rows = CURRENCIES.map(c => {
+            const rec = map[c.key];
+            if (!rec || !rec.last_accomplished) {
+                return `<div class="curr-row">
+                    <div>
+                        <div class="curr-label">${escapeHtml(c.label)}</div>
+                        <div class="curr-meta">Not accomplished</div>
+                    </div>
+                    <div class="curr-bar-wrap"><div class="curr-bar" style="width:0%;background:#3a3f45;"></div></div>
+                    <div class="curr-status" style="color:#444;">N/A</div>
+                </div>`;
+            }
+
+            const lastDate = new Date(rec.last_accomplished + 'T12:00:00');
+            const daysSince = Math.floor((today - lastDate) / 86400000);
+            const exGranted = !!rec.exception_granted;
+            const limit     = c.days;
+            const exLimit   = c.exDays;
+            const daysLeft  = limit - daysSince;
+            const exDaysLeft = exLimit - daysSince;
+
+            let statusColor, statusText, barColor, barPct, metaText;
+
+            if (daysSince <= limit) {
+                // Current — green
+                statusColor = '#4caf50';
+                barColor    = '#4caf50';
+                barPct      = Math.max(0, (daysLeft / limit) * 100);
+                statusText  = daysLeft === 0 ? 'Last day' : `${daysLeft}d left`;
+                metaText    = `Current · Due in ${daysLeft}d`;
+            } else if (exGranted && daysSince <= exLimit) {
+                // In exception window — yellow
+                statusColor = '#ffc107';
+                barColor    = '#ffc107';
+                barPct      = Math.max(0, (exDaysLeft / (exLimit - limit)) * 100);
+                statusText  = `${exDaysLeft}d (EX)`;
+                metaText    = `Exception · ${exDaysLeft}d remaining`;
+            } else {
+                // Overdue — red
+                const overdue = exGranted ? daysSince - exLimit : daysSince - limit;
+                statusColor = '#e85a4a';
+                barColor    = '#e85a4a';
+                barPct      = 100;
+                statusText  = `${overdue}d OVR`;
+                metaText    = `Overdue by ${overdue} day${overdue !== 1 ? 's' : ''}`;
+            }
+
+            const lastFmt = lastDate.toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' });
+
+            return `<div class="curr-row">
+                <div>
+                    <div class="curr-label">${escapeHtml(c.label)}</div>
+                    <div class="curr-meta">${escapeHtml(metaText)} &bull; Last: ${escapeHtml(lastFmt)}</div>
+                </div>
+                <div class="curr-bar-wrap"><div class="curr-bar" style="width:${barPct.toFixed(1)}%;background:${barColor};"></div></div>
+                <div class="curr-status" style="color:${statusColor};">${escapeHtml(statusText)}</div>
+            </div>`;
+        }).join('');
+
+        document.getElementById('currModalBody').innerHTML =
+            `<div class="curr-grid">${rows}</div>`;
+    }
+
+    // Close currency modal
+    document.getElementById('currModalClose').addEventListener('click', () => {
+        document.getElementById('currModal').classList.remove('open');
+    });
+    document.getElementById('currModal').addEventListener('click', e => {
+        if (e.target === e.currentTarget)
+            document.getElementById('currModal').classList.remove('open');
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+            document.getElementById('currModal').classList.remove('open');
+            document.getElementById('certModal').classList.remove('open');
+        }
+    });
+
+    // Close cert modal
     document.getElementById('certModalClose').addEventListener('click', () => {
         document.getElementById('certModal').classList.remove('open');
     });
     document.getElementById('certModal').addEventListener('click', e => {
         if (e.target === e.currentTarget)
-            document.getElementById('certModal').classList.remove('open');
-    });
-    document.addEventListener('keydown', e => {
-        if (e.key === 'Escape')
             document.getElementById('certModal').classList.remove('open');
     });
 

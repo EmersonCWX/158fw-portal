@@ -345,6 +345,9 @@
                         Member Requests
                         <span class="admin-nav-badge" id="navBadgeMemberReqs" style="display:none;"></span>
                     </button>
+                    <button class="admin-nav-item" onclick="showPanel('currencies')" id="nav-currencies">
+                        Currencies
+                    </button>
                     <button class="admin-nav-item" onclick="showPanel('adminusers')" id="nav-adminusers">
                         Admin Users
                     </button>
@@ -435,6 +438,11 @@
 
                                     <div class="dash-card-label">Admin Users</div>
                                     <div class="dash-card-meta">Grant or revoke admin access</div>
+                                </div>
+                                <div class="dash-card" onclick="showPanel('currencies')">
+
+                                    <div class="dash-card-label">Pilot Currencies</div>
+                                    <div class="dash-card-meta">Renew &amp; manage pilot currencies</div>
                                 </div>
                             </div>
                         </div>
@@ -639,8 +647,7 @@
                 </div>
 
                 <!-- Admin Users -->
-                <div class="admin-panel" id="panel-adminusers">
-                    <div class="admin-section">
+                <div class="admin-panel" id="panel-adminusers">                    <div class="admin-section">
                         <div class="admin-section-header">
                             <h2 class="admin-section-title">Admin Users</h2>
                         </div>
@@ -649,6 +656,28 @@
                             <div class="admin-add-form">
                                 <input type="email" id="addAdminEmail" placeholder="User email address to grant admin access...">
                                 <button class="admin-btn admin-btn-primary" onclick="addAdminUser()">Grant Admin</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pilot Currencies -->
+                <div class="admin-panel" id="panel-currencies">
+                    <div class="admin-section">
+                        <div class="admin-section-header">
+                            <h2 class="admin-section-title">Pilot Currencies</h2>
+                            <button class="admin-btn admin-btn-primary" onclick="loadCurrencyEditor()">&#8635; Refresh</button>
+                        </div>
+                        <div class="admin-section-body">
+                            <div class="gs-editor-student-bar">
+                                <label for="currPilotSelect">Pilot</label>
+                                <select id="currPilotSelect" onchange="onCurrPilotChange()">
+                                    <option value="">- Select a pilot -</option>
+                                </select>
+                                <button class="admin-btn admin-btn-success" id="currSaveBtn" onclick="saveCurrencies()" style="display:none;">Save Currencies</button>
+                            </div>
+                            <div id="currEditorGrid">
+                                <div class="gs-editor-placeholder">Select a pilot above to manage their currencies.</div>
                             </div>
                         </div>
                     </div>
@@ -719,6 +748,7 @@
             loadAirfieldOps();
             loadSieRsvps();
             loadGradesheetEditor();
+            loadCurrencyEditor();
         }
 
         async function loadReports() {
@@ -1203,6 +1233,181 @@
             showToast('Grades saved successfully.','success');
             if (!gsGradesMap[gsCurrentId]) gsGradesMap[gsCurrentId]={};
             upserts.forEach(u=>{ gsGradesMap[gsCurrentId][u.course_id]={grade:u.grade,notes:u.notes||''}; });
+        }
+
+        // ── Pilot Currencies ───────────────────────────────────────────────
+        const CURRENCIES = [
+            { key: 'night',              label: 'Night',               days: 60,  exDays: 75  },
+            { key: 'pfo',                label: 'PFO',                 days: 60,  exDays: 90  },
+            { key: 'precision_approach', label: 'Precision Approach',  days: 30,  exDays: 45  },
+            { key: 'aar',                label: 'AAR',                 days: 180, exDays: 180 },
+            { key: 'acbt',               label: 'ACBT',                days: 60,  exDays: 90  },
+            { key: 'act',                label: 'ACT',                 days: 60,  exDays: 90  },
+            { key: 'weapons_delivery',   label: 'Weapons Delivery',    days: 60,  exDays: 90  },
+            { key: 'lowat',              label: 'LOWAT',               days: 60,  exDays: 90  },
+            { key: 'night_lowat',        label: 'Night LOWAT',         days: 60,  exDays: 90  },
+        ];
+
+        let currPilots = [];
+        let currData   = {}; // currData[currency_key] = { last_accomplished, exception_granted, row_id }
+        let currPilotId = null;
+
+        async function loadCurrencyEditor() {
+            const sel = document.getElementById('currPilotSelect');
+            if (!sel) return;
+            sel.innerHTML = '<option value="">Loading members…</option>';
+            document.getElementById('currEditorGrid').innerHTML = '<div class="gs-editor-placeholder">Loading…</div>';
+            const { data: members, error } = await _supabase
+                .from('members')
+                .select('id, callsign')
+                .eq('status', 'active')
+                .order('callsign');
+            if (error) { sel.innerHTML = '<option value="">Error loading members</option>'; return; }
+            currPilots = members || [];
+            sel.innerHTML = '<option value="">- Select a pilot -</option>' +
+                currPilots.map(m => `<option value="${escHtml(m.id)}">${escHtml(m.callsign || m.id)}</option>`).join('');
+            if (currPilotId) { sel.value = currPilotId; await fetchAndRenderCurrencies(currPilotId); }
+            else document.getElementById('currEditorGrid').innerHTML = '<div class="gs-editor-placeholder">Select a pilot above to manage their currencies.</div>';
+        }
+
+        async function onCurrPilotChange() {
+            const sel = document.getElementById('currPilotSelect');
+            currPilotId = sel.value || null;
+            document.getElementById('currSaveBtn').style.display = currPilotId ? '' : 'none';
+            if (!currPilotId) {
+                document.getElementById('currEditorGrid').innerHTML = '<div class="gs-editor-placeholder">Select a pilot above to manage their currencies.</div>';
+                return;
+            }
+            await fetchAndRenderCurrencies(currPilotId);
+        }
+
+        async function fetchAndRenderCurrencies(memberId) {
+            document.getElementById('currEditorGrid').innerHTML = '<div class="admin-spinner">Loading…</div>';
+            const { data, error } = await _supabase
+                .from('pilot_currencies')
+                .select('id, currency_type, last_accomplished, exception_granted')
+                .eq('member_id', memberId);
+            currData = {};
+            if (data) data.forEach(r => {
+                currData[r.currency_type] = { last_accomplished: r.last_accomplished, exception_granted: !!r.exception_granted, row_id: r.id };
+            });
+            renderCurrencyGrid();
+        }
+
+        function renderCurrencyGrid() {
+            const today = new Date(); today.setHours(0,0,0,0);
+            const rows = CURRENCIES.map((c, i) => {
+                const rec = currData[c.key] || {};
+                const lastVal = rec.last_accomplished || '';
+                const exGranted = !!rec.exception_granted;
+
+                // Compute status preview
+                let statusHtml = '';
+                if (lastVal) {
+                    const lastDate = new Date(lastVal + 'T12:00:00');
+                    const daysSince = Math.floor((today - lastDate) / 86400000);
+                    if (daysSince <= c.days) {
+                        const left = c.days - daysSince;
+                        statusHtml = `<span style="color:#4caf50;font-size:0.72rem;font-weight:700;">${left}d left</span>`;
+                    } else if (exGranted && daysSince <= c.exDays) {
+                        const left = c.exDays - daysSince;
+                        statusHtml = `<span style="color:#ffc107;font-size:0.72rem;font-weight:700;">${left}d (EX)</span>`;
+                    } else {
+                        const over = exGranted ? daysSince - c.exDays : daysSince - c.days;
+                        statusHtml = `<span style="color:#e85a4a;font-size:0.72rem;font-weight:700;">${over}d OVR</span>`;
+                    }
+                } else {
+                    statusHtml = `<span style="color:#444;font-size:0.72rem;">Not set</span>`;
+                }
+
+                return `<div style="display:grid;grid-template-columns:160px 1fr 180px auto;align-items:center;gap:12px;padding:9px 12px;border-radius:5px;background:${i%2===0?'#1a1d22':'#1d2025'};margin-bottom:2px;">
+                    <div style="font-size:0.83rem;font-weight:700;color:#a0b0c0;">${escHtml(c.label)}</div>
+                    <div style="font-size:0.72rem;color:#666;">Normal: ${c.days}d &nbsp;|&nbsp; Exception: ${c.exDays}d</div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <input type="date" id="currDate_${i}" value="${escHtml(lastVal)}"
+                            style="background:#12151a;border:1px solid #3a3f45;border-radius:4px;color:#e8e8e8;padding:5px 8px;font-size:0.8rem;font-family:inherit;width:140px;"
+                            oninput="refreshCurrRow(${i})">
+                        ${statusHtml.replace(/</g,'<').replace(/>/g,'>')}
+                    </div>
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.78rem;color:#a0b0c0;white-space:nowrap;">
+                        <input type="checkbox" id="currEx_${i}" data-key="${escHtml(c.key)}" ${exGranted ? 'checked' : ''}
+                            style="accent-color:#ffc107;width:14px;height:14px;" onchange="refreshCurrRow(${i})">
+                        Exception
+                    </label>
+                </div>`;
+            }).join('');
+            document.getElementById('currEditorGrid').innerHTML = `<div style="border:1px solid #3a3f45;border-radius:6px;overflow:hidden;">
+                <div style="display:grid;grid-template-columns:160px 1fr 180px auto;gap:12px;padding:8px 12px;background:#242730;border-bottom:1px solid #3a3f45;">
+                    <span style="font-size:0.65rem;font-weight:700;color:#666;letter-spacing:1.2px;text-transform:uppercase;">Currency</span>
+                    <span style="font-size:0.65rem;font-weight:700;color:#666;letter-spacing:1.2px;text-transform:uppercase;">Limits</span>
+                    <span style="font-size:0.65rem;font-weight:700;color:#666;letter-spacing:1.2px;text-transform:uppercase;">Last Accomplished</span>
+                    <span style="font-size:0.65rem;font-weight:700;color:#666;letter-spacing:1.2px;text-transform:uppercase;">Exception</span>
+                </div>
+                ${rows}
+            </div>`;
+        }
+
+        function refreshCurrRow(idx) {
+            // Re-render the whole grid so status badges update live when date/exception changes
+            const today = new Date(); today.setHours(0,0,0,0);
+            CURRENCIES.forEach((c, i) => {
+                const dateEl = document.getElementById(`currDate_${i}`);
+                const exEl   = document.getElementById(`currEx_${i}`);
+                if (!dateEl) return;
+                const lastVal   = dateEl.value;
+                const exGranted = exEl ? exEl.checked : false;
+                // Find the status span that follows the date input inside the same flex container
+                const wrapper = dateEl.parentElement;
+                const spans = wrapper.querySelectorAll('span');
+                if (!spans.length) return;
+                const statusSpan = spans[spans.length - 1];
+                if (!lastVal) { statusSpan.outerHTML = `<span style="color:#444;font-size:0.72rem;">Not set</span>`; return; }
+                const lastDate  = new Date(lastVal + 'T12:00:00');
+                const daysSince = Math.floor((today - lastDate) / 86400000);
+                let html;
+                if (daysSince <= c.days) {
+                    html = `<span style="color:#4caf50;font-size:0.72rem;font-weight:700;">${c.days - daysSince}d left</span>`;
+                } else if (exGranted && daysSince <= c.exDays) {
+                    html = `<span style="color:#ffc107;font-size:0.72rem;font-weight:700;">${c.exDays - daysSince}d (EX)</span>`;
+                } else {
+                    const over = exGranted ? daysSince - c.exDays : daysSince - c.days;
+                    html = `<span style="color:#e85a4a;font-size:0.72rem;font-weight:700;">${over}d OVR</span>`;
+                }
+                statusSpan.outerHTML = html;
+            });
+        }
+
+        async function saveCurrencies() {
+            if (!currPilotId) { showToast('No pilot selected.', 'error'); return; }
+            const btn = document.getElementById('currSaveBtn');
+            btn.textContent = 'Saving…'; btn.disabled = true;
+            const now = new Date().toISOString();
+            const upserts = CURRENCIES.map((c, i) => {
+                const dateEl = document.getElementById(`currDate_${i}`);
+                const exEl   = document.getElementById(`currEx_${i}`);
+                const lastAccomplished = dateEl ? (dateEl.value || null) : null;
+                const exceptionGranted = exEl ? exEl.checked : false;
+                return {
+                    member_id:          currPilotId,
+                    currency_type:      c.key,
+                    last_accomplished:  lastAccomplished,
+                    exception_granted:  exceptionGranted,
+                    updated_by:         currentUser.email,
+                    updated_at:         now,
+                };
+            });
+            const { error } = await _supabase
+                .from('pilot_currencies')
+                .upsert(upserts, { onConflict: 'member_id,currency_type' });
+            btn.textContent = '\u2713 Save Currencies'; btn.disabled = false;
+            if (error) { showToast('Error saving currencies: ' + error.message, 'error'); return; }
+            showToast('Currencies saved.', 'success');
+            // Refresh in-memory currData from saved values
+            upserts.forEach(u => {
+                if (!currData[u.currency_type]) currData[u.currency_type] = {};
+                currData[u.currency_type].last_accomplished = u.last_accomplished;
+                currData[u.currency_type].exception_granted = u.exception_granted;
+            });
         }
 
         initAdmin();
