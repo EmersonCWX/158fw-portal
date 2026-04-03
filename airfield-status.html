@@ -6,6 +6,7 @@
     <title>158th FW Pilot Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/member-nav.js"></script>
+    <script src="js/mxg-status.js"></script>
     <style>
         body { font-family: Arial, sans-serif; background: #222; color: #fff; margin: 0; padding: 0; }
         .container { max-width: 1600px; margin: 20px auto; background: #333; border-radius: 10px; box-shadow: 0 0 10px #000; padding: 20px; }
@@ -522,89 +523,7 @@
 
     // ── v158th MXG Aircraft Status Board ──────────────────────────────────────
     (async function () {
-        const TAILS = [
-            { id: '17-5265', wing: true },
-            { id: '17-5266' }, { id: '17-5277' }, { id: '17-5278' }, { id: '17-5279' },
-            { id: '17-5280' }, { id: '17-5284' },
-            { id: '18-5336' }, { id: '18-5337' }, { id: '18-5338' }, { id: '18-5339' },
-            { id: '18-5340' }, { id: '18-5341' }, { id: '18-5343' }, { id: '18-5344' },
-            { id: '18-5349' }, { id: '18-5358' }, { id: '18-5359' }, { id: '18-5360' },
-            { id: '18-5361' }
-        ];
-
-        // Xorshift32 seeded PRNG
-        function mkRng(seed) {
-            let s = (seed ^ 0xDEADBEEF) >>> 0 || 1;
-            return function () {
-                s ^= s << 13; s ^= s >> 17; s ^= s << 5;
-                s = s >>> 0;
-                return s / 4294967296;
-            };
-        }
-
-        // Seeded Fisher-Yates shuffle (returns new array)
-        function shuffle(arr, rng) {
-            const a = arr.slice();
-            for (let i = a.length - 1; i > 0; i--) {
-                const j = Math.floor(rng() * (i + 1));
-                const tmp = a[i]; a[i] = a[j]; a[j] = tmp;
-            }
-            return a;
-        }
-
-        // Days since 2025-01-01 (local date)
-        function dayIndex() {
-            const now = new Date();
-            const local = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            const epoch = new Date(2025, 0, 1);
-            return Math.floor((local - epoch) / 86400000);
-        }
-
-        // Set to true to pause the 12-day phase cycle and use the pinned tails below.
-        // Set to false to resume normal rotation.
-        const PHASE_CYCLE_PAUSED = false;
-        const PHASE_PINNED_TAILS = [];
-
-        function computeStatus() {
-            const day = dayIndex();
-
-            let phaseTails;
-            if (PHASE_CYCLE_PAUSED) {
-                // 12-day cycle is paused — use pinned tails
-                phaseTails = new Set(PHASE_PINNED_TAILS);
-            } else {
-                // Normal 12-day phase rotation
-                const phaseCycle = Math.floor(day / 12);
-                const phRng = mkRng(phaseCycle * 7919 + 42);
-                const phaseCount = phRng() < 0.45 ? 1 : 2;
-                const phasePool = shuffle(TAILS.filter(t => !t.wing).map(t => t.id), phRng);
-                phaseTails = new Set(phasePool.slice(0, phaseCount));
-            }
-
-            // Daily active set: 12–16 tails; Wing always included, phase tails excluded from active pool
-            const dayRng = mkRng(day * 2053 + 137);
-            const activeCount = 12 + Math.floor(dayRng() * 5); // 12–16
-            const nonSpecial = TAILS.filter(t => !t.wing && !phaseTails.has(t.id)).map(t => t.id);
-            const poolShuffled = shuffle(nonSpecial, mkRng(day * 1777 + 55));
-            const needed = Math.max(0, activeCount - 1);
-            const fromPool = poolShuffled.slice(0, needed);
-            const activeTails = new Set(['17-5265', ...fromPool]);
-
-            // Regular maintenance: 1–2 from active non-phase non-wing tails
-            const mxRng = mkRng(day * 3571 + 99);
-            const maintCount = mxRng() < 0.5 ? 1 : 2;
-            const maintCandidates = shuffle(fromPool.slice(), mxRng);
-            const maintTails = new Set(maintCandidates.slice(0, maintCount));
-
-            const map = {};
-            for (const t of TAILS) {
-                if (phaseTails.has(t.id))        map[t.id] = 'phase';
-                else if (!activeTails.has(t.id)) map[t.id] = 'inactive';
-                else if (maintTails.has(t.id))   map[t.id] = 'maint';
-                else                              map[t.id] = 'ready';
-            }
-            return map;
-        }
+        const { TAILS, computeStatus } = window.MxgStatus;
 
         const STATUS_COLOR = { ready: '#4a9', maint: '#b87', phase: '#a44', inactive: '#555', offstation: '#88c' };
         const STATUS_BG    = { ready: '#131f18', maint: '#201810', phase: '#1e1010', inactive: '#1c1c1c', offstation: '#161525' };

@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="css/styles.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/member-nav.js"></script>
+    <script src="js/mxg-status.js"></script>
     <style>
         /* ── Page Layout ── */
         .page-wrapper {
@@ -371,7 +372,7 @@
                             <div class="summary-field">
                                 <span class="summary-label">Mission Type</span>
                                 <select class="summary-input" id="missionType">
-                                    <option value="">— Select —</option>
+                                    <option value="">Select</option>
                                     <option value="CAS">CAS</option>
                                     <option value="OCA/DCA">OCA/DCA</option>
                                     <option value="SEAD/DEAD">SEAD/DEAD</option>
@@ -583,68 +584,11 @@
 
         // ── MXG Tail Dropdown ──
         (async function populateTailDropdown() {
-            const TAILS = [
-                { id: '17-5265', wing: true },
-                { id: '17-5266' }, { id: '17-5277' }, { id: '17-5278' }, { id: '17-5279' },
-                { id: '17-5280' }, { id: '17-5284' },
-                { id: '18-5336' }, { id: '18-5337' }, { id: '18-5338' }, { id: '18-5339' },
-                { id: '18-5340' }, { id: '18-5341' }, { id: '18-5343' }, { id: '18-5344' },
-                { id: '18-5349' }, { id: '18-5358' }, { id: '18-5359' }, { id: '18-5360' },
-                { id: '18-5361' }
-            ];
-
-            function mkRng(seed) {
-                let s = (seed ^ 0xDEADBEEF) >>> 0 || 1;
-                return function () { s ^= s << 13; s ^= s >> 17; s ^= s << 5; s = s >>> 0; return s / 4294967296; };
-            }
-            function shuffle(arr, rng) {
-                const a = arr.slice();
-                for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const tmp = a[i]; a[i] = a[j]; a[j] = tmp; }
-                return a;
-            }
-            function dayIndex() {
-                const now = new Date();
-                const local = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                return Math.floor((local - new Date(2025, 0, 1)) / 86400000);
-            }
-
-            const PHASE_CYCLE_PAUSED = true;
-            const PHASE_PINNED_TAILS = ['18-5358', '17-5278', '17-5279', '17-5266', '18-5343', '18-5336'];
-
-            function computeStatus() {
-                const day = dayIndex();
-                const phaseTails = PHASE_CYCLE_PAUSED
-                    ? new Set(PHASE_PINNED_TAILS)
-                    : (() => {
-                        const phRng = mkRng(Math.floor(day / 12) * 7919 + 42);
-                        const phaseCount = phRng() < 0.45 ? 1 : 2;
-                        return new Set(shuffle(TAILS.filter(t => !t.wing).map(t => t.id), phRng).slice(0, phaseCount));
-                    })();
-
-                const dayRng = mkRng(day * 2053 + 137);
-                const activeCount = 12 + Math.floor(dayRng() * 5);
-                const nonSpecial = TAILS.filter(t => !t.wing && !phaseTails.has(t.id)).map(t => t.id);
-                const poolShuffled = shuffle(nonSpecial, mkRng(day * 1777 + 55));
-                const activeTails = new Set(['17-5265', ...poolShuffled.slice(0, Math.max(0, activeCount - 1))]);
-
-                const mxRng = mkRng(day * 3571 + 99);
-                const maintCount = mxRng() < 0.5 ? 1 : 2;
-                const maintTails = new Set(shuffle(poolShuffled.slice(0, Math.max(0, activeCount - 1)), mxRng).slice(0, maintCount));
-
-                const map = {};
-                for (const t of TAILS) {
-                    if (phaseTails.has(t.id))        map[t.id] = 'phase';
-                    else if (!activeTails.has(t.id)) map[t.id] = 'inactive';
-                    else if (maintTails.has(t.id))   map[t.id] = 'maint';
-                    else                              map[t.id] = 'ready';
-                }
-                return map;
-            }
-
+            const { TAILS, computeStatus } = window.MxgStatus;
             const mxgStatus = computeStatus();
 
             // Fetch off-station tails from today's flight records
-            const offStation = { '18-5344': true, '18-5339': true };
+            const offStation = {};
             try {
                 const today = new Date().toISOString().slice(0, 10);
                 const { data: flights } = await _supabase
@@ -663,11 +607,11 @@
             } catch (_) { /* silently ignore */ }
 
             const sel = document.getElementById('missionTail');
-            sel.innerHTML = '<option value="">— Select Tail —</option>';
+            sel.innerHTML = '<option value="">Select Tail</option>';
             for (const t of TAILS) {
                 const st = mxgStatus[t.id];
                 const isOff = offStation[t.id];
-                if (st === 'phase' || st === 'maint' || st === 'inactive') continue;
+                if (st !== 'ready' && !isOff) continue;
                 const opt = document.createElement('option');
                 opt.value = t.id;
                 opt.textContent = isOff ? `${t.id}  (Off Station)` : t.id;
@@ -680,7 +624,7 @@
         let currentMode = 'ZULU';
 
         // Populate pilot name and email from session
-        _supabase.auth.getSession().then(({ data: { session } }) => {
+        _supabase.auth.getSession().then(async ({ data: { session } }) => {
             _session = session;
             if (session) {
                 const user = session.user;
@@ -689,6 +633,34 @@
                     : user.email.split('@')[0].toUpperCase();
                 document.getElementById('pilotName').textContent = label;
                 document.getElementById('flPilotEmail').value = user.email;
+
+                // Try user_metadata first, then members table, then last flight record
+                if (user.user_metadata && user.user_metadata.vatsim_cid) {
+                    document.getElementById('flVatsimCid').value = user.user_metadata.vatsim_cid;
+                } else {
+                    try {
+                        const { data: member } = await _supabase
+                            .from('members')
+                            .select('vatsim_id')
+                            .eq('email', user.email)
+                            .single();
+                        if (member && member.vatsim_id) {
+                            document.getElementById('flVatsimCid').value = member.vatsim_id;
+                        } else {
+                            const { data: rec } = await _supabase
+                                .from('flight_records')
+                                .select('vatsim_cid')
+                                .eq('user_email', user.email)
+                                .not('vatsim_cid', 'is', null)
+                                .order('created_at', { ascending: false })
+                                .limit(1)
+                                .single();
+                            if (rec && rec.vatsim_cid) {
+                                document.getElementById('flVatsimCid').value = rec.vatsim_cid;
+                            }
+                        }
+                    } catch (_) { /* leave blank */ }
+                }
             }
         });
 
