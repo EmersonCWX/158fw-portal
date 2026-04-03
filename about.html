@@ -49,6 +49,127 @@
         </div>
     </main>
 
+    <!-- FAQ Section -->
+    <section class="faq-section">
+        <div class="container">
+            <h2 class="faq-title">Frequently Asked Questions</h2>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    What is the schedule of F-35 operations?
+                    <span class="faq-chevron">&#9660;</span>
+                </button>
+                <div class="faq-answer">
+                    <p>The details below depict the anticipated flight schedule for the F-35s during steady-state operations.</p>
+                    <p>The Virtual 158th Fighter Wing generally operates with takeoff windows Tuesdays through Fridays, 8:30-10:30 a.m. and 12:30-7:30 p.m., averaging two takeoff windows per day, each generally with 4 to 6 aircraft. The Wing also operates during drill weekend, typically the first non-holiday weekend of the month. Times may change due to weather, VATSIM's KZBW air traffic coordination, maintenance requests, and other factors, which prevent us from releasing more specific takeoff information. The Virtual 158th Fighter Wing publishes press releases whenever there is a significant deviation from this schedule, such as during night flying.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    How often do F-35s use afterburners during takeoff?
+                    <span class="faq-chevron">&#9660;</span>
+                </button>
+                <div class="faq-answer">
+                    <p>As of June 2021, the Virtual 158th Fighter Wing has used afterburner only once since the unit stood up in September 2022, less than 1 percent of all flights.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    What simulator do you use?
+                    <span class="faq-chevron">&#9660;</span>
+                </button>
+                <div class="faq-answer">
+                    <p>Microsoft Flight Simulator 2024.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    Do I need prior experience to join?
+                    <span class="faq-chevron">&#9660;</span>
+                </button>
+                <div class="faq-answer">
+                    <p>You must meet the VATSIM minimum hours. While the unit does prefer pilots with some F-35 experience, we offer ground-up training for those with no prior experience.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    What special operations does the Virtual 158th FW conduct?
+                    <span class="faq-chevron">&#9660;</span>
+                </button>
+                <div class="faq-answer">
+                    <p>While our main tasking is SEAD (Suppression of Enemy Air Defenses), the unit trains to the VATSIM standard to conduct air-to-air refueling, aerial combat maneuvers (ACM), interceptions and scrambles, war games, joint training exercises, escort missions, and flying low-level military routes.</p>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <style>
+        .faq-section {
+            background: #0d0d0d;
+            padding: 3rem 1rem;
+            border-top: 1px solid #1e1e1e;
+        }
+        .faq-title {
+            font-size: 1.4rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #F5E6D3;
+            margin-bottom: 2rem;
+        }
+        .faq-item {
+            border-bottom: 1px solid #1e1e1e;
+        }
+        .faq-question {
+            width: 100%;
+            background: transparent;
+            border: none;
+            padding: 1.1rem 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            color: #c9d1d9;
+            cursor: pointer;
+            text-align: left;
+            gap: 1rem;
+        }
+        .faq-question:hover { color: #F5E6D3; }
+        .faq-chevron {
+            font-size: 0.7rem;
+            color: #4a6fa5;
+            flex-shrink: 0;
+            transition: transform 0.2s;
+        }
+        .faq-question.open .faq-chevron { transform: rotate(180deg); }
+        .faq-answer {
+            display: none;
+            padding: 0 0 1.2rem;
+            color: #8b949e;
+            font-size: 0.88rem;
+            line-height: 1.7;
+        }
+        .faq-answer p + p { margin-top: 0.6rem; }
+        .faq-answer.open { display: block; }
+    </style>
+
+    <script>
+        function toggleFaq(btn) {
+            const answer = btn.nextElementSibling;
+            const isOpen = answer.classList.contains('open');
+            document.querySelectorAll('.faq-answer').forEach(a => a.classList.remove('open'));
+            document.querySelectorAll('.faq-question').forEach(q => q.classList.remove('open'));
+            if (!isOpen) { answer.classList.add('open'); btn.classList.add('open'); }
+        }
+    </script>
+
 
     <!-- Footer -->
     <footer class="footer">
