@@ -3,425 +3,660 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flight History | 158th Fighter Wing</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <title>My Information | v158th Fighter Wing</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/member-nav.js"></script>
     <style>
-        /* ── Page Layout ── */
-        .page-wrapper {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 28px 20px 60px;
-        }
-        .page-title-bar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 24px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid #3a3f45;
-        }
-        .page-title-bar h1 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #fff;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin: 0;
-        }
-        .page-title-bar p { color: #888; font-size: 0.82rem; margin-top: 4px; }
-        .page-content {
-            display: grid;
-            grid-template-columns: 220px 1fr;
-            gap: 20px;
-            align-items: start;
-        }
-        /* ── Sidebar ── */
-        .pg-sidebar {
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-            position: sticky;
-            top: 78px;
-        }
-        .sidebar-card {
-            background: #1f2226;
-            border: 1px solid #3a3f45;
-            border-radius: 4px;
-            overflow: hidden;
-        }
-        .sidebar-card-header {
-            background: #2a2d32;
-            padding: 10px 14px;
-            font-size: 0.7rem;
-            font-weight: 700;
-            color: #888;
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            border-bottom: 1px solid #3a3f45;
-        }
-        .sidebar-card-body { padding: 14px; }
-        .stat-item {
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-            padding: 8px 0;
-            border-bottom: 1px solid #2a2d32;
-        }
-        .stat-item:last-child { border-bottom: none; padding-bottom: 0; }
-        .stat-label { font-size: 0.65rem; font-weight: 700; color: #666; letter-spacing: 1px; text-transform: uppercase; }
-        .stat-value { font-size: 1.1rem; font-weight: 700; color: #e8e8e8; }
-        .stat-value.accent { color: #4caf50; }
-        /* ── Main ── */
-        .pg-main { display: flex; flex-direction: column; gap: 14px; }
-        .hist-card {
-            background: #1f2226;
-            border: 1px solid #3a3f45;
-            border-radius: 4px;
-            overflow: hidden;
-        }
-        .hist-card-header {
-            background: #242730;
-            padding: 12px 16px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 1px solid #3a3f45;
-        }
-        .hist-card-header h2 {
-            font-size: 0.85rem;
-            font-weight: 700;
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #12151a url('assets/20241120061335_1.jpg') center center / cover fixed;
             color: #e8e8e8;
-            letter-spacing: 1.5px;
+            min-height: 100vh;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 12, 16, 0.80);
+            z-index: 0;
+            pointer-events: none;
+        }
+        .page-wrapper {
+            position: relative;
+            z-index: 1;
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 80px 24px 60px;
+        }
+
+        /* -- Profile Banner -- */
+        .profile-banner {
+            background: rgba(26,29,34,0.92);
+            border: 1px solid #2a2d32;
+            border-radius: 8px;
+            padding: 22px 28px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 18px;
+        }
+
+        /* -- Avatar -- */
+        .avatar-wrap {
+            position: relative;
+            width: 90px;
+            height: 90px;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+        .avatar-wrap:hover .avatar-overlay { opacity: 1; }
+        .avatar-overlay {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.55);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.15s;
+            font-size: 0.6rem;
+            font-weight: 700;
+            color: #ccc;
+            letter-spacing: 0.5px;
             text-transform: uppercase;
-            margin: 0;
         }
-        .hist-card-body { padding: 0; }
-        /* ── Table ── */
-        .hist-table {
+        .avatar-uploading { opacity: 0.5; pointer-events: none; }
+        .profile-avatar {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: #1f2226;
+            border: 2px solid #3a3f45;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: #555;
+            object-fit: cover;
+            overflow: hidden;
+        }
+        .profile-avatar img {
             width: 100%;
-            border-collapse: collapse;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            display: block;
         }
-        .hist-table thead tr {
-            background: #1a1d22;
+        .avatar-uploading { opacity: 0.5; pointer-events: none; }
+
+        .profile-info { flex: 1; min-width: 0; }
+        .profile-callsign {
+            font-size: 1.9rem;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            line-height: 1;
         }
-        .hist-table th {
-            padding: 10px 14px;
+        .profile-meta {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+        .profile-meta-item { font-size: 0.88rem; color: #888; }
+        .profile-meta-item strong { color: #bbb; font-weight: 600; }
+        .meta-sep { color: #2a2d32; }
+        .avatar-status {
+            font-size: 0.68rem;
+            color: #555;
+            margin-top: 6px;
+            min-height: 14px;
+        }
+        .avatar-status.ok  { color: #4caf50; }
+        .avatar-status.err { color: #e85a4a; }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 9px;
+            border-radius: 20px;
             font-size: 0.65rem;
             font-weight: 700;
-            color: #666;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .status-active   { background: rgba(76,175,80,0.15);  color: #4caf50; border: 1px solid rgba(76,175,80,0.3); }
+        .status-inactive { background: rgba(150,150,150,0.1); color: #666;    border: 1px solid #2a2d32; }
+
+        /* -- Stats Row -- */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+        .stat-card {
+            background: rgba(26,29,34,0.92);
+            border: 1px solid #2a2d32;
+            border-radius: 6px;
+            padding: 18px 20px;
+        }
+        .stat-card-label {
+            font-size: 0.63rem;
+            font-weight: 700;
+            color: #555;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        .stat-card-value {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: #4caf50;
+            font-family: monospace;
+            letter-spacing: 1px;
+            line-height: 1;
+        }
+        .stat-card-sub { font-size: 0.68rem; color: #555; margin-top: 5px; }
+
+        /* -- Two-column section -- */
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+        .section-card {
+            background: rgba(26,29,34,0.92);
+            border: 1px solid #2a2d32;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .section-header {
+            padding: 11px 18px;
+            background: rgba(20,22,26,0.95);
+            border-bottom: 1px solid #2a2d32;
+            font-size: 0.63rem;
+            font-weight: 700;
+            color: #555;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+        .section-body { padding: 14px 18px; }
+
+        /* -- Currency rows -- */
+        .curr-item {
+            display: grid;
+            grid-template-columns: 130px 1fr 68px;
+            align-items: center;
+            gap: 10px;
+            padding: 7px 0;
+            border-bottom: 1px solid #1e2126;
+        }
+        .curr-item:last-child { border-bottom: none; }
+        .curr-name { font-size: 0.76rem; font-weight: 600; color: #a0b0c0; }
+        .curr-bar-wrap { height: 5px; background: #12151a; border-radius: 3px; overflow: hidden; }
+        .curr-bar { height: 100%; border-radius: 3px; transition: width 0.4s; }
+        .curr-status-text { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.5px; text-align: right; }
+
+        /* -- Cert badges -- */
+        .certs-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+        .certs-list { display: flex; flex-direction: column; gap: 10px; }
+        .cert-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .cert-meta { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+        .cert-meta-item { font-size: 0.71rem; color: #666; }
+        .cert-meta-item strong { color: #888; font-weight: 600; }
+        .cert-meta-sep { color: #3a3f45; font-size: 0.75rem; }
+        .cbadge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 3px;
+            font-size: 0.68rem;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+        }
+        .cbadge-IP    { background: #4a1515; color: #e74c3c; }
+        .cbadge-FORM  { background: #38185a; color: #b07fe8; }
+        .cbadge-ADV   { background: #163825; color: #4caf50; }
+        .cbadge-VI    { background: #103a28; color: #2ecc71; }
+        .cbadge-CBT   { background: #162535; color: #7bb3cc; }
+        .cbadge-FAC   { background: #2a1f00; color: #f0a500; }
+        .cbadge-FORMP { background: #2a1040; color: #d4a0ff; }
+        .cbadge-A2A   { background: #1a2a10; color: #a0e060; }
+        .cbadge-AAR   { background: #102030; color: #60c0e0; }
+        .no-data { color: #444; font-size: 0.82rem; font-style: italic; }
+
+        /* -- Recent Flights -- */
+        .flights-card {
+            background: rgba(26,29,34,0.92);
+            border: 1px solid #2a2d32;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .flights-table { width: 100%; border-collapse: collapse; }
+        .flights-table th {
+            background: rgba(20,22,26,0.95);
+            padding: 10px 14px;
+            font-size: 0.62rem;
+            font-weight: 700;
+            color: #555;
             letter-spacing: 1px;
             text-transform: uppercase;
             text-align: left;
             border-bottom: 1px solid #2a2d32;
             white-space: nowrap;
         }
-        .hist-table td {
-            padding: 12px 14px;
+        .flights-table td {
+            padding: 11px 14px;
             font-size: 0.83rem;
             color: #ccc;
-            border-bottom: 1px solid #1a1d22;
+            border-bottom: 1px solid #1e2126;
             vertical-align: middle;
         }
-        .hist-table tr:last-child td { border-bottom: none; }
-        .hist-table tr:hover td { background: rgba(255,255,255,0.025); cursor: pointer; }
-        .hist-table tr.expanded td { background: rgba(76,175,80,0.04); }
-        .route-cell {
-            font-family: monospace;
-            font-size: 0.78rem;
-            color: #888;
-            max-width: 200px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .expand-row td {
-            background: #1a1e22 !important;
-            border-bottom: 1px solid #3a3f45;
-            padding: 0 !important;
-        }
-        .expand-inner {
-            padding: 14px 20px;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
-        }
-        .exp-field { display: flex; flex-direction: column; gap: 4px; }
-        .exp-label { font-size: 0.62rem; font-weight: 700; color: #555; letter-spacing: 1px; text-transform: uppercase; }
-        .exp-value { font-size: 0.82rem; color: #bbb; line-height: 1.5; }
-        .exp-value.mono { font-family: monospace; color: #88aacc; }
-        /* ── Badges / tags ── */
+        .flights-table tr:last-child td { border-bottom: none; }
+        .flights-table tr:hover td { background: rgba(255,255,255,0.02); }
+        .ft-mono { font-family: monospace; font-size: 0.78rem; color: #888; }
+        .ft-time { font-family: monospace; color: #4caf50; font-weight: 600; }
         .badge {
             display: inline-block;
-            padding: 2px 8px;
+            padding: 2px 7px;
             border-radius: 2px;
-            font-size: 0.68rem;
+            font-size: 0.65rem;
             font-weight: 700;
             letter-spacing: 0.8px;
             text-transform: uppercase;
         }
-        .badge-complete { background: rgba(76,175,80,0.15); color: #4caf50; }
-        .badge-partial  { background: rgba(255,193,7,0.15);  color: #ffc107; }
-        .badge-failed   { background: rgba(232,90,74,0.15);  color: #e85a4a; }
+        .badge-complete { background: rgba(76,175,80,0.15);   color: #4caf50; }
+        .badge-partial  { background: rgba(255,193,7,0.15);   color: #ffc107; }
+        .badge-failed   { background: rgba(232,90,74,0.15);   color: #e85a4a; }
         .badge-na       { background: rgba(150,150,150,0.12); color: #666; }
-        /* ── State / Empty / Loading ── */
-        .state-row td {
+
+        /* -- Loading / empty -- */
+        .state-msg {
+            padding: 36px 20px;
             text-align: center;
-            padding: 40px 20px !important;
             color: #555;
             font-size: 0.85rem;
-            letter-spacing: 0.5px;
         }
-        .btn-filter {
-            background: transparent;
-            border: 1px solid #3a3f45;
-            color: #888;
-            padding: 5px 12px;
-            font-size: 0.72rem;
-            font-weight: 600;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            cursor: pointer;
-            font-family: inherit;
-            border-radius: 2px;
-            transition: border-color 0.15s, color 0.15s;
-        }
-        .btn-filter:hover { border-color: #a0aab4; color: #ccc; }
-        .loading-spinner {
+        .spin {
             display: inline-block;
-            width: 14px; height: 14px;
-            border: 2px solid #3a3f45;
+            width: 13px; height: 13px;
+            border: 2px solid #2a2d32;
             border-top-color: #4caf50;
             border-radius: 50%;
             animation: spin 0.7s linear infinite;
             vertical-align: middle;
-            margin-right: 8px;
+            margin-right: 6px;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-        @media (max-width: 768px) {
-            .page-wrapper { padding: 16px 12px 40px; }
-            .page-content { grid-template-columns: 1fr !important; }
-            .pg-sidebar { position: static !important; top: auto !important; }
-            .page-title-bar h1 { font-size: 1.1rem; }
-            .stats-grid { grid-template-columns: 1fr 1fr !important; }
-            .history-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-            .history-table { min-width: 480px; font-size: 0.8rem; }
+
+        /* -- Responsive -- */
+        @media (max-width: 860px) { .two-col { grid-template-columns: 1fr; } }
+        @media (max-width: 600px) {
+            .page-wrapper { padding: 70px 12px 40px; }
+            .stats-row { grid-template-columns: 1fr; }
+            .profile-callsign { font-size: 1.4rem; }
+            .stat-card-value { font-size: 1.4rem; }
         }
     </style>
 </head>
 <body>
 
+    <!-- Hidden file input for avatar upload -->
+    <input type="file" id="avatarInput" accept="image/jpeg,image/png,image/webp" style="display:none;">
+
     <div class="page-wrapper">
-        <div class="page-title-bar">
-            <div>
-                <h1>Flight History</h1>
-                <p>All logged flight records for your pilot account</p>
+
+        <!-- Profile Banner -->
+        <div class="profile-banner">
+            <div class="avatar-wrap" id="avatarWrap" title="Click to upload profile picture">
+                <div class="profile-avatar" id="avatarCircle">
+                    <span id="avatarPlaceholder"><svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" viewBox="0 0 24 24" fill="#555"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg></span>
+                </div>
+                <div class="avatar-overlay">
+                    <span>Upload</span>
+                </div>
+            </div>
+            <div class="profile-info">
+                <div class="profile-callsign" id="profCallsign"><span class="spin"></span></div>
+                <div class="profile-meta" id="profMeta"></div>
+                <div class="avatar-status" id="avatarStatus"></div>
             </div>
         </div>
 
-        <div class="page-content">
-            <!-- Sidebar -->
-            <aside class="pg-sidebar">
-                <div class="sidebar-card">
-                    <div class="sidebar-card-header">Pilot Stats</div>
-                    <div class="sidebar-card-body">
-                        <div class="stat-item">
-                            <span class="stat-label">Total Flights</span>
-                            <span class="stat-value accent" id="statFlights">—</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Total Flight Time</span>
-                            <span class="stat-value" id="statHours">—</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Last Flight</span>
-                            <span class="stat-value" id="statLastFlight" style="font-size:0.88rem;">—</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Pilot</span>
-                            <span class="stat-value" id="statPilot" style="font-size:0.88rem;">—</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="sidebar-card">
-                    <div class="sidebar-card-header">Navigation</div>
-                    <div class="sidebar-card-body" style="padding:10px 6px;">
-                        <a href="post-mission.html" style="display:block;padding:8px 10px;color:#aaa;font-size:0.82rem;font-weight:600;text-decoration:none;letter-spacing:0.8px;text-transform:uppercase;border-radius:3px;transition:background 0.15s,color 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.04)';this.style.color='#ddd';" onmouseout="this.style.background='';this.style.color='#aaa';">
-                            ← Log New Flight
-                        </a>
-                    </div>
-                </div>
-            </aside>
-
-            <!-- Main content -->
-            <main class="pg-main">
-                <div class="hist-card">
-                    <div class="hist-card-header">
-                        <h2>Flight Records</h2>
-                    </div>
-                    <div class="hist-card-body">
-                        <table class="hist-table" id="histTable">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Callsign</th>
-                                    <th>Aircraft</th>
-                                    <th>Route</th>
-                                    <th>Flight Time</th>
-                                    <th>Mission Type</th>
-                                    <th>Obj. 1</th>
-                                </tr>
-                            </thead>
-                            <tbody id="histBody">
-                                <tr class="state-row">
-                                    <td colspan="7">
-                                        <span class="loading-spinner"></span>Loading flight records…
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </main>
+        <!-- Flight Hour Stats -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-card-label">This Month</div>
+                <div class="stat-card-value" id="statMonthly">--</div>
+                <div class="stat-card-sub" id="statMonthSub"></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-label">This Year</div>
+                <div class="stat-card-value" id="statYearly">--</div>
+                <div class="stat-card-sub" id="statYearSub"></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-label">All Time</div>
+                <div class="stat-card-value" id="statAllTime">--</div>
+                <div class="stat-card-sub" id="statAllSub"></div>
+            </div>
         </div>
+
+        <!-- Currencies + Qualifications -->
+        <div class="two-col">
+            <div class="section-card">
+                <div class="section-header">Currencies</div>
+                <div class="section-body" id="currBody">
+                    <div class="state-msg"><span class="spin"></span>Loading&hellip;</div>
+                </div>
+            </div>
+            <div class="section-card">
+                <div class="section-header">Qualifications</div>
+                <div class="section-body" id="certsBody">
+                    <div class="state-msg"><span class="spin"></span>Loading&hellip;</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Flights -->
+        <div class="flights-card">
+            <div class="section-header">Recent Flights</div>
+            <table class="flights-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Aircraft</th>
+                        <th>Route</th>
+                        <th>Flight Time</th>
+                        <th>Mission Type</th>
+                        <th>Result</th>
+                    </tr>
+                </thead>
+                <tbody id="recentBody">
+                    <tr><td colspan="6" class="state-msg"><span class="spin"></span>Loading&hellip;</td></tr>
+                </tbody>
+            </table>
+        </div>
+
     </div>
 
     <script>
-        const SUPABASE_URL = 'https://gcumgpfyfqtfwbskkngt.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdW1ncGZ5ZnF0Zndic2trbmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDczMTAsImV4cCI6MjA4ODM4MzMxMH0.OSY0XEPQp-WsFWuiGrUG5fcLIVMI3c8AxBEv2shFftg';
-        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-            auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'v158fw-auth' }
-        });
+    const SUPABASE_URL      = 'https://gcumgpfyfqtfwbskkngt.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdW1ncGZ5ZnF0Zndic2trbmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDczMTAsImV4cCI6MjA4ODM4MzMxMH0.OSY0XEPQp-WsFWuiGrUG5fcLIVMI3c8AxBEv2shFftg';
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: { persistSession: true, autoRefreshToken: true, storageKey: 'v158fw-auth' }
+    });
 
-        // ── Badges ──
-        function objBadge(val) {
-            if (!val) return '<span style="color:#555;">—</span>';
-            const map = { COMPLETE: 'badge-complete', PARTIAL: 'badge-partial', FAILED: 'badge-failed', 'N/A': 'badge-na' };
-            return `<span class="badge ${map[val] || 'badge-na'}">${val}</span>`;
+    let currentUid = null;
+
+    const CURRENCIES = [
+        { key: 'night',              label: 'Night',             days: 60,  exDays: 75  },
+        { key: 'pfo',                label: 'PFO',               days: 60,  exDays: 90  },
+        { key: 'precision_approach', label: 'Precision Appr.',  days: 30,  exDays: 45  },
+        { key: 'aar',                label: 'AAR',               days: 180, exDays: 180 },
+        { key: 'acbt',               label: 'ACBT',              days: 60,  exDays: 90  },
+        { key: 'act',                label: 'ACT',               days: 60,  exDays: 90  },
+        { key: 'weapons_delivery',   label: 'Weapons Delivery', days: 60,  exDays: 90  },
+        { key: 'lowat',              label: 'LOWAT',             days: 60,  exDays: 90  },
+        { key: 'night_lowat',        label: 'Night LOWAT',       days: 60,  exDays: 90  },
+    ];
+
+    const CERT_CLASS = {
+        'IP': 'cbadge-IP', 'FORM': 'cbadge-FORM', 'FORM+': 'cbadge-FORMP',
+        'ADV': 'cbadge-ADV', 'V/I': 'cbadge-VI', 'A2A': 'cbadge-A2A',
+        'AAR': 'cbadge-AAR', 'CBT': 'cbadge-CBT', 'FAC': 'cbadge-FAC',
+    };
+    const CERT_LABELS = {
+        'IP': 'Instructor Pilot', 'FORM': '2-Ship Formation', 'FORM+': '4-Ship Formation',
+        'ADV': 'Advanced Qualified', 'V/I': 'All Weather', 'A2A': 'Air to Air',
+        'AAR': 'Air Refueling', 'CBT': 'Combat Qualified', 'FAC': 'Forward Air Controller',
+    };
+
+    function esc(s) {
+        return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function toMins(t) {
+        if (!t || t === '--:--') return 0;
+        const [h, m] = t.split(':').map(Number);
+        return (isNaN(h) ? 0 : h * 60) + (isNaN(m) ? 0 : m);
+    }
+    function toHHMM(mins) {
+        const h = Math.floor(mins / 60), m = mins % 60;
+        return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    }
+    function objBadge(val) {
+        if (!val) return '<span style="color:#555;">--</span>';
+        const map = { COMPLETE:'badge-complete', PARTIAL:'badge-partial', FAILED:'badge-failed', 'N/A':'badge-na' };
+        return `<span class="badge ${map[val]||'badge-na'}">${esc(val)}</span>`;
+    }
+
+    // -- Avatar --
+    function setAvatarImage(url) {
+        const circle = document.getElementById('avatarCircle');
+        circle.innerHTML = `<img src="${esc(url)}" alt="Profile picture" onerror="this.parentElement.innerHTML='&#9992;'">`;
+    }
+
+    document.getElementById('avatarWrap').addEventListener('click', () => {
+        document.getElementById('avatarInput').click();
+    });
+
+    document.getElementById('avatarInput').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file || !currentUid) return;
+
+        const wrap      = document.getElementById('avatarWrap');
+        const statusEl  = document.getElementById('avatarStatus');
+        const ext       = file.name.split('.').pop().toLowerCase();
+        const path      = `${currentUid}/avatar.${ext}`;
+
+        wrap.classList.add('avatar-uploading');
+        statusEl.className = 'avatar-status';
+        statusEl.textContent = 'Uploading...';
+
+        const { error: upErr } = await db.storage
+            .from('avatars')
+            .upload(path, file, { upsert: true, contentType: file.type });
+
+        if (upErr) {
+            statusEl.className = 'avatar-status err';
+            statusEl.textContent = 'Upload failed: ' + upErr.message;
+            wrap.classList.remove('avatar-uploading');
+            return;
         }
 
-        // ── Parse HH:MM to total minutes ──
-        function toMinutes(t) {
-            if (!t || t === '--:--') return 0;
-            const [h, m] = t.split(':').map(Number);
-            return (isNaN(h) ? 0 : h * 60) + (isNaN(m) ? 0 : m);
+        const { data: urlData } = db.storage.from('avatars').getPublicUrl(path);
+        const publicUrl = urlData.publicUrl + '?t=' + Date.now();
+
+        const { error: dbErr } = await db
+            .from('members')
+            .update({ avatar_url: urlData.publicUrl })
+            .eq('id', currentUid);
+
+        if (dbErr) {
+            statusEl.className = 'avatar-status err';
+            statusEl.textContent = 'Saved image but could not update profile: ' + dbErr.message;
+        } else {
+            statusEl.className = 'avatar-status ok';
+            statusEl.textContent = 'Profile picture updated.';
+            setTimeout(() => { statusEl.textContent = ''; }, 3000);
         }
 
-        function minutesToHHMM(mins) {
-            const h = Math.floor(mins / 60);
-            const m = mins % 60;
-            return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+        setAvatarImage(publicUrl);
+        wrap.classList.remove('avatar-uploading');
+        e.target.value = '';
+    });
+
+    // -- Profile --
+    function renderProfile(profile) {
+        document.getElementById('profCallsign').textContent = profile?.callsign || '--';
+        if (profile?.avatar_url) setAvatarImage(profile.avatar_url);
+
+        const statusCls = (profile?.status === 'active') ? 'status-active' : 'status-inactive';
+        let meta = `<span class="status-badge ${statusCls}">${esc(profile?.status || 'unknown')}</span>`;
+        if (profile?.rank)
+            meta += `<span class="meta-sep">|</span><span class="profile-meta-item"><strong>Rank</strong> ${esc(profile.rank)}</span>`;
+        const sqdn = profile?.flight || profile?.squadron || profile?.unit || null;
+        if (sqdn)
+            meta += `<span class="meta-sep">|</span><span class="profile-meta-item"><strong>Squadron</strong> ${esc(sqdn)}</span>`;
+        if (profile?.role)
+            meta += `<span class="meta-sep">|</span><span class="profile-meta-item"><strong>Role</strong> ${esc(profile.role)}</span>`;
+        if (profile?.commissioned) {
+            const raw = profile.commissioned.toString().split('T')[0];
+            const [yr2, mo2, dy2] = raw.split('-').map(Number);
+            const d = new Date(yr2, mo2 - 1, dy2);
+            const fmt = d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            meta += `<span class="meta-sep">|</span><span class="profile-meta-item"><strong>Commissioned</strong> ${fmt}</span>`;
         }
+        if (profile?.vatsim_id)
+            meta += `<span class="meta-sep">|</span><span class="profile-meta-item"><strong>VATSIM</strong> <a href="https://stats.vatsim.net/stats/${esc(profile.vatsim_id)}" target="_blank" rel="noopener noreferrer" style="color:#7bb3cc;text-decoration:none;">${esc(profile.vatsim_id)}</a></span>`;
+        document.getElementById('profMeta').innerHTML = meta;
+    }
 
-        // ── Render records ──
-        function renderRecords(records) {
-            const tbody = document.getElementById('histBody');
-
-            if (!records || records.length === 0) {
-                tbody.innerHTML = '<tr class="state-row"><td colspan="7">No flight records found. Log your first flight in Post Mission.</td></tr>';
-                return;
+    // -- Stats --
+    function renderStats(records) {
+        const now = new Date();
+        const mo = now.getMonth(), yr = now.getFullYear();
+        let moMins = 0, moCount = 0, yrMins = 0, yrCount = 0, allMins = 0;
+        for (const r of records) {
+            const m = toMins(r.total_flight_time);
+            allMins += m;
+            if (r.mission_date) {
+                const d = new Date(r.mission_date + 'T12:00:00');
+                if (d.getFullYear() === yr)                        { yrMins += m; yrCount++; }
+                if (d.getFullYear() === yr && d.getMonth() === mo) { moMins += m; moCount++; }
             }
-
-            // Stats
-            document.getElementById('statFlights').textContent = records.length;
-            const totalMins = records.reduce((acc, r) => acc + toMinutes(r.total_flight_time), 0);
-            document.getElementById('statHours').textContent = totalMins > 0 ? minutesToHHMM(totalMins) + ' hrs' : '—';
-            const last = records[0];
-            document.getElementById('statLastFlight').textContent = last.mission_date || '—';
-            document.getElementById('statPilot').textContent = last.pilot_callsign || '—';
-
-            // Build rows
-            let html = '';
-            records.forEach((r, i) => {
-                const routeDisplay = r.dep_icao && r.arr_icao
-                    ? `${r.dep_icao} → ${r.arr_icao}`
-                    : (r.route ? r.route.substring(0, 28) + (r.route.length > 28 ? '…' : '') : '—');
-
-                html += `
-                <tr data-idx="${i}" onclick="toggleExpand(this, ${i})">
-                    <td>${r.mission_date || '—'}</td>
-                    <td>${r.callsign || '—'}</td>
-                    <td>${r.aircraft || '—'}</td>
-                    <td class="route-cell" title="${r.route || ''}">${routeDisplay}</td>
-                    <td style="font-family:monospace;color:#4caf50;">${r.total_flight_time || '—'}</td>
-                    <td>${r.mission_type || '—'}</td>
-                    <td>${objBadge(r.obj1_result)}</td>
-                </tr>
-                <tr class="expand-row" id="expand-${i}" style="display:none;">
-                    <td colspan="7">
-                        <div class="expand-inner">
-                            <div class="exp-field">
-                                <span class="exp-label">Departure</span>
-                                <span class="exp-value mono">${r.dep_icao || '—'} @ ${r.takeoff_time || '—'} (${r.time_mode || 'Z'})</span>
-                            </div>
-                            <div class="exp-field">
-                                <span class="exp-label">Arrival</span>
-                                <span class="exp-value mono">${r.arr_icao || '—'} @ ${r.land_time || '—'} (${r.time_mode || 'Z'})</span>
-                            </div>
-                            <div class="exp-field">
-                                <span class="exp-label">Tail #</span>
-                                <span class="exp-value">${r.tail_number || '—'}</span>
-                            </div>
-                            <div class="exp-field">
-                                <span class="exp-label">VATSIM CID</span>
-                                <span class="exp-value mono">${r.vatsim_cid || '—'}</span>
-                            </div>
-                            <div class="exp-field">
-                                <span class="exp-label">Obj. 2 / 3</span>
-                                <span class="exp-value">${objBadge(r.obj2_result)} ${objBadge(r.obj3_result)}</span>
-                            </div>
-                            <div class="exp-field">
-                                <span class="exp-label">Pilot Email</span>
-                                <span class="exp-value" style="color:#666;">${r.user_email || '—'}</span>
-                            </div>
-                            <div class="exp-field" style="grid-column:1/-1;">
-                                <span class="exp-label">Route</span>
-                                <span class="exp-value mono" style="white-space:pre-wrap;word-break:break-all;">${r.route || '—'}</span>
-                            </div>
-                            <div class="exp-field" style="grid-column:1/-1;">
-                                <span class="exp-label">Debrief Notes</span>
-                                <span class="exp-value" style="white-space:pre-wrap;">${r.debrief_notes || '—'}</span>
-                            </div>
-                        </div>
-                    </td>
-                </tr>`;
-            });
-            tbody.innerHTML = html;
         }
+        document.getElementById('statMonthly').textContent = toHHMM(moMins);
+        document.getElementById('statMonthSub').textContent = `${moCount} flight${moCount !== 1 ? 's' : ''} this month`;
+        document.getElementById('statYearly').textContent   = toHHMM(yrMins);
+        document.getElementById('statYearSub').textContent  = `${yrCount} flight${yrCount !== 1 ? 's' : ''} this year`;
+        document.getElementById('statAllTime').textContent  = toHHMM(allMins);
+        document.getElementById('statAllSub').textContent   = `${records.length} flight${records.length !== 1 ? 's' : ''} total`;
+    }
 
-        // ── Expand / collapse row ──
-        function toggleExpand(row, idx) {
-            const expRow = document.getElementById(`expand-${idx}`);
-            if (!expRow) return;
-            const isOpen = expRow.style.display !== 'none';
-            expRow.style.display = isOpen ? 'none' : 'table-row';
-            row.classList.toggle('expanded', !isOpen);
-        }
-
-        // ── Load records for the signed-in user ──
-        async function loadHistory() {
-            const { data: { session } } = await _supabase.auth.getSession();
-            if (!session) {
-                window.location.replace('index.html');
-                return;
+    // -- Currencies --
+    function renderCurrencies(data) {
+        const today = new Date(); today.setHours(0,0,0,0);
+        const map = {};
+        if (data) data.forEach(r => { map[r.currency_type] = r; });
+        const html = CURRENCIES.map(c => {
+            const rec = map[c.key];
+            if (!rec || !rec.last_accomplished) {
+                return `<div class="curr-item">
+                    <span class="curr-name">${esc(c.label)}</span>
+                    <div class="curr-bar-wrap"><div class="curr-bar" style="width:0%;background:#3a3f45;"></div></div>
+                    <span class="curr-status-text" style="color:#444;">N/A</span>
+                </div>`;
             }
-
-            const { data, error } = await _supabase
-                .from('flight_records')
-                .select('*')
-                .eq('user_email', session.user.email)
-                .order('created_at', { ascending: false });
-
-            if (error) {
-                document.getElementById('histBody').innerHTML =
-                    `<tr class="state-row"><td colspan="7">Error loading records: ${error.message}</td></tr>`;
-                return;
+            const last      = new Date(rec.last_accomplished + 'T12:00:00');
+            const sinceDays = Math.floor((today - last) / 86400000);
+            const ex        = !!rec.exception_granted;
+            const left      = c.days - sinceDays;
+            const exLeft    = c.exDays - sinceDays;
+            let color, pct, label;
+            if (sinceDays <= c.days) {
+                color = '#4caf50'; pct = Math.max(0, (left / c.days) * 100);
+                label = left === 0 ? 'Last day' : `${left}d`;
+            } else if (ex && sinceDays <= c.exDays) {
+                color = '#ffc107'; pct = Math.max(0, (exLeft / (c.exDays - c.days)) * 100);
+                label = `${exLeft}d EX`;
+            } else {
+                const ovr = ex ? sinceDays - c.exDays : sinceDays - c.days;
+                color = '#e85a4a'; pct = 100; label = `${ovr}d OVR`;
             }
-            renderRecords(data);
-        }
+            return `<div class="curr-item">
+                <span class="curr-name">${esc(c.label)}</span>
+                <div class="curr-bar-wrap"><div class="curr-bar" style="width:${pct.toFixed(1)}%;background:${color};"></div></div>
+                <span class="curr-status-text" style="color:${color};">${label}</span>
+            </div>`;
+        }).join('');
+        document.getElementById('currBody').innerHTML = html;
+    }
 
-        loadHistory();
+    // -- Qualifications --
+    function renderCerts(data) {
+        if (!data || !data.length) {
+            document.getElementById('certsBody').innerHTML = '<p class="no-data">No qualifications on record.</p>';
+            return;
+        }
+        const rows = data.map(c => {
+            const date = c.granted_at
+                ? new Date(c.granted_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                : null;
+            const signedBy = c.granted_by ? c.granted_by.replace(/@.*/, '') : null;
+            let meta = '';
+            if (date)     meta += `<span class="cert-meta-item">${esc(date)}</span>`;
+            if (signedBy) meta += `<span class="cert-meta-sep">&#183;</span><span class="cert-meta-item">Signed off by <strong>${esc(signedBy)}</strong></span>`;
+            return `<div class="cert-row">
+                <span class="cbadge ${CERT_CLASS[c.certification] || 'cbadge-CBT'}" title="${esc(CERT_LABELS[c.certification] || c.certification)}">${esc(c.certification)}</span>
+                ${meta ? `<span class="cert-meta">${meta}</span>` : ''}
+            </div>`;
+        }).join('');
+        document.getElementById('certsBody').innerHTML = `<div class="certs-list">${rows}</div>`;
+    }
+
+    // -- Recent Flights --
+    function renderRecent(records) {
+        const tbody = document.getElementById('recentBody');
+        if (!records || !records.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="state-msg">No flight records yet. Log your first flight in Post Mission.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = records.slice(0, 10).map(r => {
+            const route = r.dep_icao && r.arr_icao
+                ? `${esc(r.dep_icao)} - ${esc(r.arr_icao)}`
+                : esc(r.route ? r.route.substring(0, 26) + (r.route.length > 26 ? '...' : '') : '--');
+            return `<tr>
+                <td>${esc(r.mission_date || '--')}</td>
+                <td>${esc(r.aircraft || '--')}</td>
+                <td class="ft-mono">${route}</td>
+                <td class="ft-time">${esc(r.total_flight_time || '--')}</td>
+                <td>${esc(r.mission_type || '--')}</td>
+                <td>${objBadge(r.obj1_result)}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    // -- Init --
+    async function init() {
+        const { data: { session } } = await db.auth.getSession();
+        if (!session) { window.location.replace('index.html'); return; }
+
+        currentUid = session.user.id;
+        const email = session.user.email;
+
+        const [
+            { data: profile },
+            { data: certs },
+            { data: currencies },
+            { data: flights, error: flightErr }
+        ] = await Promise.all([
+            db.from('members').select('*').eq('id', currentUid).maybeSingle(),
+            db.from('member_certifications').select('certification, granted_at, granted_by').eq('member_id', currentUid),
+            db.from('pilot_currencies').select('currency_type, last_accomplished, exception_granted').eq('member_id', currentUid),
+            db.from('flight_records').select('*').eq('user_email', email).order('mission_date', { ascending: false })
+        ]);
+
+        renderProfile(profile);
+        renderCurrencies(currencies);
+        renderCerts(certs);
+
+        if (flightErr) {
+            document.getElementById('recentBody').innerHTML =
+                `<tr><td colspan="6" class="state-msg" style="color:#e85a4a;">Error loading flights: ${esc(flightErr.message)}</td></tr>`;
+        } else {
+            renderStats(flights || []);
+            renderRecent(flights || []);
+        }
+    }
+
+    init();
     </script>
 </body>
 </html>

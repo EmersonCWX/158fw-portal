@@ -299,7 +299,7 @@
                             PILOT RESOURCES
                         </button>
                         <ul class="member-dropdown-menu" id="pilotResourcesDropdownMenu">
-                            <li><a href="flight-history.html">Flight History</a></li>
+                            <li><a href="flight-history.html">My Information</a></li>
                             <li><a href="vsaferep.html">vSAFEREP</a></li>
                             <li><a href="training.html">v158th FW EPUBS</a></li>
                             <li><a href="gradesheet.html">Gradesheet</a></li>
