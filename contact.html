@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Us - 158th Fighter Wing</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .contact-hero {
+            position: relative;
+            background: url('assets/20260402175425_1.jpg') center center / cover no-repeat;
+            padding: 7rem 1rem 3.5rem;
+            text-align: left;
+        }
+
+        .contact-hero::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(13,13,13,1) 100%);
+            pointer-events: none;
+        }
+
+        .contact-hero .container {
+            position: relative;
+            z-index: 1;
+            max-width: 820px;
+            margin: 0 auto;
+        }
+
+        .contact-page {
+            padding: 2rem 1rem 3rem;
+            background: #0d0d0d;
+        }
+
+        .contact-page .container {
+            max-width: 820px;
+            margin: 0 auto;
+        }
+
+        .contact-page h2 {
+            font-size: 1.8rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #F5E6D3;
+            margin-bottom: 0.5rem;
+        }
+
+        .contact-page .page-subtitle {
+            color: #888;
+            font-size: 0.9rem;
+            margin-bottom: 2.5rem;
+            letter-spacing: 0.5px;
+        }
+
+        /* Form type selector */
+        .form-type-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0;
+            margin-bottom: 2.5rem;
+            border: 1px solid #2a2a2a;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .form-type-tab {
+            background: transparent;
+            border: none;
+            border-right: 1px solid #2a2a2a;
+            padding: 1rem 1.2rem;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: #555;
+            transition: background 0.2s, color 0.2s;
+            text-align: left;
+            line-height: 1.4;
+        }
+
+        .form-type-tab:last-child {
+            border-right: none;
+        }
+
+        .form-type-tab:hover {
+            background: #1a1f2b;
+            color: #c9d1d9;
+        }
+
+        .form-type-tab.active {
+            background: #1a2035;
+            color: #F5E6D3;
+            border-bottom: 2px solid #4a6fa5;
+        }
+
+        .form-type-tab .tab-num {
+            display: block;
+            font-size: 0.65rem;
+            color: #4a6fa5;
+            letter-spacing: 1px;
+            margin-bottom: 0.3rem;
+        }
+
+        @media (max-width: 600px) {
+            .form-type-selector {
+                grid-template-columns: 1fr;
+            }
+            .form-type-tab {
+                border-right: none;
+                border-bottom: 1px solid #2a2a2a;
+            }
+            .form-type-tab:last-child {
+                border-bottom: none;
+            }
+        }
+
+        /* Form panels */
+        .form-panel {
+            display: none;
+            background: #161b22;
+            border: 1px solid #2a2a2a;
+            border-radius: 6px;
+            padding: 2rem;
+        }
+
+        .form-panel.active {
+            display: block;
+        }
+
+        .form-panel h3 {
+            font-size: 1rem;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: #F5E6D3;
+            margin-bottom: 0.3rem;
+        }
+
+        .form-panel .form-ref {
+            font-size: 0.75rem;
+            color: #555;
+            letter-spacing: 0.5px;
+            margin-bottom: 1.8rem;
+        }
+
+        .form-section-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #4a6fa5;
+            border-bottom: 1px solid #2a2a2a;
+            padding-bottom: 0.4rem;
+            margin: 1.6rem 0 1rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .form-row.three-col {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            color: #8b949e;
+            margin-bottom: 5px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            color: #c9d1d9;
+            font-size: 0.88rem;
+            padding: 0.55rem 0.75rem;
+            font-family: inherit;
+            transition: border-color 0.15s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #4a6fa5;
+        }
+
+        .form-group select option {
+            background: #0d1117;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-actions {
+            margin-top: 1.8rem;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .submit-btn {
+            background: #4a6fa5;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 0.65rem 2rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .submit-btn:hover {
+            background: #3a5f95;
+        }
+
+        .form-success {
+            display: none;
+            background: #1a2a1a;
+            border: 1px solid #2a4a2a;
+            border-radius: 4px;
+            padding: 1rem 1.2rem;
+            color: #7ec87e;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+        }
+
+        .form-error {
+            display: none;
+            background: #2a1a1a;
+            border: 1px solid #4a2a2a;
+            border-radius: 4px;
+            padding: 1rem 1.2rem;
+            color: #c87e7e;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .form-row, .form-row.three-col {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-container">
+            <div class="header-left">
+                <img src="assets/vang-logo.png.png" alt="VA ANG Logo" class="header-logo">
+                <a href="index.html" class="header-title-link"><span class="header-title">Virtual VERMONT AIR NATIONAL GUARD</span></a>
+            </div>
+            <button class="header-hamburger" id="headerHamburger" aria-label="Open menu">
+                <span></span><span></span><span></span>
+            </button>
+            <div class="header-nav" id="headerNav">
+                <a href="index.html" class="header-link">Home</a>
+                <a href="about.html" class="header-link">About</a>
+                <a href="news.html" class="header-link">News</a>
+                <a href="roster.html" class="header-link">Roster</a>
+                <a href="pilot.html" class="header-link">Become a Fighter Pilot</a>
+                <button class="login-btn" id="loginBtn">LOGIN</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contact Hero -->
+    <div class="contact-hero">
+        <div class="container">
+            <h2>Contact Us</h2>
+            <p class="page-subtitle">Select the type of inquiry below to get started.</p>
+        </div>
+    </div>
+
+    <!-- Contact Page -->
+    <main class="contact-page">
+        <div class="container">
+
+            <!-- Form Type Selector -->
+            <div class="form-type-selector">
+                <button class="form-type-tab" data-form="incident" onclick="selectForm('incident')">
+                    <span class="tab-num">01</span>
+                    Report an Incident
+                </button>
+                <button class="form-type-tab" data-form="aerial" onclick="selectForm('aerial')">
+                    <span class="tab-num">02</span>
+                    Request for Aerial Support
+                </button>
+                <button class="form-type-tab" data-form="general" onclick="selectForm('general')">
+                    <span class="tab-num">03</span>
+                    General Questions
+                </button>
+            </div>
+
+            <!-- Incident Report Form -->
+            <div class="form-panel" id="form-incident">
+                <h3>Incident Report</h3>
+                <p class="form-ref">v158FW - Incident Reporting</p>
+
+                <div class="form-section-label">Part I - Reporter Information</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="inc-callsign">Callsign / Handle</label>
+                        <input type="text" id="inc-callsign" placeholder="e.g. MAPLE51">
+                    </div>
+                    <div class="form-group">
+                        <label for="inc-email">Contact Email</label>
+                        <input type="email" id="inc-email" placeholder="your@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="inc-date">Date of Incident</label>
+                        <input type="date" id="inc-date">
+                    </div>
+                </div>
+
+                <div class="form-section-label">Part II - Incident Details</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="inc-type">Incident Type</label>
+                        <select id="inc-type">
+                            <option value="">Select</option>
+                            <option>Flight Safety</option>
+                            <option>Personnel / Conduct</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="inc-severity">Severity</label>
+                        <select id="inc-severity">
+                            <option value="">Select</option>
+                            <option>Low</option>
+                            <option>Medium</option>
+                            <option>High</option>
+                            <option>Critical</option>
+                        </select>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="inc-location">Location</label>
+                        <input type="text" id="inc-location" placeholder="e.g. KLSV, Red Flag VUL 1">
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="inc-desc">Description of Incident</label>
+                        <textarea id="inc-desc" rows="5" placeholder="Describe the incident in detail..."></textarea>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="inc-corrective">Corrective Action Taken (if any)</label>
+                        <textarea id="inc-corrective" rows="3" placeholder="Describe any steps already taken..."></textarea>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button class="submit-btn" onclick="submitForm('incident')">Submit Report</button>
+                </div>
+                <div class="form-success" id="success-incident">Your incident report has been submitted. Wing leadership will follow up as needed.</div>
+                <div class="form-error" id="error-incident">Please fill in all required fields before submitting.</div>
+            </div>
+
+            <!-- Aerial Support Request Form (DD2535) -->
+            <div class="form-panel" id="form-aerial">
+                <h3>Request for Military Aerial Support</h3>
+                <p class="form-ref">Request for v158th FW Aerial Support (Airshows, Flyovers, Static Displays)</p>
+                <p style="font-size:0.8rem; color:#8b949e; background:#1a1a1a; border-left:3px solid #4a6fa5; padding:0.75rem 1rem; margin-bottom:1.5rem; line-height:1.6;">
+                    <strong style="color:#F5E6D3;">Please Note:</strong> At the end of the day we are an operational fighter squadron, and sometimes cannot support requests due to operational schedules. We will do our best to accommodate, but approval is not guaranteed.
+                </p>
+
+                <div class="form-section-label">Part I - Requester Information</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="aer-org">Requesting Organization / Event</label>
+                        <input type="text" id="aer-org" placeholder="e.g. Burlington Airshow Committee">
+                    </div>
+                    <div class="form-group">
+                        <label for="aer-poc">Point of Contact</label>
+                        <input type="text" id="aer-poc" placeholder="Name / Callsign">
+                    </div>
+                    <div class="form-group">
+                        <label for="aer-email">Contact Email</label>
+                        <input type="email" id="aer-email" placeholder="your@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="aer-date-req">Date of Request</label>
+                        <input type="date" id="aer-date-req">
+                    </div>
+                </div>
+
+                <div class="form-section-label">Part II - Event Data</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="aer-support-type">Type of Support Requested</label>
+                        <select id="aer-support-type">
+                            <option value="">Select</option>
+                            <option>Flyover</option>
+                            <option>Aerial Demonstration</option>
+                            <option>Static Display</option>
+                            <option>Formation Flyover</option>
+                            <option>Photo / Film Support</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="aer-ac-type">Type of Aircraft</label>
+                        <input type="text" id="aer-ac-type" value="F-35A" readonly style="opacity:0.6; cursor:not-allowed;">
+                    </div>
+                    <div class="form-group">
+                        <label for="aer-ac-num">Number of Aircraft</label>
+                        <input type="number" id="aer-ac-num" min="1" placeholder="e.g. 4">
+                    </div>
+                    <div class="form-group">
+                        <label for="aer-date-ms">Event Date / Time (Zulu)</label>
+                        <input type="datetime-local" id="aer-date-ms">
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="aer-location">Event Location / Venue / ICAO</label>
+                        <input type="text" id="aer-location" placeholder="e.g. KBTV - Burlington International Airport">
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="aer-special">Special Requirements</label>
+                        <input type="text" id="aer-special" placeholder="e.g. specific timing, noise restrictions">
+                    </div>
+                </div>
+
+                <div class="form-section-label">Part III - Event Description</div>
+                <div class="form-group">
+                    <label for="aer-mission-desc">Event Description</label>
+                    <textarea id="aer-mission-desc" rows="5" placeholder="Describe the event, expected audience size, purpose, and any relevant details..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="aer-justification">Justification</label>
+                    <textarea id="aer-justification" rows="3" placeholder="Explain why military aerial support is being requested for this event..."></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button class="submit-btn" onclick="submitForm('aerial')">Submit Request</button>
+                </div>
+                <div class="form-success" id="success-aerial">Your aerial support request has been submitted and will be reviewed by wing leadership.</div>
+                <div class="form-error" id="error-aerial">Please fill in all required fields before submitting.</div>
+            </div>
+
+            <!-- General Questions Form -->
+            <div class="form-panel" id="form-general">
+                <h3>General Questions</h3>
+                <p class="form-ref">v158FW - General Inquiry</p>
+
+                <div class="form-section-label">Your Information</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="gen-name">Name / Callsign</label>
+                        <input type="text" id="gen-name" placeholder="Your name or callsign">
+                    </div>
+                    <div class="form-group">
+                        <label for="gen-email">Contact Email</label>
+                        <input type="email" id="gen-email" placeholder="your@email.com">
+                    </div>
+                </div>
+
+                <div class="form-section-label">Your Message</div>
+                <div class="form-group">
+                    <label for="gen-subject">Subject</label>
+                    <input type="text" id="gen-subject" placeholder="Brief subject">
+                </div>
+                <div class="form-group">
+                    <label for="gen-message">Message</label>
+                    <textarea id="gen-message" rows="6" placeholder="Write your question or message here..."></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button class="submit-btn" onclick="submitForm('general')">Send Message</button>
+                </div>
+                <div class="form-success" id="success-general">Your message has been sent. We'll get back to you as soon as possible.</div>
+                <div class="form-error" id="error-general">Please fill in all required fields before submitting.</div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>v134th Fighter Squadron</h4>
+                    <h5>G.M.B.'s</h5>
+                    <ul class="gmb-footer-list">
+                        <li>Generate Growth</li>
+                        <li>Maximize Mission Readiness</li>
+                        <li>Build Leaders</li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="pilot.html">Become a Pilot</a></li>
+                        <li><a href="about.html">About</a></li>
+                        <li><a href="roster.html">Roster</a></li>
+                        <li><a href="news.html">News</a></li>
+                        <li><a href="v158thFW-GDPR-Privacy-Policy.pdf" target="_blank" rel="noopener noreferrer">Privacy Policy</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Connect with Us</h4>
+                    <div class="social-links">
+                        <a href="https://discord.gg/zrm9ytuQK5" class="social-link" target="_blank" rel="noopener noreferrer">Discord</a>
+                        <a href="#" class="social-link">Twitter</a>
+                        <a href="#" class="social-link">Instagram</a>
+                    </div>
+                    <div class="social-links" style="margin-top:0.5rem;">
+                        <a href="contact.html" class="social-link">Contact Us</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 v158th Fighter Wing/v134th Fighter Squadron - vGreen Mountain Boys. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Partner Logos -->
+    <div class="partner-logos">
+        <a href="http://www.vatsim.net/" target="_blank" rel="noopener noreferrer"><img src="assets/VATSIM_Logo_No_Tagline.png" alt="VATSIM" style="height:70px;width:auto;max-width:220px;display:block;" /></a>
+        <a href="http://www.vatsim.net/" target="_blank" rel="noopener noreferrer"><img src="assets/VSOA_Logo_2026_tm_clear.png" alt="VSOA 2026" style="height:70px;width:auto;max-width:220px;display:block;" /></a>
+    </div>
+
+    <!-- Login Modal -->
+    <div class="modal-overlay" id="loginModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div class="modal-header-left">
+                    <img src="assets/vang-logo.png.png" alt="VA ANG Logo" class="modal-logo">
+                    <span id="modalTitle" class="modal-title">MEMBER LOGIN</span>
+                </div>
+                <button class="modal-close" id="modalClose" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-subtitle">Virtual Vermont Air National Guard</p>
+                <form class="login-form" id="loginForm" autocomplete="off">
+                    <div class="form-group">
+                        <label for="loginEmail">EMAIL</label>
+                        <input type="email" id="loginEmail" name="email" placeholder="Enter your email address" required autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">PASSWORD</label>
+                        <input type="password" id="loginPassword" name="password" placeholder="Enter password" required autocomplete="current-password">
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="login-submit-btn">LOGIN</button>
+                    </div>
+                    <p id="loginError" class="login-error" style="display:none;"></p>
+                    <p class="login-note">Access restricted to authorized personnel only.</p>
+                    <p style="text-align:center; margin-top:0.8rem;">
+                        <a href="request-access.html" style="color:#7a9ec9; font-size:0.78rem; text-decoration:none; letter-spacing:0.5px;">
+                            New to the wing? Request Access
+                        </a>
+                    </p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/script.js"></script>
+    <script>
+        function selectForm(type) {
+            // Update card active state
+            document.querySelectorAll('.form-type-tab').forEach(c => c.classList.remove('active'));
+            document.querySelector('[data-form="' + type + '"]').classList.add('active');
+
+            // Show selected form panel
+            document.querySelectorAll('.form-panel').forEach(p => p.classList.remove('active'));
+            document.getElementById('form-' + type).classList.add('active');
+
+            // Scroll to form
+            document.getElementById('form-' + type).scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        const SUPABASE_URL = 'https://gcumgpfyfqtfwbskkngt.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdW1ncGZ5ZnF0Zndic2trbmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDczMTAsImV4cCI6MjA4ODM4MzMxMH0.OSY0XEPQp-WsFWuiGrUG5fcLIVMI3c8AxBEv2shFftg';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        function getFormData(type) {
+            if (type === 'incident') return {
+                callsign: document.getElementById('inc-callsign').value.trim(),
+                email: document.getElementById('inc-email').value.trim(),
+                date: document.getElementById('inc-date').value,
+                type: document.getElementById('inc-type').value,
+                severity: document.getElementById('inc-severity').value,
+                location: document.getElementById('inc-location').value.trim(),
+                description: document.getElementById('inc-desc').value.trim(),
+                corrective_action: document.getElementById('inc-corrective').value.trim()
+            };
+            if (type === 'aerial') return {
+                org: document.getElementById('aer-org').value.trim(),
+                poc: document.getElementById('aer-poc').value.trim(),
+                email: document.getElementById('aer-email').value.trim(),
+                date_of_request: document.getElementById('aer-date-req').value,
+                support_type: document.getElementById('aer-support-type').value,
+                aircraft: document.getElementById('aer-ac-type').value,
+                num_aircraft: document.getElementById('aer-ac-num').value,
+                event_datetime: document.getElementById('aer-date-ms').value,
+                event_location: document.getElementById('aer-location').value.trim(),
+                special_requirements: document.getElementById('aer-special').value.trim(),
+                event_description: document.getElementById('aer-mission-desc').value.trim(),
+                justification: document.getElementById('aer-justification').value.trim()
+            };
+            if (type === 'general') return {
+                name: document.getElementById('gen-name').value.trim(),
+                email: document.getElementById('gen-email').value.trim(),
+                subject: document.getElementById('gen-subject').value.trim(),
+                message: document.getElementById('gen-message').value.trim()
+            };
+        }
+
+        async function submitForm(type) {
+            const panel = document.getElementById('form-' + type);
+            const inputs = panel.querySelectorAll('input[type="text"]:not([readonly]), input[type="email"], input[type="date"], input[type="datetime-local"], input[type="number"], textarea');
+            const successEl = document.getElementById('success-' + type);
+            const errorEl = document.getElementById('error-' + type);
+
+            let valid = true;
+            inputs.forEach(input => { if (!input.value.trim()) valid = false; });
+            if (!valid) { errorEl.style.display = 'block'; successEl.style.display = 'none'; return; }
+
+            const data = getFormData(type);
+            const { error } = await _supabase.from('contact_forms').insert({ form_type: type, data, reviewed: false });
+
+            if (error) {
+                errorEl.textContent = 'Submission failed. Please try again.';
+                errorEl.style.display = 'block';
+                successEl.style.display = 'none';
+                return;
+            }
+
+            successEl.style.display = 'block';
+            errorEl.style.display = 'none';
+            inputs.forEach(input => { if (!input.readOnly) input.value = ''; });
+            panel.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+        }
+    </script>
+</body>
+</html>

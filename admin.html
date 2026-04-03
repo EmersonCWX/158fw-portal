@@ -351,6 +351,10 @@
                     <button class="admin-nav-item" onclick="showPanel('adminusers')" id="nav-adminusers">
                         Admin Users
                     </button>
+                    <button class="admin-nav-item" onclick="showPanel('contactforms')" id="nav-contactforms">
+                        Contact Forms
+                        <span class="admin-nav-badge" id="navBadgeContactForms" style="display:none;"></span>
+                    </button>
                 </nav>
             </aside>
 
@@ -683,6 +687,33 @@
                     </div>
                 </div>
 
+                <!-- Contact Forms -->
+                <div class="admin-panel" id="panel-contactforms">
+                    <div class="admin-section">
+                        <div class="admin-section-header">
+                            <h2 class="admin-section-title">Contact Form Submissions</h2>
+                            <button class="admin-btn admin-btn-primary" onclick="loadContactForms()">&#8635; Refresh</button>
+                        </div>
+                        <div class="admin-section-body">
+                            <div class="admin-filter-bar">
+                                <select class="admin-filter-select" id="filterContactType" onchange="applyContactFilters()">
+                                    <option value="">All Types</option>
+                                    <option value="incident">Incident Report</option>
+                                    <option value="aerial">Aerial Support Request</option>
+                                    <option value="general">General Questions</option>
+                                </select>
+                                <input class="admin-filter-input" id="filterContactSearch" type="text" placeholder="Search name / callsign..." oninput="applyContactFilters()">
+                            </div>
+                            <div class="admin-table-wrap">
+                                <table class="admin-table">
+                                    <thead><tr><th>Date</th><th>Type</th><th>From</th><th>Email</th><th>Subject / Details</th><th>Actions</th></tr></thead>
+                                    <tbody id="contactFormsTableBody"><tr><td colspan="6" class="no-data">Loading...</td></tr></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </main>
         </div>
     </div>
@@ -749,6 +780,7 @@
             loadSieRsvps();
             loadGradesheetEditor();
             loadCurrencyEditor();
+            loadContactForms();
         }
 
         async function loadReports() {
@@ -1411,6 +1443,74 @@
         }
 
         initAdmin();
+
+        // ── Contact Forms ─────────────────────────────────────────────────
+        let allContactForms = [];
+
+        async function loadContactForms() {
+            document.getElementById('contactFormsTableBody').innerHTML = '<tr><td colspan="6" class="no-data">Loading...</td></tr>';
+            const { data, error } = await _supabase.from('contact_forms').select('*').order('created_at', { ascending: false });
+            if (error) {
+                document.getElementById('contactFormsTableBody').innerHTML = `<tr><td colspan="6" class="no-data" style="color:#e85a4a;">Error: ${error.message}</td></tr>`;
+                return;
+            }
+            allContactForms = data || [];
+            const badge = document.getElementById('navBadgeContactForms');
+            const unread = allContactForms.filter(r => !r.reviewed).length;
+            if (unread > 0) { badge.textContent = unread; badge.style.display = 'inline-flex'; }
+            else { badge.style.display = 'none'; }
+            applyContactFilters();
+        }
+
+        function applyContactFilters() {
+            const type = document.getElementById('filterContactType')?.value || '';
+            const search = (document.getElementById('filterContactSearch')?.value || '').toLowerCase();
+            const filtered = allContactForms.filter(r => {
+                if (type && r.form_type !== type) return false;
+                if (search && !JSON.stringify(r).toLowerCase().includes(search)) return false;
+                return true;
+            });
+            const tbody = document.getElementById('contactFormsTableBody');
+            if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="6" class="no-data">No submissions found.</td></tr>'; return; }
+            const typeLabels = { incident: 'Incident Report', aerial: 'Aerial Support', general: 'General Question' };
+            tbody.innerHTML = filtered.map(r => {
+                const d = r.data || {};
+                const date = r.created_at ? new Date(r.created_at).toLocaleDateString() : '—';
+                const typeLabel = typeLabels[r.form_type] || r.form_type;
+                const from = escHtml(d.callsign || d.name || d.org || '—');
+                const email = escHtml(d.email || '—');
+                let subject = '';
+                if (r.form_type === 'incident') subject = escHtml(d.type || '') + (d.severity ? ` / ${escHtml(d.severity)}` : '');
+                else if (r.form_type === 'aerial') subject = escHtml(d.support_type || '') + (d.event_location ? ` — ${escHtml(d.event_location)}` : '');
+                else subject = escHtml(d.subject || '');
+                return `<tr>
+                    <td>${date}</td>
+                    <td>${typeLabel}</td>
+                    <td>${from}</td>
+                    <td>${email}</td>
+                    <td>${subject}</td>
+                    <td><button class="admin-btn admin-btn-primary" onclick="viewContactForm('${escHtml(r.id)}')">View</button> <button class="admin-btn" onclick="deleteContactForm('${escHtml(r.id)}')">Delete</button></td>
+                </tr>`;
+            }).join('');
+        }
+
+        function viewContactForm(id) {
+            const r = allContactForms.find(x => x.id == id);
+            if (!r) return;
+            const d = r.data || {};
+            const typeLabels = { incident: 'Incident Report', aerial: 'Aerial Support Request', general: 'General Question' };
+            document.getElementById('modalTitle').textContent = typeLabels[r.form_type] || r.form_type;
+            document.getElementById('modalBody').innerHTML = '<pre style="white-space:pre-wrap;font-size:0.85rem;color:#c9d1d9;">' + escHtml(JSON.stringify(d, null, 2)) + '</pre>';
+            document.getElementById('reportModal').style.display = 'flex';
+            if (!r.reviewed) { _supabase.from('contact_forms').update({ reviewed: true }).eq('id', id).then(() => loadContactForms()); }
+        }
+
+        async function deleteContactForm(id) {
+            if (!confirm('Delete this submission?')) return;
+            const { error } = await _supabase.from('contact_forms').delete().eq('id', id);
+            if (error) { showToast('Error deleting submission.', 'error'); return; }
+            showToast('Submission deleted.', 'success'); loadContactForms();
+        }
     </script>
 </body>
 </html>
