@@ -72,9 +72,13 @@
 
         #txt-wrap { display: none; position: absolute; z-index: 15; }
         #txt-wrap.vis { display: block; }
-        #txt-field { background: rgba(0,0,0,.7); border: 1px solid #a0aab4; color: #fff; font-size: 1rem; font-family: "Segoe UI", Arial, sans-serif; padding: 4px 8px; outline: none; border-radius: 3px; min-width: 120px; }
+        #txt-field { background: rgba(0,0,0,.7); border: 1px solid #a0aab4; color: #fff; font-size: 1rem; font-family: "Segoe UI", Arial, sans-serif; padding: 4px 8px; outline: none; border-radius: 3px; min-width: 120px; white-space: nowrap; cursor: text; line-height: 1.4; }
+        #txt-field:empty::before { content: attr(data-placeholder); color: #555; font-size: .72rem; pointer-events: none; }
 
         #mag-layer { position: absolute; inset: 0; z-index: 20; pointer-events: none; }
+        #mag-layer.draw-mode .ac-token,
+        #mag-layer.draw-mode .magnet,
+        #mag-layer.draw-mode .hold-token { pointer-events: none !important; }
 
         .magnet { position: absolute; border-radius: 4px; padding: 4px 10px; cursor: grab; user-select: none; border: 1.5px solid; box-shadow: 0 2px 8px rgba(0,0,0,.6); min-width: 52px; text-align: center; pointer-events: all; line-height: 1.2; transition: box-shadow .12s; }
         .magnet:hover { box-shadow: 0 4px 18px rgba(0,0,0,.85); }
@@ -161,12 +165,12 @@
     <div id="board-bg"></div>
     <div id="wb-map"></div>
     <canvas id="cv"></canvas>
-    <div id="txt-wrap"><input id="txt-field" type="text" placeholder="Label... then Enter"></div>
+    <div id="txt-wrap"><div id="txt-field" contenteditable="true" data-placeholder="Label... then Enter" spellcheck="false"></div></div>
     <div id="mag-layer"></div>
 </div>
 
 <div id="sidebar">
-    <div class="sb-head">&#129522; Roster &mdash; Drag or Click</div>
+    <div class="sb-head">Roster Drag or Click</div>
     <div class="sb-scroll" id="rosterList"><div style="color:#555;font-size:.75rem;padding:16px;text-align:center">Loading roster&hellip;</div></div>
 </div>
 
@@ -191,7 +195,7 @@ let strokes=[], labels=[], magnets=[], aircraft=[], holds=[], mapMode='off', sid
 let acSize=50;
 let painting=false, curStroke=[], curStrokeGeo=null, ctrlSmooth=false, altStraight=false;
 let selectedAcIds=new Set(), groupDragOffsets=null;
-let txtPos=null;
+let txtPos=null, editingLabelId=null;
 let dragMag=null, dragOX=0, dragOY=0, dragMoved=false;
 let map=null, lStreet=null, lSat=null, lAip=null;
 
@@ -232,15 +236,42 @@ function drawStroke(s){
     ctx.stroke(); ctx.restore();
 }
 
+function lbText(lb){ return lb.runs?lb.runs.map(r=>r.text).join(''):(lb.text||''); }
+
 function drawLabel(lb){
     let x=lb.x, y=lb.y;
     if(lb.lat!=null&&mapMode!=='off'&&map){ const p=map.latLngToContainerPoint(L.latLng(lb.lat,lb.lng)); x=p.x; y=p.y; }
     ctx.save();
     ctx.globalCompositeOperation='source-over';
     ctx.font='bold '+(lb.size||16)+'px "Segoe UI",Arial,sans-serif';
-    ctx.fillStyle=lb.color||'#fff';
     ctx.shadowColor='rgba(0,0,0,.8)'; ctx.shadowBlur=4;
-    ctx.fillText(lb.text,x,y); ctx.restore();
+    if(lb.runs&&lb.runs.length){
+        let cx=x;
+        lb.runs.forEach(run=>{ ctx.fillStyle=run.color||'#fff'; ctx.fillText(run.text,cx,y); cx+=ctx.measureText(run.text).width; });
+    } else { ctx.fillStyle=lb.color||'#fff'; ctx.fillText(lb.text||'',x,y); }
+    ctx.restore();
+}
+
+function extractRuns(el){
+    const runs=[];
+    function walk(node,color){
+        if(node.nodeType===3){ if(node.textContent) runs.push({text:node.textContent,color:color||'#ffffff'}); }
+        else if(node.nodeType===1){
+            let c=color;
+            if(node.style&&node.style.color) c=node.style.color;
+            else if(node.tagName==='FONT'&&node.color) c=node.color;
+            node.childNodes.forEach(ch=>walk(ch,c));
+        }
+    }
+    walk(el,'#ffffff');
+    const merged=[];
+    runs.forEach(r=>{ if(merged.length&&merged[merged.length-1].color===r.color) merged[merged.length-1].text+=r.text; else merged.push({text:r.text,color:r.color}); });
+    return merged.filter(r=>r.text);
+}
+
+function runsToHtml(lb){
+    const runs=lb.runs||[{text:lb.text||'',color:lb.color||'#ffffff'}];
+    return runs.map(r=>'<span style="color:'+r.color+'">'+esc(r.text)+'</span>').join('');
 }
 
 function evtXY(e){
@@ -400,23 +431,50 @@ function pu(e){
 // Text tool
 const txtWrap=document.getElementById('txt-wrap'), txtField=document.getElementById('txt-field');
 function placeTxtCursor(e){
-    const [x,y]=evtXY(e); txtPos={x,y};
+    const [x,y]=evtXY(e);
     const br=board.getBoundingClientRect(), src=e.touches?e.touches[0]:e;
+    // check if clicking on an existing label
+    for(let i=labels.length-1;i>=0;i--){
+        const lb=labels[i];
+        let lx=lb.x, ly=lb.y;
+        if(lb.lat!=null&&mapMode!=='off'&&map){ const p=map.latLngToContainerPoint(L.latLng(lb.lat,lb.lng)); lx=p.x; ly=p.y; }
+        const sz=lb.size||16, approxW=lbText(lb).length*sz*0.6;
+        if(x>=lx-8&&x<=lx+approxW+8&&y>=ly-sz-4&&y<=ly+8){
+            editingLabelId=lb.id; txtPos={x:lx,y:ly};
+            txtWrap.style.left=(lx)+'px'; txtWrap.style.top=(ly-sz-8)+'px';
+            txtWrap.classList.add('vis'); txtField.innerHTML=runsToHtml(lb);
+            setTimeout(()=>{ txtField.focus(); document.execCommand('selectAll'); },0);
+            return;
+        }
+    }
+    // new label
+    editingLabelId=null; txtPos={x,y};
     txtWrap.style.left=(src.clientX-br.left)+'px';
     txtWrap.style.top=(src.clientY-br.top-34)+'px';
-    txtWrap.classList.add('vis'); txtField.value='';
+    txtWrap.classList.add('vis'); txtField.innerHTML='';
     setTimeout(()=>txtField.focus(),0);
 }
-txtField.addEventListener('keydown', e=>{ if(e.key==='Enter') commitTxt(); if(e.key==='Escape') txtWrap.classList.remove('vis'); });
-txtField.addEventListener('blur', ()=>{ if(txtField.value.trim()) commitTxt(); else txtWrap.classList.remove('vis'); });
+txtField.addEventListener('keydown', e=>{
+    if(e.key==='Enter'){ e.preventDefault(); commitTxt(); }
+    if(e.key==='Escape'){ txtWrap.classList.remove('vis'); txtPos=null; editingLabelId=null; }
+});
+txtField.addEventListener('blur', ()=>{ if(txtField.textContent.trim()||editingLabelId) commitTxt(); else{ txtWrap.classList.remove('vis'); txtPos=null; editingLabelId=null; } });
 function commitTxt(){
-    const t=txtField.value.trim();
-    if(t&&txtPos){
-        const lb={id:Date.now(),text:t,x:txtPos.x,y:txtPos.y,color:penColor,size:Math.max(12,penWidth*4)};
+    const runs=extractRuns(txtField);
+    const fullText=runs.map(r=>r.text).join('').trim();
+    if(editingLabelId){
+        const lb=labels.find(l=>l.id===editingLabelId);
+        if(lb){
+            if(fullText){ lb.runs=runs; lb.text=fullText; lb.color=runs[0]?.color||penColor; }
+            else labels=labels.filter(l=>l.id!==editingLabelId);
+        }
+        save(); redraw();
+    } else if(fullText&&txtPos){
+        const lb={id:Date.now(),runs,text:fullText,x:txtPos.x,y:txtPos.y,color:runs[0]?.color||penColor,size:Math.max(12,penWidth*4)};
         const ll=xyToLL(txtPos.x,txtPos.y); if(ll){lb.lat=ll.lat;lb.lng=ll.lng;}
         labels.push(lb); save(); redraw();
     }
-    txtWrap.classList.remove('vis'); txtPos=null;
+    txtWrap.classList.remove('vis'); txtPos=null; editingLabelId=null;
 }
 
 // Tools
@@ -425,12 +483,26 @@ const TCLS ={draw:'t-draw',  erase:'t-erase',  text:'t-text',  pan:'t-pan', hold
 function setTool(t){
     tool=t;
     canvas.className=''; canvas.classList.add('m-'+t);
+    const magLayer=document.getElementById('mag-layer');
+    if(t==='draw'||t==='erase'||t==='text') magLayer.classList.add('draw-mode');
+    else magLayer.classList.remove('draw-mode');
     if(map){ if(t==='pan'){map.dragging.enable();map.scrollWheelZoom.enable();}else{map.dragging.disable();map.scrollWheelZoom.disable();} }
     Object.entries(TBMAP).forEach(([k,id])=>{ document.getElementById(id).className='wb-btn'+(k===t?' '+TCLS[t]:''); });
     updateStatus();
 }
 
-function pickColor(el){ penColor=el.dataset.c; document.querySelectorAll('.wb-sw').forEach(s=>s.classList.remove('on')); el.classList.add('on'); }
+function pickColor(el){
+    penColor=el.dataset.c;
+    document.querySelectorAll('.wb-sw').forEach(s=>s.classList.remove('on')); el.classList.add('on');
+    // If text editor is open and text is selected, apply color to selection
+    if(txtWrap.classList.contains('vis')){
+        const sel=window.getSelection();
+        if(sel&&!sel.isCollapsed&&txtField.contains(sel.anchorNode)){
+            document.execCommand('foreColor',false,penColor);
+            txtField.focus();
+        }
+    }
+}
 function pickWidth(el){ penWidth=parseInt(el.dataset.w); document.querySelectorAll('.wb-w').forEach(b=>b.classList.remove('on')); el.classList.add('on'); }
 
 // Map
@@ -873,13 +945,18 @@ function endAcGhost(e){
 document.addEventListener('mouseup',endAcGhost);
 document.addEventListener('touchend',endAcGhost);
 
+// Prevent color swatches and width buttons from stealing focus from the text editor
+document.querySelectorAll('.wb-sw,.wb-w').forEach(el=>{
+    el.addEventListener('mousedown',e=>{ if(txtWrap.classList.contains('vis')) e.preventDefault(); });
+});
+
 // Undo / Clear
 function undo(){ if(labels.length) labels.pop(); else if(strokes.length) strokes.pop(); redraw(); save(); }
 function clearAll(){ if(!confirm('Clear all drawings, labels, aircraft, and holds?')) return; strokes=[]; labels=[]; aircraft=[]; holds=[]; selectedAcIds.clear(); renderAircraft(); renderHolds(); redraw(); save(); }
 
 // Keyboard
 document.addEventListener('keydown',e=>{
-    if(['INPUT','TEXTAREA'].includes(e.target.tagName)) return;
+    if(['INPUT','TEXTAREA'].includes(e.target.tagName)||e.target.isContentEditable) return;
     if(e.key==='d'||e.key==='D') setTool('draw');
     if(e.key==='e'||e.key==='E') setTool('erase');
     if(e.key==='t'||e.key==='T') setTool('text');
@@ -914,7 +991,7 @@ board.addEventListener('wheel', e=>{
             let lx=lb.x, ly=lb.y;
             if(lb.lat!=null&&mapMode!=='off'&&map){ const p=map.latLngToContainerPoint(L.latLng(lb.lat,lb.lng)); lx=p.x; ly=p.y; }
             const sz=lb.size||16;
-            const approxW=lb.text.length*sz*0.6;
+            const approxW=lbText(lb).length*sz*0.6;
             if(mx>=lx-8&&mx<=lx+approxW+8&&my>=ly-sz-4&&my<=ly+8){
                 lb.size=Math.max(8,Math.min(160,(lb.size||16)+delta));
                 redraw(); save(); return;
@@ -928,12 +1005,8 @@ board.addEventListener('wheel', e=>{
             const img=document.querySelector('#act-'+sid+' .f35-img');
             if(img) img.style.width=a.size+'px';
         });
-    } else {
-        acSize=Math.max(20,Math.min(200,acSize+delta));
-        aircraft.forEach(a=>{ a.size=acSize; });
-        document.querySelectorAll('.f35-img').forEach(img=>img.style.width=acSize+'px');
+        save();
     }
-    save();
 },{passive:false});
 
 // Save/Load

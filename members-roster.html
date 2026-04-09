@@ -319,6 +319,10 @@
         .modal-status.err { color: #e74c3c; }
         .modal-status.ok  { color: #4caf50; }
 
+        /* ── Clickable flight-time header ── */
+        .flight-hdr-btn { cursor: pointer; user-select: none; }
+        .flight-hdr-btn:hover { color: #bbb; }
+
         /* ── Callsign clickable button ── */
         .callsign-btn {
             background: none;
@@ -467,7 +471,7 @@
                         <tr>
                             <th>Callsign</th>
                             <th id="certsHdr">Certifications</th>
-                            <th>Total Flight Time</th>
+                            <th id="flightHdr" class="flight-hdr-btn" onclick="cycleFlightView()" title="Click to view monthly flight time"><span id="flightHdrLabel">Total Flight Time</span></th>
                             <th>VATSIM CID</th>
                         </tr>
                     </thead>
@@ -576,11 +580,13 @@
         'COOPER': '1957188',
     };
 
-    let allMembers    = [];
-    let certsMap      = {};   // certsMap[member_id] = Set of cert strings
-    let flightMap     = {};   // flightMap[email] = total minutes
-    let currentFilter = '';
-    let isAdmin       = false;
+    let allMembers      = [];
+    let certsMap        = {};   // certsMap[member_id] = Set of cert strings
+    let flightMap       = {};   // flightMap[email] = total minutes
+    let monthlyFlightMap = {};  // monthlyFlightMap[email] = current-month minutes
+    let currentFilter   = '';
+    let isAdmin         = false;
+    let flightViewMode  = 'total'; // 'total' | 'monthly'
 
     // Currently open modal state
     let modalMemberId   = null;
@@ -644,22 +650,27 @@
             }
         }
 
-        // Load flight totals
+        // Load flight totals (created_at used for monthly bucketing)
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
         const { data: flights } = await db
             .from('flight_records')
-            .select('user_email, total_flight_time');
+            .select('user_email, total_flight_time, created_at');
         if (flights) {
             for (const f of flights) {
                 if (!f.user_email) continue;
+                const mins = toMinutes(f.total_flight_time);
                 if (!flightMap[f.user_email]) flightMap[f.user_email] = 0;
-                flightMap[f.user_email] += toMinutes(f.total_flight_time);
+                flightMap[f.user_email] += mins;
+                if (f.created_at && f.created_at >= monthStart) {
+                    if (!monthlyFlightMap[f.user_email]) monthlyFlightMap[f.user_email] = 0;
+                    monthlyFlightMap[f.user_email] += mins;
+                }
             }
         }
 
         // Update certs header hint for admins
         if (isAdmin) {
-            document.getElementById('certsHdr').innerHTML =
-                'Certifications <span style="color:#3a3f45;font-size:0.58rem;font-weight:400;letter-spacing:0;">✎ click to edit</span>';
             document.getElementById('adminSep').style.display = '';
             const badge = document.getElementById('adminBadge');
             badge.textContent = '★ Admin — cert editing enabled';
@@ -704,7 +715,8 @@
                 certCell = `<td>${badgeHtml}</td>`;
             }
 
-            const totalMins  = flightMap[m.email] || 0;
+            const activeMap  = flightViewMode === 'monthly' ? monthlyFlightMap : flightMap;
+            const totalMins  = activeMap[m.email] || 0;
             const flightDisp = totalMins > 0
                 ? minutesToHHMM(totalMins) + ' hrs'
                 : '<span style="color:#444;">—</span>';
@@ -739,13 +751,26 @@
 
     // ── Status bar ───────────────────────────────────────────────────────────
     function updateStatusBar() {
-        const totalWingMins = allMembers.reduce((sum, m) => sum + (flightMap[m.email] || 0), 0);
+        const activeMap = flightViewMode === 'monthly' ? monthlyFlightMap : flightMap;
+        const wingLabel = flightViewMode === 'monthly' ? 'Wing this month' : 'Wing total';
+        const totalWingMins = allMembers.reduce((sum, m) => sum + (activeMap[m.email] || 0), 0);
         document.getElementById('memberCount').textContent =
             `${allMembers.length} active member${allMembers.length !== 1 ? 's' : ''}`;
         document.getElementById('totalFlightTime').textContent =
             totalWingMins > 0
-                ? `Wing total: ${minutesToHHMM(totalWingMins)} hrs`
-                : 'No flight records yet';
+                ? `${wingLabel}: ${minutesToHHMM(totalWingMins)} hrs`
+                : flightViewMode === 'monthly' ? 'No flights this month' : 'No flight records yet';
+    }
+
+    // ── Cycle flight time view ────────────────────────────────────────────────
+    function cycleFlightView() {
+        flightViewMode = flightViewMode === 'total' ? 'monthly' : 'total';
+        const isMonthly = flightViewMode === 'monthly';
+        const monthName = new Date().toLocaleString('default', { month: 'long' });
+        document.getElementById('flightHdrLabel').textContent = isMonthly ? monthName + ' Flight Time' : 'Total Flight Time';
+        document.getElementById('flightHdr').title = isMonthly ? 'Click to view total flight time' : 'Click to view monthly flight time';
+        renderRows();
+        updateStatusBar();
     }
 
     // ── Cert modal ───────────────────────────────────────────────────────────

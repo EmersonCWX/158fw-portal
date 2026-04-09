@@ -32,9 +32,6 @@
     <!-- Homepage -->
     <section id="home" class="hero">
         <div class="hero-bg" id="heroBg"></div>
-        <video id="easterEggVideo" src="assets/Easter Egg video.mp4"
-               style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:1;"
-               playsinline></video>
         <div class="hero-content">
             <h1 class="hero-title">v158TH FIGHTER WING</h1>
             <h2 class="hero-subtitle">HOME OF THE GREEN MOUNTAIN BOYS</h2>
@@ -161,14 +158,7 @@
                 "assets/20260402175606_1.jpg",
                 "assets/20260320102441_1.jpg"
             ];
-            var rareBg = "assets/rare.jpg";
-
-            // 1-in-30 chance for rare
-            var isRare = Math.floor(Math.random() * 30) === 0;
-            var chosen = isRare
-                ? rareBg
-                : commonBgs[Math.floor(Math.random() * commonBgs.length)];
-
+            var chosen = commonBgs[Math.floor(Math.random() * commonBgs.length)];
             var heroBg = document.querySelector('.hero-bg');
             if (heroBg) {
                 heroBg.style.background =
@@ -178,38 +168,6 @@
         })();
     </script>
 
-    <script>
-        (function() {
-            const code = 'strike';
-            let buffer = '';
-            document.addEventListener('keydown', function(e) {
-                buffer = (buffer + e.key).toLowerCase().slice(-code.length);
-                if (buffer === code) {
-                    buffer = '';
-                    const heroBg = document.getElementById('heroBg');
-                    const video  = document.getElementById('easterEggVideo');
-                    if (!heroBg || !video) return;
-                    heroBg.style.opacity = '0';
-                    video.style.display = 'block';
-                    video.currentTime = 0;
-                    video.play();
-                    video.addEventListener('ended', closeEasterEgg, { once: true });
-                }
-            });
-        })();
 
-        function closeEasterEgg() {
-            const heroBg = document.getElementById('heroBg');
-            const video  = document.getElementById('easterEggVideo');
-            if (!video) return;
-            video.pause();
-            video.style.display = 'none';
-            if (heroBg) heroBg.style.opacity = '';
-        }
-
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') closeEasterEgg();
-        });
-    </script>
 </body>
 </html>
