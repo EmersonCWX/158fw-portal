@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UTA Schedule | v158th Fighter Wing</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/member-nav.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #12151a url('assets/20260409111743_1.jpg') center center / cover no-repeat fixed;
+            color: #e8e8e8;
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 12, 16, 0.72);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .page-wrapper {
+            position: relative;
+            z-index: 1;
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 80px 24px 60px;
+        }
+
+        /* ── Page header ── */
+        .uta-page-header {
+            margin-bottom: 28px;
+        }
+        .uta-page-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+        }
+        .uta-page-subtitle {
+            color: #777;
+            font-size: 0.88rem;
+            margin-top: 6px;
+        }
+
+        /* ── Schedule card ── */
+        .uta-card {
+            border: 1px solid #2a2d32;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #1a1d22;
+        }
+
+        .uta-card-header {
+            background: #0a0c10;
+            padding: 18px 24px;
+            text-align: center;
+            border-bottom: 1px solid #2a2d32;
+        }
+        .uta-card-header h2 {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        .uta-card-header p {
+            font-size: 0.75rem;
+            color: #666;
+            margin-top: 4px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* ── Table ── */
+        .uta-table-wrap {
+            overflow-x: auto;
+        }
+
+        table.uta-table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        .uta-table thead tr th {
+            background: #1f2226;
+            color: #666;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            padding: 11px 20px;
+            border-bottom: 2px solid #2a2d32;
+            border-right: 1px solid #222529;
+            text-align: left;
+        }
+        .uta-table thead tr th:last-child { border-right: none; }
+
+        .uta-table tbody td {
+            padding: 12px 20px;
+            font-size: 0.9rem;
+            border-bottom: 1px solid #1e2126;
+            border-right: 1px solid #1e2126;
+            color: #ccc;
+            vertical-align: middle;
+        }
+        .uta-table tbody td:last-child { border-right: none; }
+
+        .uta-table tbody tr:last-child td { border-bottom: none; }
+
+        /* Alternating rows */
+        .uta-table tbody tr:nth-child(even) td {
+            background: rgba(255,255,255,0.018);
+        }
+
+        /* Current month highlight */
+        .uta-table tbody tr.current-month td {
+            background: rgba(122, 158, 201, 0.07);
+            color: #e8e8e8;
+        }
+        .uta-table tbody tr.current-month td.col-month {
+            font-weight: 700;
+            color: #7a9ec9;
+        }
+        .uta-table tbody tr.current-month td.col-days {
+            font-weight: 700;
+            color: #e8e8e8;
+        }
+
+        /* Past months */
+        .uta-table tbody tr.past-month td {
+            color: #555;
+        }
+
+        /* Column widths */
+        .col-month { width: 50%; font-weight: 600; color: #b0bac3; }
+        .col-days  { width: 50%; font-family: monospace; }
+
+        /* No drill */
+        .no-drill {
+            color: #e85a4a;
+            font-style: italic;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+
+        /* ── Footer note ── */
+        .uta-footnote {
+            padding: 12px 20px;
+            font-size: 0.72rem;
+            color: #444;
+            border-top: 1px solid #1e2126;
+            background: #161a1e;
+            text-align: center;
+            letter-spacing: 0.3px;
+        }
+
+        /* ── FY label ── */
+        .fy-badge {
+            display: inline-block;
+            background: #1f2226;
+            border: 1px solid #3a3f45;
+            border-radius: 3px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: #7a9ec9;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            padding: 3px 10px;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="page-wrapper">
+
+        <div class="uta-page-header">
+            <h1 class="uta-page-title">UTA Schedule</h1>
+            <p class="uta-page-subtitle">v158th Fighter Wing Unit Training Assembly Calendar</p>
+        </div>
+
+        <div class="uta-card">
+            <div class="uta-card-header">
+                <h2>UTA Schedule</h2>
+                <p>v158th Fighter Wing - FY2026 / FY2027</p>
+            </div>
+
+            <div class="uta-table-wrap">
+                <table class="uta-table" id="utaTable">
+                    <thead>
+                        <tr>
+                            <th class="col-month">Month / Year</th>
+                            <th class="col-days">Days</th>
+                        </tr>
+                    </thead>
+                    <tbody id="utaBody">
+                        <!-- Rows injected by script below -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="uta-footnote">
+                All dates are subject to change. Check back regularly for updates. Contact wing leadership for confirmations.
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+    // ── UTA Schedule Data ─────────────────────────────────────────────────────
+    // Edit this array to update the schedule.
+    // Set days to null for "NO DRILL SCHEDULED".
+    const UTA_SCHEDULE = [
+        { month: 'April 2026',     days: '03-05 (FRI, SAT, SUN)' },
+        { month: 'May 2026',       days: null },
+        { month: 'June 2026',      days: '05-07 (FRI, SAT, SUN)' },
+        { month: 'July 2026',      days: null },
+        { month: 'August 2026',    days: '31 JUL - 02 AUG (FRI, SAT, SUN)' },
+        { month: 'September 2026', days: '11-13 (FRI, SAT, SUN)' },
+        { month: 'October 2026',   days: null },
+        { month: 'November 2026',  days: '06-08 (FRI, SAT, SUN)' },
+        { month: 'December 2026',  days: '04-06 (FRI, SAT, SUN)' },
+        { month: 'January 2027',   days: '08-10 (FRI, SAT, SUN)' },
+        { month: 'February 2027',  days: null },
+        { month: 'March 2027',     days: '05-07 (THU, FRI, SAT)' },
+        { month: 'April 2027',     days: '02-04 (FRI, SAT, SUN)' },
+        { month: 'May 2027',       days: null },
+        { month: 'June 2027',      days: '04-06 (FRI, SAT, SUN)' },
+        { month: 'July 2027',      days: null },
+        { month: 'August 2027',    days: '06-08 (WED, THU, FRI)' },
+        { month: 'September 2027', days: '10-12 (FRI, SAT, SUN)' },
+    ];
+
+    // Determine current month/year string for highlighting
+    const now = new Date();
+    const currentLabel = now.toLocaleString('default', { month: 'long' }) + ' ' + now.getFullYear();
+
+    const tbody = document.getElementById('utaBody');
+
+    UTA_SCHEDULE.forEach(entry => {
+        const tr = document.createElement('tr');
+
+        // Compare entry month to determine row class
+        const entryDate = new Date(entry.month + ' 1');
+        const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        if (entryDate < currentMonthStart) {
+            tr.classList.add('past-month');
+        } else if (entry.month === currentLabel) {
+            tr.classList.add('current-month');
+        }
+
+        const tdMonth = document.createElement('td');
+        tdMonth.className = 'col-month';
+        tdMonth.textContent = entry.month.toUpperCase();
+
+        const tdDays = document.createElement('td');
+        tdDays.className = 'col-days';
+        if (entry.days) {
+            tdDays.textContent = entry.days;
+        } else {
+            const span = document.createElement('span');
+            span.className = 'no-drill';
+            span.textContent = 'NO DRILL SCHEDULED';
+            tdDays.appendChild(span);
+        }
+
+        tr.appendChild(tdMonth);
+        tr.appendChild(tdDays);
+        tbody.appendChild(tr);
+    });
+    </script>
+
+</body>
+</html>
