@@ -190,6 +190,7 @@ let _remoteViewers = {};
 const PRESENCE_COLORS = ['#5a8fc4','#4caf50','#ffd700','#ff8c00','#e85a4a','#c8a820','#a0aab4','#ffffff'];
 let _myColor = PRESENCE_COLORS[Math.floor(Math.random()*PRESENCE_COLORS.length)];
 let _ignoreRemote = false;
+let _pendingRemoteState = null;
 let tool='draw', penColor='#ffffff', penWidth=2;
 let strokes=[], labels=[], magnets=[], aircraft=[], holds=[], mapMode='off', sidebarOpen=false;
 let acSize=50;
@@ -408,11 +409,11 @@ function pu(e){
         const endXY=e&&(e.changedTouches?evtXY(e):evtXY(e))||curStroke[curStroke.length-1];
         const pts=[curStroke[0],endXY];
         const geo0=xyToLL(pts[0][0],pts[0][1]), geo1=xyToLL(pts[1][0],pts[1][1]);
-        const s={color:penColor,width:tool==='erase'?30:penWidth,erase:tool==='erase',points:pts};
+        const s={id:'s_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),color:penColor,width:tool==='erase'?30:penWidth,erase:tool==='erase',points:pts};
         if(tool==='erase'&&mapMode!=='off'&&map) s.eraseZoom=map.getZoom();
         if(geo0&&geo1) s.geoPoints=[{lat:geo0.lat,lng:geo0.lng},{lat:geo1.lat,lng:geo1.lng}];
         strokes.push(s); save();
-        altStraight=false; curStroke=[]; curStrokeGeo=null; ctrlSmooth=false; redraw(); return;
+        altStraight=false; curStroke=[]; curStrokeGeo=null; ctrlSmooth=false; _applyPendingRemote(); redraw(); return;
     }
     if(curStroke.length>1){
         let pts=curStroke, geo=curStrokeGeo;
@@ -420,12 +421,13 @@ function pu(e){
             pts=chaikin(curStroke,3);
             if(geo&&geo.length>1) geo=chaikin(geo.map(g=>[g.lat,g.lng]),3).map(p=>({lat:p[0],lng:p[1]}));
         }
-        const s={color:penColor,width:tool==='erase'?30:penWidth,erase:tool==='erase',points:pts};
+        const s={id:'s_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),color:penColor,width:tool==='erase'?30:penWidth,erase:tool==='erase',points:pts};
         if(tool==='erase'&&mapMode!=='off'&&map) s.eraseZoom=map.getZoom();
         if(geo) s.geoPoints=geo;
         strokes.push(s); save();
     }
     curStroke=[]; curStrokeGeo=null; ctrlSmooth=false; altStraight=false;
+    _applyPendingRemote();
 }
 
 // Text tool
@@ -1031,24 +1033,38 @@ document.getElementById('wbLabel').addEventListener('input',save);
 // ── Collab helpers ────────────────────────────────────────────────
 function wbStateObj(){
     return {label:document.getElementById('wbLabel').value,
-        strokes:strokes.map(s=>({color:s.color,width:s.width,erase:!!s.erase,eraseZoom:s.eraseZoom??null,points:s.points,geoPoints:s.geoPoints||null})),
+        strokes:strokes.map(s=>({id:s.id||null,color:s.color,width:s.width,erase:!!s.erase,eraseZoom:s.eraseZoom??null,points:s.points,geoPoints:s.geoPoints||null})),
         labels, magnets:magnets.map(m=>({id:m.id,callsign:m.callsign,rank:m.rank,x:m.x,y:m.y,color:m.color,lat:m.lat,lng:m.lng})),
         aircraft:aircraft.map(a=>({id:a.id,x:a.x,y:a.y,color:a.color,angle:a.angle||0,size:a.size||acSize,refZoom:a.refZoom??null,lat:a.lat,lng:a.lng})),
         holds:holds.map(h=>({id:h.id,x:h.x,y:h.y,color:h.color,angle:h.angle||0,size:h.size||holdSize,turns:h.turns||'RT',refZoom:h.refZoom??null,lat:h.lat,lng:h.lng})),
         acSize, mapMode};
 }
+// Merge two arrays by id — keeps remote as source of truth but preserves local-only items not yet synced
+function _mergeById(local,remote){
+    if(!remote) return local;
+    if(!local||!local.length) return remote;
+    const remoteIds=new Set(remote.map(x=>x.id).filter(Boolean));
+    const localPending=local.filter(x=>x.id&&!remoteIds.has(x.id));
+    return [...remote,...localPending];
+}
+function _applyPendingRemote(){
+    if(_pendingRemoteState){ const p=_pendingRemoteState; _pendingRemoteState=null; applyRemoteState(p); }
+}
 function applyRemoteState(d){
+    // Buffer updates that arrive while the user is mid-stroke; apply once the stroke is committed
+    if(painting){ _pendingRemoteState=d; return; }
     if(!d) return;
-    const prevMap=mapMode;
     if(d.label!=null) document.getElementById('wbLabel').value=d.label;
-    if(d.strokes) strokes=d.strokes;
-    if(d.labels)  labels=d.labels;
-    if(d.magnets) magnets=d.magnets;
-    if(d.aircraft)aircraft=d.aircraft;
-    if(d.holds)   holds=d.holds;
-    if(d.acSize)  acSize=d.acSize;
+    // Ensure every remote stroke has an id so merging works going forward
+    if(d.strokes) strokes=_mergeById(strokes,d.strokes.map(s=>s.id?s:{...s,id:'s_'+Math.random().toString(36).slice(2,9)}));
+    if(d.labels)  labels =_mergeById(labels, d.labels);
+    if(d.magnets) magnets=_mergeById(magnets,d.magnets);
+    if(d.aircraft)aircraft=_mergeById(aircraft,d.aircraft);
+    if(d.holds)   holds  =_mergeById(holds,  d.holds);
+    if(d.acSize)  acSize =d.acSize;
     renderMagnets(); renderAircraft(); renderHolds(); redraw();
-    if(d.mapMode&&d.mapMode!==prevMap) setTimeout(()=>setMap(d.mapMode),100);
+    // Map view (mode/pan/zoom) is intentionally NOT synced — each user controls
+    // their own map independently so remote saves can't pull the map elsewhere.
 }
 async function saveRemote(){
     setSyncDot('syncing');
