@@ -523,7 +523,7 @@
 
     // ── v158th MXG Aircraft Status Board ──────────────────────────────────────
     (async function () {
-        const { TAILS, computeStatus } = window.MxgStatus;
+        const { TAILS, computeStatus, OFFSTATION_TAILS } = window.MxgStatus;
 
         const STATUS_COLOR = { ready: '#4a9', maint: '#b87', phase: '#a44', inactive: '#555', offstation: '#88c' };
         const STATUS_BG    = { ready: '#131f18', maint: '#201810', phase: '#1e1010', inactive: '#1c1c1c', offstation: '#161525' };
@@ -554,6 +554,11 @@
                 }
             }
         } catch (_) { /* silently ignore */ }
+
+        // Merge static off-station overrides from mxg-status.js
+        for (const tail of OFFSTATION_TAILS) {
+            if (!offStation[tail]) offStation[tail] = 'OFF STATION';
+        }
 
         function renderBoard() {
             const grid = document.getElementById('mxg-tail-grid');

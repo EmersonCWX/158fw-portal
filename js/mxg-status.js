@@ -19,6 +19,10 @@ window.MxgStatus = (function () {
     const PHASE_CYCLE_PAUSED = false;
     const PHASE_PINNED_TAILS = [];
 
+    // Manually override tails as off-station (shown purple on the board).
+    // Use full tail IDs, e.g. '17-5265'. Clear when jets return to KBTV.
+    const OFFSTATION_TAILS = ['17-5265', '18-5359'];
+
     // Xorshift32 seeded PRNG
     function mkRng(seed) {
         let s = (seed ^ 0xDEADBEEF) >>> 0 || 1;
@@ -83,5 +87,5 @@ window.MxgStatus = (function () {
         return map;
     }
 
-    return { TAILS, PHASE_CYCLE_PAUSED, PHASE_PINNED_TAILS, mkRng, shuffle, dayIndex, computeStatus };
+    return { TAILS, PHASE_CYCLE_PAUSED, PHASE_PINNED_TAILS, OFFSTATION_TAILS, mkRng, shuffle, dayIndex, computeStatus };
 })();
