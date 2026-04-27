@@ -21,7 +21,7 @@ window.MxgStatus = (function () {
 
     // Manually override tails as off-station (shown purple on the board).
     // Use full tail IDs, e.g. '17-5265'. Clear when jets return to KBTV.
-    const OFFSTATION_TAILS = ['17-5265', '18-5359'];
+    const OFFSTATION_TAILS = [];
 
     // Xorshift32 seeded PRNG
     function mkRng(seed) {

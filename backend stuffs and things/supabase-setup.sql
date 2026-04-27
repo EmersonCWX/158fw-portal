@@ -516,7 +516,7 @@ CREATE POLICY "admin: select vsaferep reports"
     USING (
         EXISTS (
             SELECT 1 FROM public.vsaferep_admins
-            WHERE email = auth.email()
+            WHERE email = auth.jwt() ->> 'email'
         )
     );
 
@@ -528,7 +528,7 @@ CREATE POLICY "admin: delete vsaferep reports"
     USING (
         EXISTS (
             SELECT 1 FROM public.vsaferep_admins
-            WHERE email = auth.email()
+            WHERE email = auth.jwt() ->> 'email'
         )
     );
 
