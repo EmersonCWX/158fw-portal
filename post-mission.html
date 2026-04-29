@@ -784,13 +784,14 @@
 
         // ── Clear ──
         function clearForm() {
-            ['missionType','missionCallsign','missionAcft','missionTail','debriefNotes',
+            ['missionType','missionCallsign','missionTail','debriefNotes',
              'flDepIcao','flToTime','flArrIcao','flLandTime','flRoute','flVatsimCid',
              'obj1notes','obj2notes','obj3notes'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.value = '';
             });
             document.getElementById('flTotal').value = '--:--';
+            document.getElementById('missionAcft').value = 'F-35A';
             document.getElementById('flCertCheck').checked = false;
             ['obj1','obj2','obj3'].forEach(id => { document.getElementById(id).value = ''; });
             document.querySelectorAll('.chk-item').forEach(item => {
@@ -798,6 +799,13 @@
                 item.classList.remove('done');
             });
             updateChecklist();
+            // Restore session-bound fields
+            if (_session) {
+                const user = _session.user;
+                if (user.user_metadata && user.user_metadata.vatsim_cid) {
+                    document.getElementById('flVatsimCid').value = user.user_metadata.vatsim_cid;
+                }
+            }
         }
 
         document.getElementById('btnClear').addEventListener('click', () => {
