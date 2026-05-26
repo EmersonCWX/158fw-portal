@@ -19,6 +19,15 @@ const loginPasswordInput = document.getElementById('loginPassword');
 const loginSubmitBtn = loginForm ? loginForm.querySelector('.login-submit-btn') : null;
 const loginErrorEl = document.getElementById('loginError');
 
+// Password reset elements
+const loginSection = document.getElementById('loginSection');
+const resetSection = document.getElementById('resetSection');
+const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+const backToLoginLink = document.getElementById('backToLoginLink');
+const resetSubmitBtn = document.getElementById('resetSubmitBtn');
+const resetEmailInput = document.getElementById('resetEmail');
+const modalTitle = document.getElementById('modalTitle');
+
 // Open modal
 if (loginBtn) {
     loginBtn.addEventListener('click', () => {
@@ -152,6 +161,69 @@ function closeLoginModal() {
     if (loginModal) loginModal.classList.remove('active');
     document.body.style.overflow = '';
     clearLoginError();
+    // Reset back to login view
+    if (loginSection) loginSection.style.display = '';
+    if (resetSection) resetSection.style.display = 'none';
+    if (modalTitle) modalTitle.textContent = 'MEMBER LOGIN';
+    if (loginErrorEl) loginErrorEl.style.color = '';
+}
+
+// Forgot password — switch to reset view
+if (forgotPasswordLink) {
+    forgotPasswordLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (loginSection) loginSection.style.display = 'none';
+        if (resetSection) resetSection.style.display = 'block';
+        if (modalTitle) modalTitle.textContent = 'RESET PASSWORD';
+        clearLoginError();
+        if (resetEmailInput) {
+            resetEmailInput.value = loginEmailInput ? loginEmailInput.value : '';
+            resetEmailInput.focus();
+        }
+    });
+}
+
+// Back to login — switch back
+if (backToLoginLink) {
+    backToLoginLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (resetSection) resetSection.style.display = 'none';
+        if (loginSection) loginSection.style.display = '';
+        if (modalTitle) modalTitle.textContent = 'MEMBER LOGIN';
+        clearLoginError();
+        if (loginErrorEl) loginErrorEl.style.color = '';
+    });
+}
+
+// Send password reset email
+if (resetSubmitBtn) {
+    resetSubmitBtn.addEventListener('click', async () => {
+        const email = resetEmailInput ? resetEmailInput.value.trim() : '';
+        if (!email) {
+            showLoginError('Please enter your email address.');
+            return;
+        }
+        resetSubmitBtn.disabled = true;
+        resetSubmitBtn.textContent = 'SENDING...';
+        clearLoginError();
+
+        const { error } = await _supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: 'https://virtual158th.com/reset-password.html'
+        });
+
+        resetSubmitBtn.disabled = false;
+        resetSubmitBtn.textContent = 'SEND RESET LINK';
+
+        if (error) {
+            showLoginError(error.message);
+        } else {
+            if (loginErrorEl) {
+                loginErrorEl.textContent = 'Check your email for a password reset link.';
+                loginErrorEl.style.display = 'block';
+                loginErrorEl.style.color = '#6dbf67';
+            }
+        }
+    });
 }
 
 // Restore session on page load

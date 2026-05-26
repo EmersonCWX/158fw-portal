@@ -19,7 +19,7 @@
         .red { color: #f00; }
         .yellow { color: #ff0; }
         .gray { color: #aaa; }
-        .metar, .taf, .pireps { font-family: monospace; background: #111; padding: 8px; border-radius: 5px; margin: 6px 0; font-size: 1em; }
+        .metar, .taf { font-family: monospace; background: #111; padding: 8px; border-radius: 5px; margin: 6px 0; font-size: 1em; }
         .row { display: flex; justify-content: space-between; margin: 3px 0; }
         .small { font-size: 0.95em; }
         .vcenter { display: flex; align-items: center; }
@@ -53,7 +53,7 @@
             .flex-col { min-width: 0; width: 100%; }
             .section { min-width: 0; max-width: 100%; box-sizing: border-box; overflow: hidden; }
             h1 { font-size: 1.2rem; }
-            .metar, .taf, .pireps { word-break: break-all; overflow-wrap: break-word; white-space: pre-wrap; font-size: 0.9em; }
+            .metar, .taf { word-break: break-all; overflow-wrap: break-word; white-space: pre-wrap; font-size: 0.9em; }
             .row { flex-wrap: wrap; gap: 2px; }
             .row > span { min-width: 0; }
             .table, .ops-table { width: 100%; font-size: 0.78em; table-layout: fixed; }
@@ -104,10 +104,6 @@
                     <div class="section-title">ALTERNATE <span class="small">(Fuel)</span></div>
                     <div class="green">None</div>
                 </div>
-                <div class="section">
-                    <div class="section-title">Current PIREPs</div>
-                    <div id="pireps" class="pireps">Loading...</div>
-                </div>
             </div>
             <!-- Center Column -->
             <div class="flex-col">
@@ -135,10 +131,7 @@
                     <div class="row"><span id="range-adirondack" class="green">Adirondack MOA</span></div>
                     <div class="row"><span id="range-condor1" class="green">Condor 1 MOA</span></div>
                 </div>
-                <div class="section">
-                    <div class="section-title">NOTAMs <span id="notam-count" style="font-size:0.78em;color:#aaa;font-weight:normal;"></span></div>
-                    <div id="notams-list" style="max-height:220px;overflow-y:auto;font-size:0.8em;"><span class="gray">Loading...</span></div>
-                </div>
+
                 <!-- Special Interest Events -->
                 <div class="section">
                     <div class="section-title">Special Interest Events</div>
@@ -147,16 +140,6 @@
             </div>
             <!-- Right Column -->
             <div class="flex-col">
-                <div class="section">
-                    <div class="section-title">FCIF</div>
-                    <div class="green">None</div>
-                    <div class="gray">--Notes--</div>
-                </div>
-                <div class="section">
-                    
-                    <div class="section-title">For Pubs Currency, See v158th FW PUBs Drive</div>
-                    <div class="row"><a href="https://docs.google.com/document/d/1UmhWI4F8-k9EY9prpzPN2ISCtm1XyBH1zp7Ho0hJnNQ/edit?pli=1&tab=t.0" target="_blank" style="color:#aaf;text-decoration:none;">v158th FW Syllabus</a> <span>Revision 0</span></div>
-                </div>
                 <div class="section">
                     <div class="section-title">OUT FIELDS</div>
                     <table class="table" id="outfields-table">
@@ -202,393 +185,248 @@
         </div>
     </div>
     <script>
-    const avwxToken = 'MEsA2QSGtIHWpgECLiOUBHwtka0EiiyoAfCRHOTG5QA';
-    const laminarKey = 'YOUR_LAMINAR_DATA_USER_KEY';
+    // ── Shared configuration ──────────────────────────────────────────────────
+    const avwxToken     = 'MEsA2QSGtIHWpgECLiOUBHwtka0EiiyoAfCRHOTG5QA';
+    const AVWX_TTL      = 5 * 60 * 1000; // 5-minute cache
 
-    // -- NOTAMs (Laminar Data / Cirium v2) ------------------------------------
-    (async function loadNotams() {
-        const el = document.getElementById('notams-list');
-        const countEl = document.getElementById('notam-count');
-        if (!el) return;
+    const SUPABASE_URL      = 'https://gcumgpfyfqtfwbskkngt.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdW1ncGZ5ZnF0Zndic2trbmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDczMTAsImV4cCI6MjA4ODM4MzMxMH0.OSY0XEPQp-WsFWuiGrUG5fcLIVMI3c8AxBEv2shFftg';
+    const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'v158fw-auth' }
+    });
+
+    // ── AVWX cached fetch (sessionStorage, 5-min TTL) ─────────────────────────
+    async function avwxFetch(endpoint) {
+        const key = 'avwx|' + endpoint;
         try {
-            const url = `https://api.laminardata.aero/notamdata/v2/aerodromes/KBTV/notams?userKey=${laminarKey}`;
-            const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-            if (!res.ok) { el.innerHTML = `<span class="red">Error ${res.status}</span>`; return; }
-            const data = await res.json();
-            const features = data.features || [];
-            if (!features.length) { el.innerHTML = '<span class="gray">No active NOTAMs.</span>'; return; }
-            if (countEl) countEl.textContent = `(${features.length})`;
-            el.innerHTML = features.map(ft => {
-                const p    = ft.properties || {};
-                const id   = (p.series || '') + (p.number || ft.id || '');
-                const text = p.text || (p.translations && p.translations[0] && p.translations[0].simpleText) || '';
-                return `<div style="border-bottom:1px solid #333;padding:5px 0;">`
-                     + `<div style="color:#aaf;font-family:monospace;margin-bottom:2px;">${id}</div>`
-                     + `<div style="color:#ccc;line-height:1.4;">${text}</div>`
-                     + `</div>`;
-            }).join('');
-        } catch (e) {
-            el.innerHTML = '<span class="red">Failed to load NOTAMs.</span>';
-        }
-    })();
-
-    // Helper to fetch METAR/TAF from NOAA (CORS-friendly)
-    function fetchTextData(url, callback) {
-        fetch(url)
-            .then(r => r.text())
-            .then(txt => callback(txt))
-            .catch(() => callback('Error loading data.'));
+            const hit = sessionStorage.getItem(key);
+            if (hit) {
+                const { ts, data } = JSON.parse(hit);
+                if (Date.now() - ts < AVWX_TTL) return data;
+            }
+        } catch (_) {}
+        const res = await fetch(`https://avwx.rest/api/${endpoint}?token=${avwxToken}`);
+        if (!res.ok) throw new Error('AVWX ' + res.status);
+        const data = await res.json();
+        try { sessionStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch (_) {}
+        return data;
     }
-    // KBTV METAR using AVWX REST API
-    fetch(`https://avwx.rest/api/metar/KBTV?token=${avwxToken}`)
-        .then(res => res.json())
-        .then(metarObj => {
-            let metar = metarObj && metarObj.raw ? metarObj.raw : 'No METAR data.';
-            document.getElementById('metar').textContent = metar;
-            // Extract temperature for TOLD
-            let tempMatch = metar.match(/ (M?\d{2})\/(M?\d{2})/);
-            let tempC = tempMatch ? (tempMatch[1].startsWith('M') ? -parseInt(tempMatch[1].slice(1),10) : parseInt(tempMatch[1],10)) : null;
-            let tempF = tempC !== null ? Math.round((tempC * 9/5) + 32) : null;
-            document.getElementById('temperature').textContent = tempF !== null ? tempF + '°F' : '--';
 
-            // ── F-35A TOLD calculation ─────────────────────────────────────
-            // Simplified performance model at KBTV (PA ~335 ft)
-            // Lookup table: [tempC, toRoll(ft), abortKts, ldgRoll(ft)]
-            if (tempC !== null) {
-                const told = [
-                    [-20, 1320, 139, 2150],
-                    [-10, 1420, 141, 2230],
-                    [  0, 1540, 144, 2330],
-                    [ 10, 1680, 147, 2440],
-                    [ 15, 1760, 149, 2510],
-                    [ 20, 1860, 151, 2620],
-                    [ 30, 2080, 154, 2850],
-                    [ 40, 2340, 158, 3140]
-                ];
-                // Clamp and interpolate
-                const clampedT = Math.max(told[0][0], Math.min(told[told.length-1][0], tempC));
-                let lower = told[0], upper = told[told.length-1];
-                for (let i = 0; i < told.length - 1; i++) {
-                    if (clampedT >= told[i][0] && clampedT <= told[i+1][0]) {
-                        lower = told[i]; upper = told[i+1]; break;
-                    }
-                }
-                const frac = lower[0] === upper[0] ? 0 : (clampedT - lower[0]) / (upper[0] - lower[0]);
-                const lerp = (a, b) => Math.round(a + frac * (b - a));
-                // PA correction for KBTV (335 ft adds ~3% to distances)
-                const paFactor = 1 + (335 / 1000) * 0.03;
-                document.getElementById('f35a-takeoff').textContent = Math.round(lerp(lower[1], upper[1]) * paFactor) + ' ft';
-                document.getElementById('f35a-abort').textContent   = lerp(lower[2], upper[2]) + ' kts';
-                document.getElementById('f35a-landing').textContent = Math.round(lerp(lower[3], upper[3]) * paFactor) + ' ft';
-            }
-            const runwayDisplay = document.getElementById('runway-display');
-            const runwayVfr = document.getElementById('runway-vfr');
-            const statusSpan = document.getElementById('scorpion-status');
-            const rcrSpan = document.getElementById('scorpion-rcr');
-            const birdsSpan = document.getElementById('scorpion-birds');
-            const itsSpan = document.getElementById('scorpion-its');
-            // Use DST-aware BTV local time for "terminated" logic
-            const now = new Date();
-            let estOffset = -5;
-            const startDST = new Date(now.getFullYear(), 2, 8 - (new Date(now.getFullYear(), 2, 1).getDay() || 7));
-            const endDST = new Date(now.getFullYear(), 10, 1 + (7 - new Date(now.getFullYear(), 10, 1).getDay()));
-            if (now >= startDST && now < endDST) estOffset = -4;
-            const btv = new Date(now.getTime() + (estOffset * 60 + now.getTimezoneOffset()) * 60000);
-            const hours = btv.getHours();
-            const minutes = btv.getMinutes();
-            const day = btv.getDay(); // 0=Sunday, 1=Monday, ...
-            // Terminated logic
-            let isTerminated = false;
-            if (day === 1) { // Monday
-                isTerminated = true;
-            } else if ((hours > 21 || (hours === 21 && minutes >= 30)) || (hours < 8 || (hours === 8 && minutes < 30))) {
-                isTerminated = true;
-            }
-            // Extract ceiling (lowest BKN or OVC layer, in feet) and visibility (SM)
-            let ceiling = 99999;
-            if (metarObj.clouds && Array.isArray(metarObj.clouds)) {
-                for (const cloud of metarObj.clouds) {
-                    if ((cloud.type === 'BKN' || cloud.type === 'OVC') && cloud.altitude != null) {
-                        const layerFt = cloud.altitude * 100;
-                        if (layerFt < ceiling) ceiling = layerFt;
-                    }
-                }
-            }
-            let visibility = 99;
-            if (metarObj.visibility && metarObj.visibility.value != null) {
-                visibility = metarObj.visibility.value; // SM for US stations
-            }
+    // ── Helper: apply flight-rules colour to a MOA element ────────────────────
+    function applyMoaColor(id, flightRules) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (flightRules === 'LIFR' || flightRules === 'IFR') el.className = 'red';
+        else if (flightRules === 'MVFR') el.className = 'yellow';
+        else el.className = 'green';
+    }
 
-            // Set ops status — custom thresholds take priority over AVWX flight rules
-            let fieldStatus = 'VFR';
-            let statusClass = 'green';
-            if (ceiling < 1200 && visibility < 5) {
-                fieldStatus = 'Stop Ops/Wx Recall';
-                statusClass = 'red';
-            } else if (ceiling < 5000 && visibility < 5) {
-                fieldStatus = 'Restricted';
-                statusClass = 'yellow';
-            } else if (metarObj && metarObj.flight_rules) {
-                if (metarObj.flight_rules === 'LIFR') { fieldStatus = 'LIFR'; statusClass = 'red'; }
-                else if (metarObj.flight_rules === 'IFR') { fieldStatus = 'IFR'; statusClass = 'red'; }
-                else if (metarObj.flight_rules === 'MVFR') { fieldStatus = 'MVFR'; statusClass = 'yellow'; }
-                else if (metarObj.flight_rules === 'VFR') { fieldStatus = 'VFR'; statusClass = 'green'; }
+    // ── KBTV METAR (drives TOLD, status, runway, and Condor 1 MOA) ────────────
+    avwxFetch('metar/KBTV').then(metarObj => {
+        let metar = metarObj && metarObj.raw ? metarObj.raw : 'No METAR data.';
+        document.getElementById('metar').textContent = metar;
+
+        // Temperature for TOLD
+        let tempMatch = metar.match(/ (M?\d{2})\/(M?\d{2})/);
+        let tempC = tempMatch ? (tempMatch[1].startsWith('M') ? -parseInt(tempMatch[1].slice(1), 10) : parseInt(tempMatch[1], 10)) : null;
+        let tempF = tempC !== null ? Math.round((tempC * 9 / 5) + 32) : null;
+        document.getElementById('temperature').textContent = tempF !== null ? tempF + '°F' : '--';
+
+        // F-35A TOLD
+        if (tempC !== null) {
+            const told = [
+                [-20, 1320, 139, 2150], [-10, 1420, 141, 2230],
+                [  0, 1540, 144, 2330], [ 10, 1680, 147, 2440],
+                [ 15, 1760, 149, 2510], [ 20, 1860, 151, 2620],
+                [ 30, 2080, 154, 2850], [ 40, 2340, 158, 3140]
+            ];
+            const clampedT = Math.max(told[0][0], Math.min(told[told.length - 1][0], tempC));
+            let lower = told[0], upper = told[told.length - 1];
+            for (let i = 0; i < told.length - 1; i++) {
+                if (clampedT >= told[i][0] && clampedT <= told[i + 1][0]) { lower = told[i]; upper = told[i + 1]; break; }
             }
-            runwayVfr.textContent = fieldStatus;
-            runwayVfr.className = `highlight ${statusClass}`;
-            // Status row logic
-            if (isTerminated) {
-                statusSpan.textContent = 'Terminated';
-                statusSpan.className = 'red';
-                runwayDisplay.textContent = '--';
-            } else {
-                statusSpan.textContent = 'Active';
-                statusSpan.className = 'green';
-                // Determine runway from wind or ATIS
-                let windMatch = metar.match(/ (\d{3}|VRB)(\d{2,3})G?(\d{2,3})?KT/);
-                let windDir = windMatch ? windMatch[1] : null;
-                let rwy = '--';
-                if (windDir && windDir !== 'VRB') {
-                    let windDeg = parseInt(windDir, 10);
-                    // Runway 15 = 150, Runway 33 = 330
-                    let diff15 = Math.abs(((windDeg - 150 + 180 + 360) % 360) - 180);
-                    let diff33 = Math.abs(((windDeg - 330 + 180 + 360) % 360) - 180);
-                    rwy = diff15 <= diff33 ? '15' : '33';
-                }
-                runwayDisplay.textContent = rwy;
-            }
-            // RCR, Birds, ITS (static for now, can be dynamic if needed)
-            rcrSpan.textContent = 'Dry (23)';
-            rcrSpan.className = 'green';
-            birdsSpan.textContent = 'Low';
-            birdsSpan.className = 'green';
-            itsSpan.textContent = 'Normal';
-            itsSpan.className = 'green';
-        })
-        .catch(() => {
-            document.getElementById('metar').textContent = 'Error loading METAR.';
-            document.getElementById('temperature').textContent = '--';
-            const terminatedSpan = document.getElementById('scorpion-terminated');
-            terminatedSpan.style.display = '';
-            document.getElementById('runway-display').textContent = '--';
-        });
-    // KBTV TAF using AVWX REST API
-    fetch(`https://avwx.rest/api/taf/KBTV?token=${avwxToken}`)
-        .then(res => res.json())
-        .then(tafObj => {
-            let taf = tafObj && tafObj.raw ? tafObj.raw : 'No TAF data.';
-            document.getElementById('taf').textContent = taf;
-        })
-        .catch(() => {
-            document.getElementById('taf').textContent = 'Error loading TAF.';
-        });
-    // Show loading spinner for PIREPs
-    const pirepsDiv = document.getElementById('pireps');
-    pirepsDiv.innerHTML = "<span class='gray'>Loading...</span>";
-    let pirepsLoaded = false;
-    // Fetch and display recent PIREPs within 150nm of KBTV using AVWX REST API
-    fetch(`https://avwx.rest/api/pirep/KBTV?radius=150&token=${avwxToken}`)
-        .then(res => res.json())
-        .then(data => {
-            pirepsLoaded = true;
-            if (Array.isArray(data) && data.length > 0) {
-                pirepsDiv.innerHTML = data.map(pirep => {
-                    // Show time, location, and a short summary if available
-                    const time = pirep.time ? pirep.time.dt : '';
-                    const loc = pirep.station || '';
-                    const summary = pirep.raw || '';
-                    return `<div><span class='yellow'>${time}</span> <span class='label'>${loc}</span> <span>${summary}</span></div>`;
-                }).join('');
-            } else {
-                pirepsDiv.textContent = 'No recent PIREPs.';
-            }
-        })
-        .catch(() => {
-            pirepsLoaded = true;
-            pirepsDiv.textContent = 'Error loading PIREPs.';
-        });
-    // Fallback: if not loaded in 10 seconds, show error
-    setTimeout(() => {
-        if (!pirepsLoaded) {
-            pirepsDiv.textContent = 'PIREP loading timed out.';
+            const frac = lower[0] === upper[0] ? 0 : (clampedT - lower[0]) / (upper[0] - lower[0]);
+            const lerp = (a, b) => Math.round(a + frac * (b - a));
+            const paFactor = 1 + (335 / 1000) * 0.03;
+            document.getElementById('f35a-takeoff').textContent = Math.round(lerp(lower[1], upper[1]) * paFactor) + ' ft';
+            document.getElementById('f35a-abort').textContent   = lerp(lower[2], upper[2]) + ' kts';
+            document.getElementById('f35a-landing').textContent = Math.round(lerp(lower[3], upper[3]) * paFactor) + ' ft';
         }
-    }, 10000);
-    // OUT FIELDS METARs (KPBG, KRME, KGTB, KPSM) using textData endpoint
-    const outfields = [
+
+        const runwayDisplay = document.getElementById('runway-display');
+        const runwayVfr     = document.getElementById('runway-vfr');
+        const statusSpan    = document.getElementById('scorpion-status');
+        const rcrSpan       = document.getElementById('scorpion-rcr');
+        const birdsSpan     = document.getElementById('scorpion-birds');
+        const itsSpan       = document.getElementById('scorpion-its');
+
+        // DST-aware BTV local time
+        const now = new Date();
+        let estOffset = -5;
+        const startDST = new Date(now.getFullYear(), 2, 8 - (new Date(now.getFullYear(), 2, 1).getDay() || 7));
+        const endDST   = new Date(now.getFullYear(), 10, 1 + (7 - new Date(now.getFullYear(), 10, 1).getDay()));
+        if (now >= startDST && now < endDST) estOffset = -4;
+        const btv = new Date(now.getTime() + (estOffset * 60 + now.getTimezoneOffset()) * 60000);
+        const hours = btv.getHours(), minutes = btv.getMinutes(), day = btv.getDay();
+        const isTerminated = day === 1 ||
+            (hours > 21 || (hours === 21 && minutes >= 30)) ||
+            (hours < 8  || (hours === 8  && minutes < 30));
+
+        // Ceiling & visibility
+        let ceiling = 99999;
+        if (metarObj.clouds) for (const c of metarObj.clouds) {
+            if ((c.type === 'BKN' || c.type === 'OVC') && c.altitude != null)
+                ceiling = Math.min(ceiling, c.altitude * 100);
+        }
+        let visibility = (metarObj.visibility && metarObj.visibility.value != null) ? metarObj.visibility.value : 99;
+
+        // Field status
+        let fieldStatus = 'VFR', statusClass = 'green';
+        if      (ceiling < 1200 && visibility < 5)   { fieldStatus = 'Stop Ops/Wx Recall'; statusClass = 'red'; }
+        else if (ceiling < 5000 && visibility < 5)   { fieldStatus = 'Restricted';         statusClass = 'yellow'; }
+        else if (metarObj.flight_rules === 'LIFR')   { fieldStatus = 'LIFR';  statusClass = 'red'; }
+        else if (metarObj.flight_rules === 'IFR')    { fieldStatus = 'IFR';   statusClass = 'red'; }
+        else if (metarObj.flight_rules === 'MVFR')   { fieldStatus = 'MVFR';  statusClass = 'yellow'; }
+        runwayVfr.textContent = fieldStatus;
+        runwayVfr.className   = 'highlight ' + statusClass;
+
+        if (isTerminated) {
+            statusSpan.textContent = 'Terminated'; statusSpan.className = 'red';
+            runwayDisplay.textContent = '--';
+        } else {
+            statusSpan.textContent = 'Active'; statusSpan.className = 'green';
+            const windMatch = metar.match(/ (\d{3}|VRB)(\d{2,3})G?(\d{2,3})?KT/);
+            let rwy = '--';
+            if (windMatch && windMatch[1] !== 'VRB') {
+                const wd = parseInt(windMatch[1], 10);
+                const d15 = Math.abs(((wd - 150 + 540) % 360) - 180);
+                const d33 = Math.abs(((wd - 330 + 540) % 360) - 180);
+                rwy = d15 <= d33 ? '15' : '33';
+            }
+            runwayDisplay.textContent = rwy;
+        }
+        rcrSpan.textContent   = 'Dry (23)'; rcrSpan.className   = 'green';
+        birdsSpan.textContent = 'Low';       birdsSpan.className = 'green';
+        itsSpan.textContent   = 'Normal';    itsSpan.className   = 'green';
+
+        // Reuse for Condor 1 MOA — saves a full round-trip request
+        applyMoaColor('range-condor1', metarObj.flight_rules);
+    }).catch(() => {
+        document.getElementById('metar').textContent = 'Error loading METAR.';
+        document.getElementById('temperature').textContent = '--';
+        document.getElementById('runway-display').textContent = '--';
+    });
+
+    // ── KBTV TAF ──────────────────────────────────────────────────────────────
+    avwxFetch('taf/KBTV').then(obj => {
+        document.getElementById('taf').textContent = (obj && obj.raw) ? obj.raw : 'No TAF data.';
+    }).catch(() => {
+        document.getElementById('taf').textContent = 'Error loading TAF.';
+    });
+
+    // ── Outfield METARs (KPBG, KRME, KGTB, KPSM) ─────────────────────────────
+    [
         { code: 'KPBG', statusId: 'of-kpbg-status', metarId: 'of-kpbg' },
         { code: 'KRME', statusId: 'of-krme-status', metarId: 'of-krme' },
         { code: 'KGTB', statusId: 'of-kgtb-status', metarId: 'of-kgtb' },
         { code: 'KPSM', statusId: 'of-kpsm-status', metarId: 'of-kpsm' }
-    ];
-    // Fetch each OUT FIELD METAR individually
-    outfields.forEach(fld => {
-        fetch(`https://avwx.rest/api/metar/${fld.code}?token=${avwxToken}`)
-            .then(res => res.json())
-            .then(metarObj => {
-                let metar = metarObj && metarObj.raw ? metarObj.raw : 'No METAR data.';
-                let el = document.getElementById(fld.metarId);
-                if (el) el.textContent = metar;
-                // Set status color based on flight rules
-                let status = 'VFR';
-                let statusClass = 'green';
-                if (metarObj && metarObj.flight_rules) {
-                    if (metarObj.flight_rules === 'LIFR') { status = 'LIFR'; statusClass = 'red'; }
-                    else if (metarObj.flight_rules === 'IFR') { status = 'IFR'; statusClass = 'red'; }
-                    else if (metarObj.flight_rules === 'MVFR') { status = 'MVFR'; statusClass = 'yellow'; }
-                    else if (metarObj.flight_rules === 'VFR') { status = 'VFR'; statusClass = 'green'; }
-                }
-                let statusEl = document.getElementById(fld.statusId);
-                if (statusEl) { statusEl.textContent = status; statusEl.className = statusClass; }
-            })
-            .catch(() => {
-                let el = document.getElementById(fld.metarId);
-                if (el) el.textContent = 'Error loading METAR.';
-                let statusEl = document.getElementById(fld.statusId);
-                if (statusEl) { statusEl.textContent = 'ERR'; statusEl.className = 'red'; }
-            });
-    });
-    // Fetch weather for MOAs using AVWX REST API (KMSS, KSLK, KBTV)
-    // MOA Ranges array
-    const moaRanges = [
-        { id: 'range-yankee1', wxid: 'range-yankee1-wx', station: 'KMSS', label: 'Yankee 1 MOA' },
-        { id: 'range-adirondack', wxid: 'range-adirondack-wx', station: 'KSLK', label: 'Adirondack MOA' },
-        { id: 'range-condor1', wxid: 'range-condor1-wx', station: 'KBTV', label: 'Condor 1 MOA' }
-    ]; // End moaRanges array
-
-    // Fetch each MOA METAR individually
-    moaRanges.forEach(rg => {
-        fetch(`https://avwx.rest/api/metar/${rg.station}?token=${avwxToken}`)
-            .then(res => res.json())
-            .then(metarObj => {
-                // Set color based on flight rules
-                let colorClass = 'green';
-                if (metarObj && metarObj.flight_rules) {
-                    if (metarObj.flight_rules === 'LIFR' || metarObj.flight_rules === 'IFR') colorClass = 'red';
-                    else if (metarObj.flight_rules === 'MVFR') colorClass = 'yellow';
-                    else if (metarObj.flight_rules === 'VFR') colorClass = 'green';
-                }
-                let rangeEl = document.getElementById(rg.id);
-                if (rangeEl) rangeEl.className = colorClass;
-            })
-            .catch(() => {
-                let rangeEl = document.getElementById(rg.id);
-                if (rangeEl) rangeEl.className = 'red';
-            });
-    });
-
-    // ── Load Airfield Ops from Supabase ────────────────────────────────────
-    (async function loadAirfieldOps() {
-        const SUPABASE_URL     = 'https://gcumgpfyfqtfwbskkngt.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdW1ncGZ5ZnF0Zndic2trbmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDczMTAsImV4cCI6MjA4ODM4MzMxMH0.OSY0XEPQp-WsFWuiGrUG5fcLIVMI3c8AxBEv2shFftg';
-        const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-            auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'v158fw-auth' }
+    ].forEach(fld => {
+        avwxFetch('metar/' + fld.code).then(obj => {
+            const el = document.getElementById(fld.metarId);
+            if (el) el.textContent = (obj && obj.raw) ? obj.raw : 'No METAR data.';
+            const statusEl = document.getElementById(fld.statusId);
+            if (!statusEl) return;
+            const fr = obj && obj.flight_rules;
+            if      (fr === 'LIFR' || fr === 'IFR') { statusEl.textContent = fr;     statusEl.className = 'red'; }
+            else if (fr === 'MVFR')                  { statusEl.textContent = 'MVFR'; statusEl.className = 'yellow'; }
+            else                                     { statusEl.textContent = 'VFR';  statusEl.className = 'green'; }
+        }).catch(() => {
+            const el = document.getElementById(fld.metarId);
+            if (el) el.textContent = 'Error loading METAR.';
+            const statusEl = document.getElementById(fld.statusId);
+            if (statusEl) { statusEl.textContent = 'ERR'; statusEl.className = 'red'; }
         });
+    });
 
-        const { data, error } = await _sb
-            .from('airfield_ops')
-            .select('id, items');
+    // ── MOA range colours (KMSS→Yankee 1, KSLK→Adirondack; Condor 1 reused above) ──
+    [{ id: 'range-yankee1', station: 'KMSS' }, { id: 'range-adirondack', station: 'KSLK' }].forEach(rg => {
+        avwxFetch('metar/' + rg.station)
+            .then(obj => applyMoaColor(rg.id, obj && obj.flight_rules))
+            .catch(() => { const el = document.getElementById(rg.id); if (el) el.className = 'red'; });
+    });
 
+    // ── Supabase: one query for airfield_ops (ops notes + SI items + SIE events) ──
+    let _sieEventsCache = [];
+    (async function loadAirfieldData() {
+        const { data, error } = await _sb.from('airfield_ops').select('id, items');
         if (error || !data) {
-            // Fall back to static placeholder
             document.getElementById('special-interest-items').innerHTML =
                 '<div class="row"><span>VATSIM Focus</span></div><div class="row"><span>Drill Weekend</span></div><div class="row"><span>v158 Foundations and CT</span></div>';
             document.getElementById('ops-notes-body').innerHTML =
                 '<tr><td>Drill Weekend Mar 7-8th</td><td>Mar 6th</td><td>EC</td></tr>';
             return;
         }
-
         const siRow  = data.find(r => r.id === 'special_interest');
         const opsRow = data.find(r => r.id === 'ops_notes');
+        const sieRow = data.find(r => r.id === 'sie_events');
 
-        // Render Special Interest Items
         const siEl = document.getElementById('special-interest-items');
-        if (siRow && siRow.items && siRow.items.length) {
-            siEl.innerHTML = siRow.items
-                .map(e => `<div class="row"><span>${e.item || ''}</span></div>`)
-                .join('');
-        } else {
-            siEl.innerHTML = '<span class="gray">None</span>';
-        }
+        if (siEl) siEl.innerHTML = (siRow && siRow.items && siRow.items.length)
+            ? siRow.items.map(e => `<div class="row"><span>${e.item || ''}</span></div>`).join('')
+            : '<span class="gray">None</span>';
 
-        // Render OPS Notes
         const opsBody = document.getElementById('ops-notes-body');
-        if (opsRow && opsRow.items && opsRow.items.length) {
-            opsBody.innerHTML = opsRow.items
-                .map(e => `<tr><td>${e.note || ''}</td><td>${e.date || ''}</td><td>${e.initials || ''}</td></tr>`)
-                .join('');
-        } else {
-            opsBody.innerHTML = '<tr><td colspan="3" style="color:#aaa;font-style:italic;">No OPS notes.</td></tr>';
-        }
+        if (opsBody) opsBody.innerHTML = (opsRow && opsRow.items && opsRow.items.length)
+            ? opsRow.items.map(e => `<tr><td>${e.note||''}</td><td>${e.date||''}</td><td>${e.initials||''}</td></tr>`).join('')
+            : '<tr><td colspan="3" style="color:#aaa;font-style:italic;">No OPS notes.</td></tr>';
+
+        // Cache SIE events and render
+        _sieEventsCache = (sieRow && sieRow.items) ? sieRow.items : [];
+        sieRender();
     })();
 
-    // ── v158th MXG Aircraft Status Board ──────────────────────────────────────
+    // ── MXG Aircraft Status Board ─────────────────────────────────────────────
     (async function () {
         const { TAILS, computeStatus, OFFSTATION_TAILS } = window.MxgStatus;
-
         const STATUS_COLOR = { ready: '#4a9', maint: '#b87', phase: '#a44', inactive: '#555', offstation: '#88c' };
         const STATUS_BG    = { ready: '#131f18', maint: '#201810', phase: '#1e1010', inactive: '#1c1c1c', offstation: '#161525' };
         const STATUS_LABEL = { ready: 'Ready', maint: 'Maintenance', phase: 'Phase MX', inactive: 'Not Assigned' };
 
         const mxgStatus = computeStatus();
-
-        // Fetch today's off-station tails from flight_records
-        const offStation = {}; // tail_number -> arr_icao
+        const offStation = {};
         try {
             const today = new Date().toISOString().slice(0, 10);
-            const _sbMxg = supabase.createClient(
-                'https://gcumgpfyfqtfwbskkngt.supabase.co',
-                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdW1ncGZ5ZnF0Zndic2trbmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDczMTAsImV4cCI6MjA4ODM4MzMxMH0.OSY0XEPQp-WsFWuiGrUG5fcLIVMI3c8AxBEv2shFftg',
-                { auth: { persistSession: false } }
-            );
-            const { data: flights } = await _sbMxg
+            const { data: flights } = await _sb
                 .from('flight_records')
                 .select('tail_number, arr_icao')
                 .eq('mission_date', today)
                 .not('tail_number', 'is', null)
                 .not('arr_icao', 'is', null);
-            if (flights) {
-                for (const f of flights) {
-                    if (f.tail_number && f.arr_icao && f.arr_icao.toUpperCase() !== 'KBTV') {
-                        offStation[f.tail_number.trim()] = f.arr_icao.toUpperCase();
-                    }
-                }
+            if (flights) for (const f of flights) {
+                if (f.tail_number && f.arr_icao && f.arr_icao.toUpperCase() !== 'KBTV')
+                    offStation[f.tail_number.trim()] = f.arr_icao.toUpperCase();
             }
-        } catch (_) { /* silently ignore */ }
-
-        // Merge static off-station overrides from mxg-status.js
-        for (const tail of OFFSTATION_TAILS) {
-            if (!offStation[tail]) offStation[tail] = 'OFF STATION';
-        }
+        } catch (_) {}
+        for (const tail of OFFSTATION_TAILS) if (!offStation[tail]) offStation[tail] = 'OFF STATION';
 
         function renderBoard() {
             const grid = document.getElementById('mxg-tail-grid');
             if (!grid) return;
-            const now = new Date();
             const dateEl = document.getElementById('mxg-date');
-            if (dateEl) dateEl.textContent = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-
+            if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
             grid.innerHTML = '';
             for (const t of TAILS) {
                 const isOff = offStation[t.id];
-                const st = isOff ? 'offstation' : mxgStatus[t.id];
-                const color = STATUS_COLOR[st];
-                const bg = STATUS_BG[st];
-                const label = isOff ? 'Off Station' : STATUS_LABEL[st];
-
-                const card = document.createElement('div');
-                card.style.cssText = `background:${bg};border:1px solid ${color};border-radius:5px;padding:7px 4px;text-align:center;`;
-
+                const st    = isOff ? 'offstation' : mxgStatus[t.id];
+                const card  = document.createElement('div');
+                card.style.cssText = `background:${STATUS_BG[st]};border:1px solid ${STATUS_COLOR[st]};border-radius:5px;padding:7px 4px;text-align:center;`;
                 const num = document.createElement('div');
-                num.style.cssText = `font-size:0.9em;font-weight:bold;color:${color};font-family:monospace;`;
+                num.style.cssText = `font-size:0.9em;font-weight:bold;color:${STATUS_COLOR[st]};font-family:monospace;`;
                 num.textContent = t.id;
-                card.appendChild(num);
-
                 const lbl = document.createElement('div');
-                lbl.style.cssText = `font-size:0.68em;color:${color};margin-top:3px;opacity:0.85;`;
-                lbl.textContent = label;
-                card.appendChild(lbl);
-
-                grid.appendChild(card);
+                lbl.style.cssText = `font-size:0.68em;color:${STATUS_COLOR[st]};margin-top:3px;opacity:0.85;`;
+                lbl.textContent = isOff ? 'Off Station' : STATUS_LABEL[st];
+                card.appendChild(num); card.appendChild(lbl); grid.appendChild(card);
             }
         }
 
@@ -597,11 +435,7 @@
             const el = document.getElementById('mxg-assigned');
             if (!el) return;
             el.style.display = 'block';
-            if (ready.length === 0) {
-                el.style.color = '#f55';
-                el.textContent = 'No Ready tails available today!';
-                return;
-            }
+            if (!ready.length) { el.style.color = '#f55'; el.textContent = 'No Ready tails available today!'; return; }
             const pick = ready[Math.floor(Math.random() * ready.length)];
             el.style.color = '#4a9';
             el.innerHTML = 'Your jet today: <span style="font-size:1.3em;font-family:monospace;font-weight:bold;">' + pick.id + '</span>';
@@ -609,121 +443,94 @@
 
         renderBoard();
     })();
-    </script>
 
-    <!-- Special Interest Events -->
-    <script>
-    (function() {
-        const SUPABASE_URL      = 'https://gcumgpfyfqtfwbskkngt.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdW1ncGZ5ZnF0Zndic2trbmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDczMTAsImV4cCI6MjA4ODM4MzMxMH0.OSY0XEPQp-WsFWuiGrUG5fcLIVMI3c8AxBEv2shFftg';
-        const _sieSb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY,
-            { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'v158fw-auth' } });
+    // ── Special Interest Events (uses shared _sb and cached airfield_ops data) ──
+    let _sieSession = null;
 
-        let _sieSession = null;
+    async function sieGetSession() {
+        if (_sieSession) return _sieSession;
+        const { data: { session } } = await _sb.auth.getSession();
+        _sieSession = session;
+        return session;
+    }
 
-        async function sieGetSession() {
-            if (_sieSession) return _sieSession;
-            const { data: { session } } = await _sieSb.auth.getSession();
-            _sieSession = session;
-            return session;
+    async function sieGetIdentity() {
+        const session = await sieGetSession();
+        if (!session) return null;
+        const callsign = (session.user.user_metadata && session.user.user_metadata.callsign)
+            ? session.user.user_metadata.callsign.toUpperCase()
+            : session.user.email;
+        return { uid: session.user.id, callsign };
+    }
+
+    function fmtDate(dateStr) {
+        const [y, m, d] = dateStr.split('-').map(Number);
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const days   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        return days[new Date(y, m - 1, d).getDay()] + ' ' + months[m - 1] + ' ' + d + ', ' + y;
+    }
+
+    function isPast(dateStr) {
+        const [y, m, d] = dateStr.split('-').map(Number);
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        return new Date(y, m - 1, d) < today;
+    }
+
+    async function sieLoadMyRsvps(uid) {
+        if (!uid) return {};
+        const { data } = await _sb.from('sie_rsvps').select('event_key, status').eq('user_id', uid);
+        const map = {};
+        (data || []).forEach(r => { map[r.event_key] = r.status; });
+        return map;
+    }
+
+    async function sieRender() {
+        const list = document.getElementById('sie-list');
+        if (!list) return;
+        const identity = await sieGetIdentity();
+        const myRsvps  = identity ? await sieLoadMyRsvps(identity.uid) : {};
+        const upcoming = _sieEventsCache
+            .filter(e => e.date && e.title && !isPast(e.date))
+            .sort((a, b) => a.date.localeCompare(b.date));
+        if (!upcoming.length) {
+            list.innerHTML = '<span style="color:#666;font-style:italic;">No upcoming events.</span>';
+            return;
         }
+        list.innerHTML = upcoming.map(ev => {
+            const evKey   = ev.date + '::' + ev.title.replace(/[^a-zA-Z0-9]/g, '_');
+            const status  = myRsvps[evKey] || null;
+            const goStyle = status === 'going'    ? 'background:#1a6a1a;color:#7f7;' : 'background:#333;color:#aaa;';
+            const noStyle = status === 'notgoing' ? 'background:#6a1a1a;color:#f77;' : 'background:#333;color:#aaa;';
+            return `<div style="border-bottom:1px solid #444;padding:7px 0;">
+                <div style="color:#ffd580;font-weight:bold;margin-bottom:3px;">${ev.title.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div>
+                <div style="color:#aaa;margin-bottom:5px;">${fmtDate(ev.date)}</div>
+                <div style="display:flex;gap:6px;">
+                    <button onclick="sieRsvp('${evKey}','going')" style="${goStyle}border:none;border-radius:4px;padding:3px 10px;cursor:pointer;font-size:0.9em;">&#10003; Going</button>
+                    <button onclick="sieRsvp('${evKey}','notgoing')" style="${noStyle}border:none;border-radius:4px;padding:3px 10px;cursor:pointer;font-size:0.9em;">&#10007; Not Going</button>
+                </div>
+            </div>`;
+        }).join('');
+    }
 
-        async function sieGetIdentity() {
-            const session = await sieGetSession();
-            if (!session) return null;
-            const callsign = (session.user.user_metadata && session.user.user_metadata.callsign)
-                ? session.user.user_metadata.callsign.toUpperCase()
-                : session.user.email;
-            return { uid: session.user.id, callsign };
+    window.sieRsvp = async function (evKey, newStatus) {
+        const identity = await sieGetIdentity();
+        if (!identity) { alert('You must be logged in to RSVP.'); return; }
+        const { data: existing } = await _sb.from('sie_rsvps')
+            .select('id, status').eq('user_id', identity.uid).eq('event_key', evKey).maybeSingle();
+        if (existing && existing.status === newStatus) {
+            await _sb.from('sie_rsvps').delete().eq('id', existing.id);
+        } else if (existing) {
+            await _sb.from('sie_rsvps').update({
+                status: newStatus, callsign: identity.callsign, updated_at: new Date().toISOString()
+            }).eq('id', existing.id);
+        } else {
+            await _sb.from('sie_rsvps').insert({
+                user_id: identity.uid, callsign: identity.callsign, event_key: evKey, status: newStatus
+            });
         }
-
-        function fmtDate(dateStr) {
-            const [y, m, d] = dateStr.split('-').map(Number);
-            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-            const days   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-            const dt = new Date(y, m - 1, d);
-            return days[dt.getDay()] + ' ' + months[m-1] + ' ' + d + ', ' + y;
-        }
-
-        function isPast(dateStr) {
-            const [y, m, d] = dateStr.split('-').map(Number);
-            const eventDate = new Date(y, m - 1, d);
-            const today = new Date(); today.setHours(0,0,0,0);
-            return eventDate < today;
-        }
-
-        async function sieLoadMyRsvps(uid) {
-            if (!uid) return {};
-            const { data } = await _sieSb.from('sie_rsvps')
-                .select('event_key, status')
-                .eq('user_id', uid);
-            const map = {};
-            (data || []).forEach(r => { map[r.event_key] = r.status; });
-            return map;
-        }
-
-        async function sieRender() {
-            const list = document.getElementById('sie-list');
-            if (!list) return;
-
-            // Fetch events from Supabase
-            const { data: opsData } = await _sieSb.from('airfield_ops')
-                .select('items').eq('id', 'sie_events').maybeSingle();
-            const SIE_EVENTS = (opsData && opsData.items) ? opsData.items : [];
-
-            const identity = await sieGetIdentity();
-            const myRsvps  = identity ? await sieLoadMyRsvps(identity.uid) : {};
-
-            const upcoming = SIE_EVENTS
-                .filter(e => e.date && e.title && !isPast(e.date))
-                .sort((a, b) => a.date.localeCompare(b.date));
-
-            if (upcoming.length === 0) {
-                list.innerHTML = '<span style="color:#666;font-style:italic;">No upcoming events.</span>';
-                return;
-            }
-
-            list.innerHTML = upcoming.map(ev => {
-                const evKey = ev.date + '::' + ev.title.replace(/[^a-zA-Z0-9]/g,'_');
-                const status = myRsvps[evKey] || null;
-                const goingStyle = status === 'going'    ? 'background:#1a6a1a;color:#7f7;' : 'background:#333;color:#aaa;';
-                const nogoStyle  = status === 'notgoing' ? 'background:#6a1a1a;color:#f77;' : 'background:#333;color:#aaa;';
-                return `<div style="border-bottom:1px solid #444;padding:7px 0;">
-                    <div style="color:#ffd580;font-weight:bold;margin-bottom:3px;">${ev.title.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div>
-                    <div style="color:#aaa;margin-bottom:5px;">${fmtDate(ev.date)}</div>
-                    <div style="display:flex;gap:6px;">
-                        <button onclick="sieRsvp('${evKey}','going')" style="${goingStyle}border:none;border-radius:4px;padding:3px 10px;cursor:pointer;font-size:0.9em;">&#10003; Going</button>
-                        <button onclick="sieRsvp('${evKey}','notgoing')" style="${nogoStyle}border:none;border-radius:4px;padding:3px 10px;cursor:pointer;font-size:0.9em;">&#10007; Not Going</button>
-                    </div>
-                </div>`;
-            }).join('');
-        }
-
-        window.sieRsvp = async function(evKey, newStatus) {
-            const identity = await sieGetIdentity();
-            if (!identity) { alert('You must be logged in to RSVP.'); return; }
-
-            const { data: existing } = await _sieSb.from('sie_rsvps')
-                .select('id, status').eq('user_id', identity.uid).eq('event_key', evKey).maybeSingle();
-
-            if (existing && existing.status === newStatus) {
-                await _sieSb.from('sie_rsvps').delete().eq('id', existing.id);
-            } else if (existing) {
-                await _sieSb.from('sie_rsvps').update({
-                    status: newStatus, callsign: identity.callsign, updated_at: new Date().toISOString()
-                }).eq('id', existing.id);
-            } else {
-                await _sieSb.from('sie_rsvps').insert({
-                    user_id: identity.uid, callsign: identity.callsign,
-                    event_key: evKey, status: newStatus
-                });
-            }
-            _sieSession = null;
-            sieRender();
-        };
-
-        document.addEventListener('DOMContentLoaded', sieRender);
-    })();
+        _sieSession = null;
+        sieRender();
+    };
     </script>
 </body>
 </html>

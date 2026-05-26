@@ -560,16 +560,34 @@
             <div class="modal-body">
                 <p class="modal-subtitle">Virtual Vermont Air National Guard</p>
                 <form class="login-form" id="loginForm" autocomplete="off">
-                    <div class="form-group">
-                        <label for="loginEmail">EMAIL</label>
-                        <input type="email" id="loginEmail" name="email" placeholder="Enter your email address" required autocomplete="email">
+                    <div id="loginSection">
+                        <div class="form-group">
+                            <label for="loginEmail">EMAIL</label>
+                            <input type="email" id="loginEmail" name="email" placeholder="Enter your email address" required autocomplete="email">
+                        </div>
+                        <div class="form-group">
+                            <label for="loginPassword">PASSWORD</label>
+                            <input type="password" id="loginPassword" name="password" placeholder="Enter password" required autocomplete="current-password">
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="login-submit-btn">LOGIN</button>
+                        </div>
+                        <p style="text-align:center; margin-top:0.5rem;">
+                            <a href="#" id="forgotPasswordLink" style="color:#7a9ec9; font-size:0.78rem; text-decoration:none; letter-spacing:0.5px;">Forgot Password?</a>
+                        </p>
                     </div>
-                    <div class="form-group">
-                        <label for="loginPassword">PASSWORD</label>
-                        <input type="password" id="loginPassword" name="password" placeholder="Enter password" required autocomplete="current-password">
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="login-submit-btn">LOGIN</button>
+                    <!-- Password Reset Section -->
+                    <div id="resetSection" style="display:none;">
+                        <div class="form-group">
+                            <label for="resetEmail">EMAIL</label>
+                            <input type="email" id="resetEmail" placeholder="Enter your email address" autocomplete="email">
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" id="resetSubmitBtn" class="login-submit-btn">SEND RESET LINK</button>
+                        </div>
+                        <p style="text-align:center; margin-top:0.5rem;">
+                            <a href="#" id="backToLoginLink" style="color:#7a9ec9; font-size:0.78rem; text-decoration:none; letter-spacing:0.5px;">Back to Login</a>
+                        </p>
                     </div>
                     <p id="loginError" class="login-error" style="display:none;"></p>
                     <p class="login-note">Access restricted to authorized personnel only.</p>

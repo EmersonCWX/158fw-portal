@@ -9,6 +9,7 @@
 
 /* Root Colors */
 :root {
+    --primary-blue: #222;
     --dark-blue: #0a1f36;
     --bright-orange: #707070;
     --military-green: #2d5016;

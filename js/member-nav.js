@@ -284,7 +284,7 @@
                         </button>
                         <ul class="member-dropdown-menu" id="opsDropdownMenu">
                             <li><a href="airfield-status.html">Airfield Status</a></li>
-                            <li><a href="pre-mission.html">Pre-Mission</a></li>
+                            <li><a href="pre-mission.html">Mission Planning</a></li>
                             <li><a href="post-mission.html">Post Mission</a></li>
                             <li><a href="whiteboard.html">Whiteboard</a></li>
                         </ul>
@@ -301,7 +301,7 @@
                         <ul class="member-dropdown-menu" id="pilotResourcesDropdownMenu">
                             <li><a href="flight-history.html">My Information</a></li>
                             <li><a href="vsaferep.html">vSAFEREP</a></li>
-                            <li><a href="training.html">v158th FW EPUBS</a></li>
+                            <li><a href="training.html">Publications</a></li>
                             <li><a href="gradesheet.html">Gradesheet</a></li>
                             <li><a href="uta-schedule.html">UTA Schedule</a></li>
                             <li><div class="member-dropdown-divider"></div></li>
