@@ -1499,8 +1499,28 @@
             const d = r.data || {};
             const typeLabels = { incident: 'Incident Report', aerial: 'Aerial Support Request', general: 'General Question' };
             document.getElementById('modalTitle').textContent = typeLabels[r.form_type] || r.form_type;
-            document.getElementById('modalBody').innerHTML = '<pre style="white-space:pre-wrap;font-size:0.85rem;color:#c9d1d9;">' + escHtml(JSON.stringify(d, null, 2)) + '</pre>';
-            document.getElementById('reportModal').style.display = 'flex';
+
+            const longFields = ['message', 'description', 'details', 'narrative', 'notes', 'comments'];
+            const gridItems = Object.entries(d).filter(([k]) => !longFields.includes(k));
+            const wideItems = Object.entries(d).filter(([k]) => longFields.includes(k));
+            const fmtKey = k => k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+            let html = '';
+            if (gridItems.length) {
+                html += `<div class="admin-modal-grid">` +
+                    gridItems.map(([k, v]) => `<div class="admin-modal-field"><div class="admin-modal-field-label">${escHtml(fmtKey(k))}</div><div class="admin-modal-field-value">${escHtml(String(v ?? '—'))}</div></div>`).join('') +
+                    `</div>`;
+            }
+            wideItems.forEach(([k, v]) => {
+                html += `<div class="admin-modal-field"><div class="admin-modal-field-label">${escHtml(fmtKey(k))}</div><div class="admin-modal-field-value">${escHtml(String(v ?? '—'))}</div></div>`;
+            });
+            html += `<div style="margin-top:18px;padding-top:14px;border-top:1px solid #2a2d33;display:flex;justify-content:flex-end;gap:10px;">
+                <button class="admin-btn admin-btn-danger" onclick="deleteContactForm('${escHtml(String(id))}')">Delete</button>
+                <button class="admin-btn admin-btn-primary" onclick="closeModal()">Close</button>
+            </div>`;
+
+            document.getElementById('modalBody').innerHTML = html;
+            document.getElementById('reportModal').classList.add('open');
             if (!r.reviewed) { _supabase.from('contact_forms').update({ reviewed: true }).eq('id', id).then(() => loadContactForms()); }
         }
 

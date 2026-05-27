@@ -134,7 +134,7 @@
                             <button type="submit" class="login-submit-btn">LOGIN</button>
                         </div>
                         <p style="text-align:center; margin-top:0.5rem;">
-                            <a href="#" id="forgotPasswordLink" style="color:#7a9ec9; font-size:0.78rem; text-decoration:none; letter-spacing:0.5px;">Forgot Password?</a>
+                            <a href="reset-password.html" id="forgotPasswordLink" onclick="event.preventDefault();document.getElementById('loginSection').style.display='none';document.getElementById('resetSection').style.display='block';document.getElementById('modalTitle').textContent='RESET PASSWORD';" style="color:#7a9ec9; font-size:0.78rem; text-decoration:none; letter-spacing:0.5px;">Forgot Password?</a>
                         </p>
                     </div>
                     <!-- Password Reset Section -->
