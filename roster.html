@@ -14,20 +14,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         window.MEMBER_NAV_PUBLIC_PAGE = true;
-        // Hide the public header immediately if a Supabase session exists,
-        // so there's no grey-bar flash before member-nav.js finishes its async auth check.
-        (function() {
-            try {
-                const keys = Object.keys(localStorage);
-                const hasSession = keys.some(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
-                if (hasSession) {
-                    document.addEventListener('DOMContentLoaded', function() {
-                        var h = document.querySelector('header.header');
-                        if (h) h.style.display = 'none';
-                    });
-                }
-            } catch(e) {}
-        })();
     </script>
     <script src="js/member-nav.js"></script>
 </head>
@@ -117,6 +103,13 @@
                     </thead>
                     <tbody>
                         <tr class="roster-row-leader">
+                            <td><span class="roster-position">OG/CC</span></td>
+                            <td class="roster-callsign">Gyro</td>
+                            <td>O-2</td>
+                            <td>1924410</td>
+                            <td><span class="roster-badge badge-active">Active</span></td>
+                        </tr>
+                        <tr class="roster-row-leader">
                             <td><span class="roster-position">SQ/CC</span></td>
                             <td class="roster-callsign">Venus</td>
                             <td>O-5</td>
@@ -160,14 +153,6 @@
                             <td>1731294</td>
                             <td><span class="roster-badge badge-active">Active</span></td>
                         </tr>
-                        <tr>
-                            <td>A/WG</td>
-                            <td class="roster-callsign">Gyro</td>
-                            <td>O-2</td>
-                            <td>1924410</td>
-                            <td><span class="roster-badge badge-active">Active</span></td>
-                        </tr>
-
                         <tr>
                             <td>A/WG</td>
                             <td class="roster-callsign">Magma</td>
@@ -214,7 +199,7 @@
                         </tr>
                         <tr>
                             <td>B/WG</td>
-                            <td class="roster-callsign">FNG</td>
+                            <td class="roster-callsign">UNSAT</td>
                             <td>O-1</td>
                             <td>1741172</td>
                             <td><span class="roster-badge badge-active">Active</span></td>
@@ -534,7 +519,7 @@
                         <li><a href="pilot.html">Become a Pilot</a></li>
                         <li><a href="about.html">About</a></li>
                         <li><a href="roster.html">Roster</a></li>
-                        <li><a href="v158thFW-GDPR-Privacy-Policy.pdf" target="_blank" rel="noopener noreferrer">Privacy Policy</a></li>
+                        <li><a href="assets/PUBLICATIONS/v158thFW-GDPR-Privacy-Policy Updated.pdf" target="_blank" rel="noopener noreferrer">Privacy Policy</a></li>
                     </ul>
                 </div>
                 <div class="footer-section">

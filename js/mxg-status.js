@@ -1,6 +1,6 @@
 // ── v158th MXG Tail Status — shared module ──────────────────────────────────
-// Edit PHASE_CYCLE_PAUSED / PHASE_PINNED_TAILS here to control phase status
-// across ALL pages (airfield-status.html, post-mission.html, etc.)
+// Phase cycle rotates automatically every 12 days based on UTC date.
+// Off-station status is driven by post-mission flight records (arr_icao != KBTV).
 
 window.MxgStatus = (function () {
 
@@ -13,15 +13,6 @@ window.MxgStatus = (function () {
         { id: '18-5349' }, { id: '18-5358' }, { id: '18-5359' }, { id: '18-5360' },
         { id: '18-5361' }
     ];
-
-    // Set to true to pause the 12-day phase cycle and use PHASE_PINNED_TAILS below.
-    // Set to false to resume normal rotation.
-    const PHASE_CYCLE_PAUSED = false;
-    const PHASE_PINNED_TAILS = [];
-
-    // Manually override tails as off-station (shown purple on the board).
-    // Use full tail IDs, e.g. '17-5265'. Clear when jets return to KBTV.
-    const OFFSTATION_TAILS = ['17-5265', '17-5277', '17-5280', '18-5361'];
 
     // Xorshift32 seeded PRNG
     function mkRng(seed) {
@@ -43,26 +34,21 @@ window.MxgStatus = (function () {
         return a;
     }
 
-    // Days since 2025-01-01 (local date)
+    // Days since 2025-01-01 (UTC — identical for every user regardless of timezone)
     function dayIndex() {
         const now = new Date();
-        const local = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        return Math.floor((local - new Date(2025, 0, 1)) / 86400000);
+        const utc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+        return Math.floor((utc - new Date(Date.UTC(2025, 0, 1))) / 86400000);
     }
 
     function computeStatus() {
         const day = dayIndex();
 
-        let phaseTails;
-        if (PHASE_CYCLE_PAUSED) {
-            phaseTails = new Set(PHASE_PINNED_TAILS);
-        } else {
-            const phaseCycle = Math.floor(day / 12);
-            const phRng = mkRng(phaseCycle * 7919 + 42);
-            const phaseCount = phRng() < 0.45 ? 1 : 2;
-            const phasePool = shuffle(TAILS.filter(t => !t.wing).map(t => t.id), phRng);
-            phaseTails = new Set(phasePool.slice(0, phaseCount));
-        }
+        const phaseCycle = Math.floor(day / 12);
+        const phRng = mkRng(phaseCycle * 7919 + 42);
+        const phaseCount = phRng() < 0.45 ? 1 : 2;
+        const phasePool = shuffle(TAILS.filter(t => !t.wing).map(t => t.id), phRng);
+        const phaseTails = new Set(phasePool.slice(0, phaseCount));
 
         const dayRng = mkRng(day * 2053 + 137);
         const activeCount = 12 + Math.floor(dayRng() * 5); // 12–16
@@ -87,5 +73,5 @@ window.MxgStatus = (function () {
         return map;
     }
 
-    return { TAILS, PHASE_CYCLE_PAUSED, PHASE_PINNED_TAILS, OFFSTATION_TAILS, mkRng, shuffle, dayIndex, computeStatus };
+    return { TAILS, mkRng, shuffle, dayIndex, computeStatus };
 })();

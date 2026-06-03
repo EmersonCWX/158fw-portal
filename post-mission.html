@@ -585,22 +585,27 @@
         // ── MXG Tail Dropdown ──
         (async function populateTailDropdown() {
             const { TAILS, computeStatus } = window.MxgStatus;
+
             const mxgStatus = computeStatus();
 
-            // Fetch off-station tails from today's flight records
+            // Off-station = most recent flight record for that tail landed somewhere other than KBTV
             const offStation = {};
             try {
-                const today = new Date().toISOString().slice(0, 10);
                 const { data: flights } = await _supabase
                     .from('flight_records')
                     .select('tail_number, arr_icao')
-                    .eq('mission_date', today)
                     .not('tail_number', 'is', null)
-                    .not('arr_icao', 'is', null);
+                    .not('arr_icao', 'is', null)
+                    .order('created_at', { ascending: false })
+                    .limit(500);
+                const seen = new Set();
                 if (flights) {
                     for (const f of flights) {
-                        if (f.tail_number && f.arr_icao && f.arr_icao.toUpperCase() !== 'KBTV') {
-                            offStation[f.tail_number.trim()] = true;
+                        const tail = f.tail_number.trim();
+                        if (!seen.has(tail)) {
+                            seen.add(tail);
+                            if (f.arr_icao.toUpperCase() !== 'KBTV')
+                                offStation[tail] = true;
                         }
                     }
                 }

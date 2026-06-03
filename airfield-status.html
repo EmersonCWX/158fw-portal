@@ -119,7 +119,7 @@
                     <div class="row"><span class="label">BTV VOR</span> <span>117.50</span></div>
                     <div class="row"><span class="label">BJA TCN</span> <span>71X</span></div>
                     <div class="row"><span class="label">ILS RWY 15</span> <span>110.3</span></div>
-                    <div class="row"><span class="label">ILS RWY 33</span> <span>111.7</span></div>
+                    <div class="row"><span class="label">ILS RWY 33</span> <span>110.3</span></div>
                 </div>
                 <div class="section">
                     <div class="section-title">Special Interest Items</div>
@@ -387,27 +387,34 @@
 
     // ── MXG Aircraft Status Board ─────────────────────────────────────────────
     (async function () {
-        const { TAILS, computeStatus, OFFSTATION_TAILS } = window.MxgStatus;
+        const { TAILS, computeStatus } = window.MxgStatus;
         const STATUS_COLOR = { ready: '#4a9', maint: '#b87', phase: '#a44', inactive: '#555', offstation: '#88c' };
         const STATUS_BG    = { ready: '#131f18', maint: '#201810', phase: '#1e1010', inactive: '#1c1c1c', offstation: '#161525' };
         const STATUS_LABEL = { ready: 'Ready', maint: 'Maintenance', phase: 'Phase MX', inactive: 'Not Assigned' };
 
         const mxgStatus = computeStatus();
+
+        // Off-station is determined by the most recent flight record per tail:
+        // if the last recorded arrival airport is not KBTV, the tail is off-station.
         const offStation = {};
         try {
-            const today = new Date().toISOString().slice(0, 10);
             const { data: flights } = await _sb
                 .from('flight_records')
                 .select('tail_number, arr_icao')
-                .eq('mission_date', today)
                 .not('tail_number', 'is', null)
-                .not('arr_icao', 'is', null);
+                .not('arr_icao', 'is', null)
+                .order('created_at', { ascending: false })
+                .limit(500);
+            const seen = new Set();
             if (flights) for (const f of flights) {
-                if (f.tail_number && f.arr_icao && f.arr_icao.toUpperCase() !== 'KBTV')
-                    offStation[f.tail_number.trim()] = f.arr_icao.toUpperCase();
+                const tail = f.tail_number.trim();
+                if (!seen.has(tail)) {
+                    seen.add(tail);
+                    if (f.arr_icao.toUpperCase() !== 'KBTV')
+                        offStation[tail] = f.arr_icao.toUpperCase();
+                }
             }
         } catch (_) {}
-        for (const tail of OFFSTATION_TAILS) if (!offStation[tail]) offStation[tail] = 'OFF STATION';
 
         function renderBoard() {
             const grid = document.getElementById('mxg-tail-grid');

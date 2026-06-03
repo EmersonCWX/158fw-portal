@@ -355,16 +355,12 @@
             return;
         }
 
+        // Public pages always show their own public header — don't inject the member nav.
+        if (window.MEMBER_NAV_PUBLIC_PAGE) return;
+
         // Inject header
         document.body.insertAdjacentHTML('afterbegin', headerHTML);
         document.body.classList.add('member-page');
-
-        // On public pages the original public <header> is still in the DOM — hide it
-        // so only the member nav is shown to logged-in users.
-        if (window.MEMBER_NAV_PUBLIC_PAGE) {
-            const publicHeader = document.querySelector('header.header');
-            if (publicHeader) publicHeader.style.display = 'none';
-        }
 
         // Clocks — NTP-synced via worldtimeapi.org
         const _kbtvFmt = new Intl.DateTimeFormat('en-US', {
