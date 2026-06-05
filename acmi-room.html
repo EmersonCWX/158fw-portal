@@ -476,12 +476,12 @@
     <!-- ── MAIN ──────────────────────────────────────────────────────────────── -->
     <main class="acmi-main" id="acmiMain">
 
-        <!-- Upload Section -->
-        <div class="section-header">
+        <!-- Upload Section — hidden during development -->
+        <div class="section-header" style="display:none">
             <div class="section-title">Upload Mission Recording</div>
         </div>
 
-        <div class="upload-panel hidden" id="uploadPanel">
+        <div class="upload-panel hidden" id="uploadPanel" style="display:none !important">
             <div class="drop-zone" id="dropZone">
                 <input type="file" id="acmiFile" accept=".acmi,.txt,.zip,.acmi.zip" />
                 <div class="drop-icon">📁</div>
@@ -523,20 +523,29 @@
             </div>
         </div>
 
-        <!-- Not logged in notice -->
-        <div id="uploadNotice" style="display:none; background:#1e2227; border:1px solid #2e3540; border-radius:8px; padding:1.5rem 2rem; margin-bottom:3.5rem; color:#4a5568; font-size:0.88rem; letter-spacing:0.5px;">
-            You must be logged in to upload mission recordings.
+        <!-- Not logged in notice — hidden during development -->
+        <div id="uploadNotice" style="display:none !important;"></div>
+
+        <!-- Coming Soon notice -->
+        <div style="text-align:center; padding: 5rem 2rem;">
+            <div style="font-size:0.72rem; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:#3a4555; margin-bottom:1.5rem;">Under Development</div>
+            <div style="font-size:clamp(1.4rem,3vw,2rem); font-weight:800; letter-spacing:3px; text-transform:uppercase; color:#e0e8f0; margin-bottom:1rem;">ACMI Room</div>
+            <div style="width:40px; height:3px; background:#5a8fc4; margin:0 auto 1.5rem; border-radius:2px;"></div>
+            <p style="font-size:0.95rem; color:#4a5568; max-width:480px; margin:0 auto; line-height:1.8;">
+                Mission upload and debrief replay coming soon.<br>
+                Check back after the next training cycle.
+            </p>
         </div>
 
-        <!-- Mission Library -->
-        <div class="section-header" style="margin-top: 1rem;">
+        <!-- Mission Library — hidden during development -->
+        <div class="section-header" style="display:none; margin-top: 1rem;">
             <div class="section-title">Mission Library</div>
             <div class="library-toolbar">
                 <input class="library-search" type="text" id="librarySearch" placeholder="Search missions..." />
             </div>
         </div>
 
-        <div class="mission-grid" id="missionGrid">
+        <div class="mission-grid" id="missionGrid" style="display:none">
             <!-- skeleton placeholders while loading -->
             <div class="skeleton-card">
                 <div class="skeleton-line" style="height:18px; width:70%;"></div>
