@@ -38,7 +38,7 @@ function createWindow() {
         height:          660,
         minWidth:        820,
         minHeight:       560,
-        title:           '158th FW ACMI Recorder',
+        title:           'v158th FW ACMI Recorder',
         backgroundColor: '#141618',
         autoHideMenuBar: true,
         webPreferences:  {

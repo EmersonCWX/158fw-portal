@@ -35,8 +35,9 @@ window.MxgStatus = (function () {
     }
 
     // Days since 2025-01-01 (UTC — identical for every user regardless of timezone)
+    // Board updates at 0400z: subtract 4 h so the UTC date rolls at 0400z.
     function dayIndex() {
-        const now = new Date();
+        const now = new Date(Date.now() - 4 * 3600000);
         const utc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
         return Math.floor((utc - new Date(Date.UTC(2025, 0, 1))) / 86400000);
     }
