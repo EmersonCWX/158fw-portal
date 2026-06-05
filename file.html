@@ -165,13 +165,11 @@
         .fp-marsa-text { font-size: 0.78rem; color: #888; }
         /* Preset route dropdown styling */
         .fp-field .fp-preset-select {
-            position: absolute;
-            top: 4px;
-            right: 0;
             width: auto;
             min-width: 160px;
-            padding: 4px 8px;
-            font-size: 0.72rem;
+            padding: 3px 8px;
+            font-size: 0.75rem;
+            height: auto;
         }
         /* Action buttons */
         .fp-actions {
@@ -209,6 +207,12 @@
             color: #fff;
         }
         .fp-btn-submit:hover { background: #8a9299; border-color: #8a9299; }
+        /* Utility helpers */
+        .fp-hidden-input { display: none; margin-top: 10px; }
+        .fp-hidden { display: none; }
+        .fp-uppercase { text-transform: uppercase; }
+        .fp-route-header { display: flex; align-items: center; justify-content: space-between; }
+        .fp-route-header label { margin-bottom: 0; }
     </style>
 </head>
 <body>
@@ -233,13 +237,13 @@
 
                             <div class="fp-row fp-cols-1">
                                 <div class="fp-field">
-                                    <select id="unitSelect">
+                                    <select id="unitSelect" title="Unit">
                                         <option value="">-- Select Unit --</option>
                                         <option value="134FS">134th FS</option>
                                         <option value="315FS">315th FS</option>
                                         <option value="other">&mdash; Other (Manual Entry) &mdash;</option>
                                     </select>
-                                    <input type="text" id="unitCustom" placeholder="Enter unit name" style="display:none; margin-top:10px;">
+                                    <input type="text" id="unitCustom" placeholder="Enter unit name" class="fp-hidden-input">
                                 </div>
                             </div>
                         </div>
@@ -255,22 +259,22 @@
                             <div class="fp-row fp-cols-4">
                                 <div class="fp-field">
                                     <label>CALLSIGN <span class="fp-req">*</span></label>
-                                    <input type="text" id="callsign" required>
+                                    <input type="text" id="callsign" title="Callsign" required>
                                 </div>
                                 <div class="fp-field">
                                     <label>FLIGHT RULES</label>
-                                    <select id="flightRules">
+                                    <select id="flightRules" title="Flight Rules">
                                         <option value="I">I &ndash; IFR</option>
                                         <option value="V">V &ndash; VFR</option>
                                     </select>
                                 </div>
                                 <div class="fp-field">
                                     <label>DATE OF FLIGHT</label>
-                                    <input type="date" id="dateOfFlight">
+                                    <input type="date" id="dateOfFlight" title="Date of Flight">
                                 </div>
                                 <div class="fp-field">
                                     <label>RESERVED</label>
-                                    <input type="text" value="&mdash;" disabled class="fp-disabled">
+                                    <input type="text" value="&mdash;" disabled title="Reserved" class="fp-disabled">
                                 </div>
                             </div>
 
@@ -278,11 +282,11 @@
                             <div class="fp-row fp-cols-4">
                                 <div class="fp-field">
                                     <label>AIRCRAFT TYPE</label>
-                                    <input type="text" id="acType">
+                                    <input type="text" id="acType" title="Aircraft Type">
                                 </div>
                                 <div class="fp-field">
                                     <label>WAKE CATEGORY</label>
-                                    <select id="wakeCat">
+                                    <select id="wakeCat" title="Wake Category">
                                         <option value="">Select</option>
                                         <option value="L">L &ndash; Light</option>
                                         <option value="M">M &ndash; Medium</option>
@@ -292,11 +296,11 @@
                                 </div>
                                 <div class="fp-field">
                                     <label>EQUIPMENT</label>
-                                    <input type="text" id="equipment">
+                                    <input type="text" id="equipment" title="Equipment">
                                 </div>
                                 <div class="fp-field">
                                     <label>TRANSPONDER</label>
-                                    <select id="transponder">
+                                    <select id="transponder" title="Transponder">
                                         <option value="L">L &ndash; Mode S</option>
                                         <option value="S">S &ndash; Mode S (Alt)</option>
                                         <option value="C">C &ndash; Mode C</option>
@@ -310,7 +314,7 @@
                             <div class="fp-row fp-cols-4">
                                 <div class="fp-field">
                                     <label>DEPARTURE ICAO</label>
-                                    <input type="text" id="depIcao" maxlength="4" style="text-transform:uppercase;">
+                                    <input type="text" id="depIcao" maxlength="4" title="Departure ICAO" class="fp-uppercase">
                                 </div>
                                 <div class="fp-field">
                                     <label>OFF BLOCK (UTC)</label>
@@ -318,27 +322,27 @@
                                 </div>
                                 <div class="fp-field">
                                     <label>CRUISE SPEED (KTS)</label>
-                                    <input type="text" id="cruiseSpd">
+                                    <input type="text" id="cruiseSpd" title="Cruise Speed">
                                 </div>
                                 <div class="fp-field">
                                     <label>CRUISE ALT (FT)</label>
-                                    <input type="text" id="cruiseAlt">
+                                    <input type="text" id="cruiseAlt" title="Cruise Altitude">
                                 </div>
                             </div>
 
                             <!-- Row 4 - Route -->
                             <div class="fp-row fp-cols-1">
                                 <div class="fp-field">
-                                    <div style="display:flex; align-items:center; justify-content:space-between;">
-                                        <label style="margin-bottom:0;">ROUTE</label>
-                                        <select id="presetRoute" style="width:auto; min-width:160px; padding:3px 8px; font-size:0.75rem; height:auto;">
+                                    <div class="fp-route-header">
+                                        <label>ROUTE</label>
+                                        <select id="presetRoute" title="Preset Route" class="fp-preset-select">
                                             <option value="">-- Select Preset Route --</option>
                                             <option value="GMA">Green Mountain Alpha</option>
                                             <option value="GM2Y">Green Mountain 2 Y</option>
                                             <option value="GM2C">Green Mountain 2 C</option>
                                         </select>
                                     </div>
-                                    <input type="text" id="route">
+                                    <input type="text" id="route" title="Route">
                                 </div>
                             </div>
 
@@ -346,7 +350,7 @@
                             <div class="fp-row fp-cols-4">
                                 <div class="fp-field">
                                     <label>ARRIVAL ICAO</label>
-                                    <input type="text" id="arrIcao" maxlength="4" style="text-transform:uppercase;">
+                                    <input type="text" id="arrIcao" maxlength="4" title="Arrival ICAO" class="fp-uppercase">
                                 </div>
                                 <div class="fp-field">
                                     <label>ENROUTE TIME</label>
@@ -354,7 +358,7 @@
                                 </div>
                                 <div class="fp-field">
                                     <label>ALTERNATE ICAO</label>
-                                    <input type="text" id="altIcao" maxlength="4" style="text-transform:uppercase;">
+                                    <input type="text" id="altIcao" maxlength="4" title="Alternate ICAO" class="fp-uppercase">
                                 </div>
                                 <div class="fp-field">
                                     <label>FUEL ENDURANCE</label>
@@ -374,19 +378,19 @@
                             <div class="fp-row fp-cols-5">
                                 <div class="fp-field">
                                     <label>PBN/</label>
-                                    <input type="text" id="pbn">
+                                    <input type="text" id="pbn" title="PBN">
                                 </div>
                                 <div class="fp-field">
                                     <label>CODE/</label>
-                                    <input type="text" id="code">
+                                    <input type="text" id="code" title="Code">
                                 </div>
                                 <div class="fp-field">
                                     <label>RVR/</label>
-                                    <input type="text" id="rvr">
+                                    <input type="text" id="rvr" title="RVR">
                                 </div>
                                 <div class="fp-field">
                                     <label>PER/</label>
-                                    <select id="per">
+                                    <select id="per" title="PER">
                                         <option value="">&mdash;</option>
                                         <option value="A">A</option>
                                         <option value="B">B</option>
@@ -397,7 +401,7 @@
                                 </div>
                                 <div class="fp-field">
                                     <label>SEL/</label>
-                                    <input type="text" id="sel">
+                                    <input type="text" id="sel" title="SEL">
                                 </div>
                             </div>
 
@@ -405,15 +409,15 @@
                             <div class="fp-row fp-cols-3">
                                 <div class="fp-field">
                                     <label>NAV/</label>
-                                    <input type="text" id="nav">
+                                    <input type="text" id="nav" title="NAV">
                                 </div>
                                 <div class="fp-field">
                                     <label>DAT/</label>
-                                    <input type="text" id="dat">
+                                    <input type="text" id="dat" title="DAT">
                                 </div>
                                 <div class="fp-field">
                                     <label>REG/</label>
-                                    <input type="text" id="reg">
+                                    <input type="text" id="reg" title="REG">
                                 </div>
                             </div>
 
@@ -421,15 +425,15 @@
                             <div class="fp-row fp-cols-3">
                                 <div class="fp-field">
                                     <label>COM/</label>
-                                    <input type="text" id="com">
+                                    <input type="text" id="com" title="COM">
                                 </div>
                                 <div class="fp-field">
                                     <label>OPR/</label>
-                                    <input type="text" id="opr">
+                                    <input type="text" id="opr" title="OPR">
                                 </div>
                                 <div class="fp-field">
                                     <label>SUR/</label>
-                                    <input type="text" id="sur">
+                                    <input type="text" id="sur" title="SUR">
                                 </div>
                             </div>
 
@@ -437,15 +441,15 @@
                             <div class="fp-row fp-cols-3">
                                 <div class="fp-field">
                                     <label>ORGN/</label>
-                                    <input type="text" id="orgn">
+                                    <input type="text" id="orgn" title="ORGN">
                                 </div>
                                 <div class="fp-field">
                                     <label>RALT/</label>
-                                    <input type="text" id="ralt">
+                                    <input type="text" id="ralt" title="RALT">
                                 </div>
                                 <div class="fp-field">
                                     <label>TALT/</label>
-                                    <input type="text" id="talt">
+                                    <input type="text" id="talt" title="TALT">
                                 </div>
                             </div>
 
@@ -453,7 +457,7 @@
                             <div class="fp-row fp-cols-1">
                                 <div class="fp-field">
                                     <label>EET/</label>
-                                    <input type="text" id="eetField">
+                                    <input type="text" id="eetField" title="EET">
                                 </div>
                             </div>
 
@@ -461,7 +465,7 @@
                             <div class="fp-row fp-cols-1">
                                 <div class="fp-field">
                                     <label>RMK/ (ADDITIONAL REMARKS)</label>
-                                    <textarea id="rmk" rows="3"></textarea>
+                                    <textarea id="rmk" rows="3" title="Additional Remarks"></textarea>
                                 </div>
                             </div>
                         </div>
@@ -482,7 +486,7 @@
                                         <button type="button" class="fp-toggle" data-val="nonstd">NONSTD</button>
                                     </div>
                                 </div>
-                                <div class="fp-field" id="formCallsignsField" style="display:none;">
+                                <div class="fp-field fp-hidden" id="formCallsignsField">
                                     <label>FORMATION CALLSIGNS</label>
                                     <input type="text" id="formCallsigns" placeholder="E.G., MAPLE21 MAPLE22">
                                 </div>
@@ -494,7 +498,7 @@
                                     <label>MARSA</label>
                                     <div class="fp-marsa-toggle">
                                         <label class="fp-switch">
-                                            <input type="checkbox" id="marsaCheck">
+                                            <input type="checkbox" id="marsaCheck" title="MARSA">
                                             <span class="fp-slider"></span>
                                         </label>
                                         <span class="fp-marsa-text">Military Authority Assumes Responsibility for Separation of Aircraft</span>
@@ -758,99 +762,64 @@
 
                 remarks = remarks.trim();
 
-                // Helper: split a HHMM string into hours + minutes
-                function splitHHMM(hhmm) {
-                    const s = (hhmm || '').replace(/\D/g, '').padStart(4, '0');
-                    return { h: s.slice(0, 2), m: s.slice(2, 4) };
-                }
-
-                // Build query string with all fields
+                // Build query string — field names verified against VATSIM beta prefile form
                 const params = new URLSearchParams();
                 params.set('callsign', cs);
                 params.set('flight_rules', val('flightRules'));
-                params.set('is_ifr', val('flightRules') === 'I' ? '1' : '0');
-                // Aircraft type — VATSIM data feed uses aircraft_faa; send all known aliases
+                const dof = val('dateOfFlight');
+                if (dof) params.set('dof', dof);
+
+                // Aircraft
                 const acTypeVal = val('acType');
                 const wakeVal = val('wakeCat');
                 const equipVal = val('equipment');
-                // ICAO combined format: WAKE/TYPE/EQUIP — this is what the beta form parses for all three fields
-                const aircraftFaa = wakeVal && equipVal
-                    ? `${wakeVal}/${acTypeVal}/${equipVal}`
-                    : wakeVal ? `${wakeVal}/${acTypeVal}` : acTypeVal;
-                params.set('aircraft_faa', aircraftFaa);
-                params.set('aircraft_short', acTypeVal);
                 params.set('aircraft', acTypeVal);
-                params.set('type', acTypeVal);
-                // Wake turbulence — also send standalone aliases
-                if (wakeVal) {
-                    params.set('wtc', wakeVal);
-                    params.set('wake', wakeVal);
-                    params.set('wake_turbulence_cat', wakeVal);
-                }
+                if (wakeVal) params.set('wake_category', wakeVal);
                 params.set('equipment', equipVal);
                 params.set('transponder', val('transponder'));
+
+                // Routing
                 params.set('departure', val('depIcao'));
-                params.set('dep', val('depIcao'));
-                // Off block — send both known aliases
                 const offBlock = val('offBlock').replace(/\D/g, '');
-                if (offBlock) { params.set('departure_time', offBlock); params.set('deptime', offBlock); }
-                params.set('arrival', val('arrIcao'));
-                params.set('destination', val('arrIcao'));
-                params.set('arr', val('arrIcao'));
-                params.set('alternate', val('altIcao'));
-                params.set('alt', val('altIcao'));
-                params.set('route', val('route'));
-                // Airspeed — send all known aliases
-                params.set('cruise_tas', val('cruiseSpd'));
+                if (offBlock) params.set('off_block_time', offBlock);
                 params.set('speed', val('cruiseSpd'));
-                params.set('cruisespeed', val('cruiseSpd'));
                 params.set('altitude', val('cruiseAlt'));
-                // Enroute time — VATSIM data feed uses 'enroute_time' as HHMM string; send all aliases
+                params.set('route', val('route'));
+                params.set('arrival', val('arrIcao'));
+                params.set('alternate', val('altIcao'));
+
+                // Times (HHMM)
                 const eetRaw = val('eet').replace(/\D/g, '').padStart(4, '0');
-                if (val('eet')) {
-                    const eet = splitHHMM(val('eet'));
-                    params.set('enroute_time', eetRaw);
-                    params.set('enroute_hrs', eet.h);
-                    params.set('enroute_mins', eet.m);
-                    params.set('ete', eetRaw);
-                }
-                // Fuel endurance — VATSIM data feed uses 'fuel_time' as HHMM string; send all aliases
+                if (val('eet')) params.set('enroute_time', eetRaw);
                 const fuelRaw = val('fuelEnd').replace(/\D/g, '').padStart(4, '0');
-                if (val('fuelEnd')) {
-                    const fuel = splitHHMM(val('fuelEnd'));
-                    params.set('fuel_time', fuelRaw);
-                    params.set('fuel_hrs', fuel.h);
-                    params.set('fuel_mins', fuel.m);
-                    params.set('minsfuel', fuel.m);
-                    params.set('hrsfuel', fuel.h);
-                    params.set('endurance', fuelRaw);
-                }
-                params.set('remarks', remarks);
-                // Field 18 fields individually
+                if (val('fuelEnd')) params.set('fuel_time', fuelRaw);
+
+                // Field 18
                 if (val('pbn'))      params.set('pbn',  val('pbn'));
+                if (val('code'))     params.set('code', val('code'));
+                if (val('rvr'))      params.set('rvr',  val('rvr'));
+                if (val('per'))      params.set('per',  val('per'));
+                if (val('sel'))      params.set('sel',  val('sel'));
                 if (val('nav'))      params.set('nav',  val('nav'));
-                // Build RMK/ value: user's remarks + unit + website
+                if (val('dat'))      params.set('dat',  val('dat'));
+                if (val('reg'))      params.set('reg',  val('reg'));
+                if (val('com'))      params.set('com',  val('com'));
+                if (val('opr'))      params.set('opr',  val('opr'));
+                if (val('sur'))      params.set('sur',  val('sur'));
+                if (val('orgn'))     params.set('orgn', val('orgn'));
+                if (val('ralt'))     params.set('ralt', val('ralt'));
+                if (val('talt'))     params.set('talt', val('talt'));
+                if (val('eetField')) params.set('eet',  val('eetField'));
+
+                // RMK — append unit tag and site
                 const unitVal = val('unitSelect');
                 let rmkOut = val('rmk');
                 if (unitVal === '134FS' && !rmkOut.includes('134th FS')) rmkOut += (rmkOut ? ' ' : '') + '//134th FS';
                 else if (unitVal === '315FS' && !rmkOut.includes('315th FS')) rmkOut += (rmkOut ? ' ' : '') + '//315th FS';
                 if (!rmkOut.includes('virtual158th.com')) rmkOut += (rmkOut ? ' ' : '') + 'virtual158th.com';
                 params.set('rmk', rmkOut.trim());
-                if (val('com'))      params.set('com',  val('com'));
-                if (val('opr'))      params.set('opr',  val('opr'));
-                if (val('sur'))      params.set('sur',  val('sur'));
-                if (val('orgn'))     params.set('orgn', val('orgn'));
-                if (val('per'))      params.set('per',  val('per'));
-                if (val('code'))     params.set('code', val('code'));
-                if (val('reg'))      params.set('reg',  val('reg'));
-                if (val('rvr'))      params.set('rvr',  val('rvr'));
-                if (val('sel'))      params.set('sel',  val('sel'));
-                if (val('dat'))      params.set('dat',  val('dat'));
-                if (val('ralt'))     params.set('ralt', val('ralt'));
-                if (val('talt'))     params.set('talt', val('talt'));
-                // eetField is Field 18 EET (waypoint elapsed times) — keep as f18_eet to avoid overwriting enroute eet
-                if (val('eetField')) params.set('f18_eet', val('eetField'));
-                params.set('voice_type', '/v/');
+
+                params.set('voice_rules', 'V');
 
                 const url = 'https://my.vatsim.net/pilots/flightplan/beta?' + params.toString();
                 window.open(url, '_blank');

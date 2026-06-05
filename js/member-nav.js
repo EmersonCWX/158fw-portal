@@ -287,6 +287,7 @@
                             <li><a href="pre-mission.html">Mission Planning</a></li>
                             <li><a href="post-mission.html">Post Mission</a></li>
                             <li><a href="whiteboard.html">Whiteboard</a></li>
+                            <li><a href="acmi-room.html">ACMI Room</a></li>
                         </ul>
                     </div>
                     <!-- Roster -->

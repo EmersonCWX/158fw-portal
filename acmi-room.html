@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACMI Room | v158th FW</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/member-nav.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; }
+        body {
+            font-family: "Segoe UI", Arial, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .acmi-hero {
+            position: relative;
+            min-height: calc(100vh - 60px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .acmi-hero-bg {
+            position: absolute;
+            inset: 0;
+            background-image: url('assets/Backend pics/20260515180940_1.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            filter: brightness(0.35);
+            z-index: 0;
+        }
+
+        .acmi-content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            padding: 3rem 2rem;
+            max-width: 700px;
+        }
+
+        .acmi-tag {
+            display: inline-block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: #a0aab4;
+            border: 1px solid #444;
+            padding: 5px 14px;
+            border-radius: 3px;
+            margin-bottom: 1.8rem;
+        }
+
+        .acmi-title {
+            font-size: clamp(2.2rem, 6vw, 4rem);
+            font-weight: 800;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            color: #ffffff;
+        }
+
+        .acmi-divider {
+            width: 60px;
+            height: 3px;
+            background: #ffffff;
+            margin: 0 auto 1.8rem;
+            border-radius: 2px;
+        }
+
+        .acmi-subtitle {
+            font-size: 1.1rem;
+            color: #b0bec5;
+            letter-spacing: 1px;
+            line-height: 1.7;
+            margin-bottom: 2.5rem;
+        }
+
+        .acmi-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(90, 143, 196, 0.15);
+            border: 1px solid rgba(90, 143, 196, 0.4);
+            color: #7fb3e0;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            padding: 10px 22px;
+            border-radius: 4px;
+        }
+
+        .acmi-badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #5a8fc4;
+            animation: pulse 1.8s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.8); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Member nav injected by member-nav.js -->
+
+    <div class="acmi-hero">
+        <div class="acmi-hero-bg"></div>
+        <div class="acmi-content">
+            <span class="acmi-tag">v158th Fighter Wing</span>
+            <h1 class="acmi-title">ACMI Room</h1>
+            <div class="acmi-divider"></div>
+            <p class="acmi-subtitle">
+                Air Combat Maneuvering Instrumentation debrief<br>
+                Currently in development.
+        </div>
+    </div>
+
+</body>
+</html>
