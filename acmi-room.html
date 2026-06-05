@@ -11,110 +11,438 @@
         html, body { height: 100%; }
         body {
             font-family: "Segoe UI", Arial, sans-serif;
-            background: #1a1a1a;
+            background: #141618;
             color: #fff;
             min-height: 100vh;
         }
 
+        /* ── HERO ── */
         .acmi-hero {
             position: relative;
-            min-height: calc(100vh - 60px);
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             overflow: hidden;
         }
-
         .acmi-hero-bg {
             position: absolute;
             inset: 0;
             overflow: hidden;
             z-index: 0;
         }
-
         .acmi-hero-bg img {
             width: 100%;
             height: 100%;
             object-fit: cover;
             object-position: center;
-            filter: brightness(0.35);
+            filter: brightness(0.32);
             display: block;
         }
-
+        .acmi-hero-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom, transparent 60%, #141618 100%);
+            z-index: 1;
+        }
         .acmi-content {
             position: relative;
-            z-index: 1;
+            z-index: 2;
             text-align: center;
             padding: 3rem 2rem;
-            max-width: 700px;
+            max-width: 760px;
         }
-
         .acmi-tag {
             display: inline-block;
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             font-weight: 700;
             letter-spacing: 3px;
             text-transform: uppercase;
             color: #a0aab4;
-            border: 1px solid #444;
+            border: 1px solid #3a3f45;
             padding: 5px 14px;
             border-radius: 3px;
             margin-bottom: 1.8rem;
         }
-
         .acmi-title {
-            font-size: clamp(2.2rem, 6vw, 4rem);
+            font-size: clamp(2.4rem, 7vw, 4.5rem);
             font-weight: 800;
-            letter-spacing: 4px;
+            letter-spacing: 5px;
             text-transform: uppercase;
-            line-height: 1.1;
+            line-height: 1.05;
             margin-bottom: 1.5rem;
             color: #ffffff;
         }
-
         .acmi-divider {
             width: 60px;
             height: 3px;
-            background: #ffffff;
+            background: #5a8fc4;
             margin: 0 auto 1.8rem;
             border-radius: 2px;
         }
-
         .acmi-subtitle {
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             color: #b0bec5;
-            letter-spacing: 1px;
-            line-height: 1.7;
+            letter-spacing: 0.5px;
+            line-height: 1.8;
             margin-bottom: 2.5rem;
         }
-
-        .acmi-badge {
-            display: inline-flex;
+        .acmi-scroll-cue {
+            display: flex;
+            flex-direction: column;
             align-items: center;
             gap: 8px;
-            background: rgba(90, 143, 196, 0.15);
-            border: 1px solid rgba(90, 143, 196, 0.4);
-            color: #7fb3e0;
-            font-size: 0.85rem;
-            font-weight: 600;
+            color: #5a8fc4;
+            font-size: 0.75rem;
             letter-spacing: 2px;
             text-transform: uppercase;
-            padding: 10px 22px;
-            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 1rem;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+        .acmi-scroll-cue:hover { opacity: 1; }
+        .acmi-scroll-cue svg { animation: bounce 1.8s ease-in-out infinite; }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(6px); }
         }
 
-        .acmi-badge::before {
+        /* ── MAIN SECTION ── */
+        .acmi-main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 4rem 2rem 6rem;
+        }
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: #e0e8f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-title::before {
             content: '';
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
+            display: inline-block;
+            width: 4px;
+            height: 18px;
             background: #5a8fc4;
-            animation: pulse 1.8s ease-in-out infinite;
+            border-radius: 2px;
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.4; transform: scale(0.8); }
+        /* ── UPLOAD PANEL ── */
+        .upload-panel {
+            background: #1e2227;
+            border: 1px solid #2e3540;
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 3.5rem;
+        }
+        .upload-panel.hidden { display: none; }
+
+        .drop-zone {
+            border: 2px dashed #3a4555;
+            border-radius: 6px;
+            padding: 2.5rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: #5a8fc4;
+            background: rgba(90,143,196,0.05);
+        }
+        .drop-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+        .drop-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+            opacity: 0.6;
+        }
+        .drop-label {
+            font-size: 0.95rem;
+            color: #8a9bb0;
+            margin-bottom: 0.4rem;
+        }
+        .drop-hint {
+            font-size: 0.78rem;
+            color: #4a5568;
+            letter-spacing: 1px;
+        }
+        .drop-selected {
+            font-size: 0.9rem;
+            color: #7fb3e0;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+
+        .upload-form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        @media (max-width: 600px) {
+            .upload-form-grid { grid-template-columns: 1fr; }
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .form-group.full-width { grid-column: 1 / -1; }
+        .form-group label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: #7a8fa0;
+        }
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            background: #252b33;
+            border: 1px solid #3a4555;
+            border-radius: 4px;
+            color: #e0e8f0;
+            font-family: inherit;
+            font-size: 0.9rem;
+            padding: 9px 12px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: #5a8fc4;
+        }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+
+        .upload-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .btn-primary {
+            background: #5a8fc4;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            padding: 11px 26px;
+            cursor: pointer;
+            transition: background 0.2s, opacity 0.2s;
+        }
+        .btn-primary:hover:not(:disabled) { background: #4a7fb4; }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .upload-status {
+            font-size: 0.85rem;
+            color: #8a9bb0;
+        }
+        .upload-status.success { color: #5cb85c; }
+        .upload-status.error { color: #d9534f; }
+        .upload-progress {
+            height: 4px;
+            background: #2e3540;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 1rem;
+            display: none;
+        }
+        .upload-progress-bar {
+            height: 100%;
+            background: #5a8fc4;
+            width: 0%;
+            transition: width 0.3s;
+            border-radius: 2px;
+        }
+
+        /* ── MISSION LIBRARY ── */
+        .library-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .library-search {
+            background: #1e2227;
+            border: 1px solid #2e3540;
+            border-radius: 4px;
+            color: #e0e8f0;
+            font-family: inherit;
+            font-size: 0.85rem;
+            padding: 8px 14px;
+            outline: none;
+            width: 220px;
+            transition: border-color 0.2s;
+        }
+        .library-search:focus { border-color: #5a8fc4; }
+        .library-search::placeholder { color: #4a5568; }
+
+        .mission-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.25rem;
+        }
+        .mission-card {
+            background: #1e2227;
+            border: 1px solid #2e3540;
+            border-radius: 8px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            transition: border-color 0.2s, transform 0.15s;
+        }
+        .mission-card:hover {
+            border-color: #3a5070;
+            transform: translateY(-2px);
+        }
+        .mission-card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
+        .mission-card-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #e0e8f0;
+            line-height: 1.3;
+        }
+        .mission-card-date {
+            font-size: 0.75rem;
+            color: #5a8fc4;
+            font-weight: 600;
+            letter-spacing: 1px;
+            white-space: nowrap;
+            margin-top: 2px;
+        }
+        .mission-card-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .meta-chip {
+            background: #252b33;
+            border: 1px solid #3a4555;
+            border-radius: 3px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            color: #8a9bb0;
+            padding: 3px 9px;
+            text-transform: uppercase;
+        }
+        .meta-chip.blue { border-color: rgba(90,143,196,0.4); color: #7fb3e0; }
+        .mission-card-desc {
+            font-size: 0.85rem;
+            color: #6a7b8a;
+            line-height: 1.6;
+            flex: 1;
+        }
+        .mission-card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: auto;
+            padding-top: 0.75rem;
+            border-top: 1px solid #252b33;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .uploader-label {
+            font-size: 0.75rem;
+            color: #4a5568;
+        }
+        .uploader-label span { color: #7fb3e0; }
+        .card-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .btn-download {
+            background: transparent;
+            border: 1px solid #3a5070;
+            color: #7fb3e0;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: 6px 14px;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+            text-decoration: none;
+        }
+        .btn-download:hover { background: rgba(90,143,196,0.12); border-color: #5a8fc4; }
+        .btn-delete {
+            background: transparent;
+            border: 1px solid #5a2222;
+            color: #d9534f;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: 6px 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-delete:hover { background: rgba(217,83,79,0.1); }
+
+        /* empty / loading states */
+        .library-empty {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #4a5568;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+        }
+        .library-empty svg { opacity: 0.2; margin-bottom: 1rem; }
+
+        .skeleton-card {
+            background: #1e2227;
+            border: 1px solid #2e3540;
+            border-radius: 8px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .skeleton-line {
+            background: linear-gradient(90deg, #252b33 25%, #2e3540 50%, #252b33 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 3px;
+        }
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
         }
     </style>
 </head>
@@ -122,19 +450,403 @@
 
     <!-- Member nav injected by member-nav.js -->
 
+    <!-- ── HERO ─────────────────────────────────────────────────────────────── -->
     <div class="acmi-hero">
         <div class="acmi-hero-bg">
             <img src="assets/Backend pics/v158th FW ACMI Room Video (1).gif" alt="">
         </div>
+        <div class="acmi-hero-overlay"></div>
         <div class="acmi-content">
             <span class="acmi-tag">v158th Fighter Wing</span>
             <h1 class="acmi-title">ACMI Room</h1>
             <div class="acmi-divider"></div>
             <p class="acmi-subtitle">
-                Air Combat Maneuvering Instrumentation debrief<br>
-                Currently in development.
+                Air Combat Maneuvering Instrumentation debrief suite.<br>
+                Upload Tacview recordings, review past missions, and sharpen your tactics.
+            </p>
+            <div class="acmi-scroll-cue" onclick="document.getElementById('acmiMain').scrollIntoView({behavior:'smooth'})">
+                <span>View Missions</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"/>
+                </svg>
+            </div>
         </div>
     </div>
+
+    <!-- ── MAIN ──────────────────────────────────────────────────────────────── -->
+    <main class="acmi-main" id="acmiMain">
+
+        <!-- Upload Section -->
+        <div class="section-header">
+            <div class="section-title">Upload Mission Recording</div>
+        </div>
+
+        <div class="upload-panel hidden" id="uploadPanel">
+            <div class="drop-zone" id="dropZone">
+                <input type="file" id="acmiFile" accept=".acmi,.txt,.zip,.acmi.zip" />
+                <div class="drop-icon">📁</div>
+                <div class="drop-label">Drag &amp; drop your <strong>.acmi</strong> file here, or click to browse</div>
+                <div class="drop-hint">Supported: .acmi · .acmi.zip · max 200 MB</div>
+                <div class="drop-selected" id="dropSelected"></div>
+            </div>
+
+            <div class="upload-form-grid">
+                <div class="form-group">
+                    <label for="missionName">Mission Name *</label>
+                    <input type="text" id="missionName" placeholder="e.g. Red Flag 01 — BARCAP" maxlength="120" />
+                </div>
+                <div class="form-group">
+                    <label for="missionDate">Mission Date *</label>
+                    <input type="date" id="missionDate" />
+                </div>
+                <div class="form-group">
+                    <label for="missionAircraft">Aircraft Type</label>
+                    <input type="text" id="missionAircraft" placeholder="e.g. F-16C Viper" maxlength="60" />
+                </div>
+                <div class="form-group">
+                    <label for="missionParticipants">Participants (callsigns, comma-separated)</label>
+                    <input type="text" id="missionParticipants" placeholder="e.g. Sabre, Venus, Smore" maxlength="200" />
+                </div>
+                <div class="form-group full-width">
+                    <label for="missionDesc">Debrief Notes / Description</label>
+                    <textarea id="missionDesc" placeholder="Brief summary of the mission, lessons learned, etc." maxlength="1000"></textarea>
+                </div>
+            </div>
+
+            <div class="upload-progress" id="uploadProgress">
+                <div class="upload-progress-bar" id="uploadProgressBar"></div>
+            </div>
+
+            <div class="upload-actions">
+                <button class="btn-primary" id="uploadBtn" disabled>Upload Recording</button>
+                <span class="upload-status" id="uploadStatus"></span>
+            </div>
+        </div>
+
+        <!-- Not logged in notice -->
+        <div id="uploadNotice" style="display:none; background:#1e2227; border:1px solid #2e3540; border-radius:8px; padding:1.5rem 2rem; margin-bottom:3.5rem; color:#4a5568; font-size:0.88rem; letter-spacing:0.5px;">
+            You must be logged in to upload mission recordings.
+        </div>
+
+        <!-- Mission Library -->
+        <div class="section-header" style="margin-top: 1rem;">
+            <div class="section-title">Mission Library</div>
+            <div class="library-toolbar">
+                <input class="library-search" type="text" id="librarySearch" placeholder="Search missions..." />
+            </div>
+        </div>
+
+        <div class="mission-grid" id="missionGrid">
+            <!-- skeleton placeholders while loading -->
+            <div class="skeleton-card">
+                <div class="skeleton-line" style="height:18px; width:70%;"></div>
+                <div class="skeleton-line" style="height:12px; width:40%;"></div>
+                <div class="skeleton-line" style="height:48px; width:100%;"></div>
+            </div>
+            <div class="skeleton-card">
+                <div class="skeleton-line" style="height:18px; width:55%;"></div>
+                <div class="skeleton-line" style="height:12px; width:35%;"></div>
+                <div class="skeleton-line" style="height:48px; width:100%;"></div>
+            </div>
+            <div class="skeleton-card">
+                <div class="skeleton-line" style="height:18px; width:65%;"></div>
+                <div class="skeleton-line" style="height:12px; width:45%;"></div>
+                <div class="skeleton-line" style="height:48px; width:100%;"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+    (function () {
+        const SUPABASE_URL     = 'https://gcumgpfyfqtfwbskkngt.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdW1ncGZ5ZnF0Zndic2trbmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDczMTAsImV4cCI6MjA4ODM4MzMxMH0.OSY0XEPQp-WsFWuiGrUG5fcLIVMI3c8AxBEv2shFftg';
+        const BUCKET           = 'acmi-files';
+
+        const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: { persistSession: true, autoRefreshToken: true, storageKey: 'v158fw-auth' }
+        });
+
+        let currentUser = null;
+        let currentCallsign = '';
+        let isAdmin = false;
+        let allMissions = [];
+
+        // ── DOM refs ──────────────────────────────────────────────────────────
+        const uploadPanel   = document.getElementById('uploadPanel');
+        const uploadNotice  = document.getElementById('uploadNotice');
+        const dropZone      = document.getElementById('dropZone');
+        const fileInput     = document.getElementById('acmiFile');
+        const dropSelected  = document.getElementById('dropSelected');
+        const uploadBtn     = document.getElementById('uploadBtn');
+        const uploadStatus  = document.getElementById('uploadStatus');
+        const uploadProgress = document.getElementById('uploadProgress');
+        const progressBar   = document.getElementById('uploadProgressBar');
+        const missionGrid   = document.getElementById('missionGrid');
+        const librarySearch = document.getElementById('librarySearch');
+
+        let selectedFile = null;
+
+        // ── Auth ──────────────────────────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await db.auth.getSession();
+            if (session) {
+                currentUser = session.user;
+                const { data: profile } = await db
+                    .from('members')
+                    .select('callsign, role')
+                    .eq('id', currentUser.id)
+                    .maybeSingle();
+                if (profile) {
+                    currentCallsign = profile.callsign || currentUser.email;
+                    isAdmin = profile.role === 'admin';
+                }
+                uploadPanel.classList.remove('hidden');
+            } else {
+                uploadNotice.style.display = 'block';
+            }
+            loadMissions();
+        });
+
+        // ── Drag-and-drop ─────────────────────────────────────────────────────
+        dropZone.addEventListener('dragover', e => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file) setFile(file);
+        });
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files[0]) setFile(fileInput.files[0]);
+        });
+
+        function setFile(file) {
+            const allowed = ['.acmi', '.zip', '.txt'];
+            const ext = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+            if (!allowed.includes(ext)) {
+                setStatus('Only .acmi, .acmi.zip, or .txt files are accepted.', 'error');
+                return;
+            }
+            if (file.size > 200 * 1024 * 1024) {
+                setStatus('File exceeds 200 MB limit.', 'error');
+                return;
+            }
+            selectedFile = file;
+            dropSelected.textContent = `✔ ${file.name}  (${formatBytes(file.size)})`;
+            validateForm();
+        }
+
+        // ── Form validation ───────────────────────────────────────────────────
+        ['missionName', 'missionDate'].forEach(id =>
+            document.getElementById(id).addEventListener('input', validateForm)
+        );
+        function validateForm() {
+            const name = document.getElementById('missionName').value.trim();
+            const date = document.getElementById('missionDate').value;
+            uploadBtn.disabled = !(selectedFile && name && date);
+        }
+
+        // ── Upload ────────────────────────────────────────────────────────────
+        uploadBtn.addEventListener('click', async () => {
+            if (!selectedFile || !currentUser) return;
+            const name     = document.getElementById('missionName').value.trim();
+            const date     = document.getElementById('missionDate').value;
+            const aircraft = document.getElementById('missionAircraft').value.trim();
+            const rawPax   = document.getElementById('missionParticipants').value.trim();
+            const desc     = document.getElementById('missionDesc').value.trim();
+            const participants = rawPax ? rawPax.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+            uploadBtn.disabled = true;
+            setStatus('Uploading…', '');
+            uploadProgress.style.display = 'block';
+            animateProgress(0, 60);
+
+            const filePath = `${currentUser.id}/${Date.now()}_${sanitizeFilename(selectedFile.name)}`;
+
+            const { error: storageErr } = await db.storage
+                .from(BUCKET)
+                .upload(filePath, selectedFile, { upsert: false });
+
+            if (storageErr) {
+                setStatus(`Upload failed: ${storageErr.message}`, 'error');
+                resetUploadUI();
+                return;
+            }
+
+            animateProgress(65, 90);
+
+            const { error: dbErr } = await db.from('acmi_missions').insert({
+                uploaded_by:  currentUser.id,
+                callsign:     currentCallsign,
+                mission_name: name,
+                mission_date: date,
+                aircraft:     aircraft || null,
+                participants: participants.length ? participants : null,
+                description:  desc || null,
+                file_path:    filePath,
+                file_name:    selectedFile.name,
+                file_size:    selectedFile.size
+            });
+
+            if (dbErr) {
+                setStatus(`Record failed: ${dbErr.message}`, 'error');
+                // Clean up orphaned storage file
+                await db.storage.from(BUCKET).remove([filePath]);
+                resetUploadUI();
+                return;
+            }
+
+            animateProgress(100, 100);
+            setStatus('Mission uploaded successfully!', 'success');
+
+            // Reset form
+            setTimeout(() => {
+                selectedFile = null;
+                dropSelected.textContent = '';
+                fileInput.value = '';
+                ['missionName','missionDate','missionAircraft','missionParticipants','missionDesc']
+                    .forEach(id => document.getElementById(id).value = '');
+                uploadProgress.style.display = 'none';
+                progressBar.style.width = '0%';
+                setStatus('', '');
+                uploadBtn.disabled = true;
+                loadMissions();
+            }, 2000);
+        });
+
+        // ── Load missions ─────────────────────────────────────────────────────
+        async function loadMissions() {
+            const { data, error } = await db
+                .from('acmi_missions')
+                .select('*')
+                .order('mission_date', { ascending: false });
+
+            if (error) {
+                missionGrid.innerHTML = `<div class="library-empty">Failed to load missions.</div>`;
+                return;
+            }
+            allMissions = data || [];
+            renderMissions(allMissions);
+        }
+
+        function renderMissions(list) {
+            if (!list.length) {
+                missionGrid.innerHTML = `
+                    <div class="library-empty" style="grid-column:1/-1">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <div style="margin-top:0.5rem;">No missions uploaded yet.</div>
+                    </div>`;
+                return;
+            }
+            missionGrid.innerHTML = list.map(m => buildCard(m)).join('');
+            // Attach delete handlers
+            missionGrid.querySelectorAll('.btn-delete').forEach(btn => {
+                btn.addEventListener('click', () => deleteMission(btn.dataset.id, btn.dataset.path));
+            });
+        }
+
+        function buildCard(m) {
+            const canDelete = currentUser && (currentUser.id === m.uploaded_by || isAdmin);
+            const chips = [
+                m.aircraft ? `<span class="meta-chip blue">${escHtml(m.aircraft)}</span>` : '',
+                ...(m.participants || []).map(p => `<span class="meta-chip">${escHtml(p)}</span>`)
+            ].join('');
+            const dateStr = m.mission_date
+                ? new Date(m.mission_date + 'T00:00:00').toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' })
+                : '';
+            const sizeStr = m.file_size ? formatBytes(m.file_size) : '';
+            return `
+            <div class="mission-card">
+                <div class="mission-card-header">
+                    <div class="mission-card-title">${escHtml(m.mission_name)}</div>
+                    <div class="mission-card-date">${dateStr}</div>
+                </div>
+                ${chips ? `<div class="mission-card-meta">${chips}</div>` : ''}
+                ${m.description ? `<div class="mission-card-desc">${escHtml(m.description)}</div>` : ''}
+                <div class="mission-card-footer">
+                    <div class="uploader-label">Uploaded by <span>${escHtml(m.callsign || 'Unknown')}</span>${sizeStr ? ` · ${sizeStr}` : ''}</div>
+                    <div class="card-actions">
+                        <button class="btn-download" data-path="${escAttr(m.file_path)}" data-name="${escAttr(m.file_name)}" onclick="acmiDownload(this)">
+                            ↓ Download
+                        </button>
+                        ${canDelete ? `<button class="btn-delete" data-id="${escAttr(m.id)}" data-path="${escAttr(m.file_path)}">✕</button>` : ''}
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        // ── Download ──────────────────────────────────────────────────────────
+        window.acmiDownload = async function(btn) {
+            const path = btn.dataset.path;
+            const name = btn.dataset.name;
+            const { data, error } = await db.storage.from(BUCKET).createSignedUrl(path, 120);
+            if (error || !data) { alert('Could not generate download link.'); return; }
+            const a = document.createElement('a');
+            a.href = data.signedUrl;
+            a.download = name;
+            a.click();
+        };
+
+        // ── Delete ────────────────────────────────────────────────────────────
+        async function deleteMission(id, filePath) {
+            if (!confirm('Delete this mission recording? This cannot be undone.')) return;
+            await db.storage.from(BUCKET).remove([filePath]);
+            await db.from('acmi_missions').delete().eq('id', id);
+            loadMissions();
+        }
+
+        // ── Search / filter ───────────────────────────────────────────────────
+        librarySearch.addEventListener('input', () => {
+            const q = librarySearch.value.toLowerCase();
+            renderMissions(allMissions.filter(m =>
+                m.mission_name.toLowerCase().includes(q) ||
+                (m.callsign || '').toLowerCase().includes(q) ||
+                (m.aircraft || '').toLowerCase().includes(q) ||
+                (m.participants || []).some(p => p.toLowerCase().includes(q)) ||
+                (m.description || '').toLowerCase().includes(q)
+            ));
+        });
+
+        // ── Helpers ───────────────────────────────────────────────────────────
+        function setStatus(msg, type) {
+            uploadStatus.textContent = msg;
+            uploadStatus.className = 'upload-status' + (type ? ` ${type}` : '');
+        }
+        function resetUploadUI() {
+            uploadProgress.style.display = 'none';
+            progressBar.style.width = '0%';
+            uploadBtn.disabled = false;
+        }
+        function animateProgress(from, to) {
+            let v = from;
+            const step = () => {
+                if (v >= to) return;
+                v = Math.min(v + 2, to);
+                progressBar.style.width = v + '%';
+                requestAnimationFrame(step);
+            };
+            requestAnimationFrame(step);
+        }
+        function formatBytes(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+        function sanitizeFilename(name) {
+            return name.replace(/[^a-zA-Z0-9._\-]/g, '_');
+        }
+        function escHtml(str) {
+            return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+        function escAttr(str) {
+            return String(str ?? '').replace(/"/g, '&quot;');
+        }
+    })();
+    </script>
 
 </body>
 </html>
