@@ -28,12 +28,17 @@
         .acmi-hero-bg {
             position: absolute;
             inset: 0;
-            background-image: url('assets/Backend pics/20260515180940_1.jpg');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            filter: brightness(0.35);
+            overflow: hidden;
             z-index: 0;
+        }
+
+        .acmi-hero-bg img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            filter: brightness(0.35);
+            display: block;
         }
 
         .acmi-content {
@@ -118,7 +123,9 @@
     <!-- Member nav injected by member-nav.js -->
 
     <div class="acmi-hero">
-        <div class="acmi-hero-bg"></div>
+        <div class="acmi-hero-bg">
+            <img src="assets/Backend pics/v158th FW ACMI Room Video (1).gif" alt="">
+        </div>
         <div class="acmi-content">
             <span class="acmi-tag">v158th Fighter Wing</span>
             <h1 class="acmi-title">ACMI Room</h1>
