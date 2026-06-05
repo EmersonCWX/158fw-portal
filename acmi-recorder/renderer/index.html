@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self'; script-src 'self'; style-src 'unsafe-inline'">
+    <title>158th FW ACMI Recorder</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:        #141618;
+            --surface:   #1e2227;
+            --border:    #2e3540;
+            --accent:    #5a8fc4;
+            --accent2:   #7fb3e0;
+            --text:      #e0e8f0;
+            --muted:     #6a7b8a;
+            --danger:    #d9534f;
+            --success:   #4caf7d;
+            --warning:   #e09b3a;
+            --rec:       #e04040;
+        }
+
+        body {
+            font-family: "Segoe UI", Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            font-size: 13px;
+        }
+
+        /* ── TOP BAR ── */
+        .topbar {
+            background: #1a1d21;
+            border-bottom: 1px solid var(--border);
+            padding: 0 18px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            -webkit-app-region: drag;
+            gap: 1rem;
+        }
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            -webkit-app-region: no-drag;
+        }
+        .app-logo {
+            font-size: 1rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--accent2);
+        }
+        .app-logo span { color: var(--muted); font-weight: 400; font-size: 0.75rem; letter-spacing: 1px; margin-left: 4px; }
+
+        .sim-status {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            -webkit-app-region: no-drag;
+        }
+        .status-dot {
+            width: 9px; height: 9px;
+            border-radius: 50%;
+            background: var(--muted);
+            transition: background 0.3s;
+        }
+        .status-dot.connected  { background: var(--success); box-shadow: 0 0 6px var(--success); }
+        .status-dot.recording  { background: var(--rec); box-shadow: 0 0 8px var(--rec); animation: recPulse 1s ease-in-out infinite; }
+        .status-dot.error      { background: var(--danger); }
+        @keyframes recPulse {
+            0%,100% { opacity: 1; transform: scale(1); }
+            50%     { opacity: 0.5; transform: scale(0.8); }
+        }
+        .status-label { color: var(--muted); }
+        .status-label.connected  { color: var(--success); }
+        .status-label.recording  { color: var(--rec); }
+        .status-label.error      { color: var(--danger); }
+
+        /* ── CONTENT AREA ── */
+        .content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            gap: 0;
+        }
+
+        /* ── LEFT PANEL: Config ── */
+        .panel-config {
+            width: 280px;
+            min-width: 240px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            padding: 20px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .panel-section-title {
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: var(--muted);
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 2px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .form-group label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+        .form-group input {
+            background: #252b33;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.85rem;
+            padding: 7px 10px;
+            outline: none;
+            transition: border-color 0.2s;
+            width: 100%;
+        }
+        .form-group input:focus { border-color: var(--accent); }
+        .form-group input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Connect / disconnect button */
+        .btn-connect {
+            width: 100%;
+            padding: 9px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            cursor: pointer;
+            border: 1px solid var(--accent);
+            background: transparent;
+            color: var(--accent2);
+            transition: background 0.2s;
+        }
+        .btn-connect:hover:not(:disabled) { background: rgba(90,143,196,0.15); }
+        .btn-connect:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-connect.connected {
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+        .btn-connect.connected:hover { background: rgba(217,83,79,0.1); }
+
+        /* ── RIGHT PANEL: Live feed ── */
+        .panel-right {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .aircraft-header {
+            padding: 14px 18px 12px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .aircraft-header-title {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+        .aircraft-count-badge {
+            background: rgba(90,143,196,0.15);
+            border: 1px solid rgba(90,143,196,0.3);
+            color: var(--accent2);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            padding: 2px 10px;
+            border-radius: 10px;
+        }
+
+        .aircraft-table-wrap {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        thead th {
+            background: #1a1d21;
+            color: var(--muted);
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            padding: 8px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        tbody tr {
+            border-bottom: 1px solid #1e2227;
+            transition: background 0.1s;
+        }
+        tbody tr:hover { background: #1e2530; }
+        tbody td {
+            padding: 9px 14px;
+            font-size: 0.82rem;
+            color: var(--text);
+            font-variant-numeric: tabular-nums;
+        }
+        tbody td.id-cell {
+            font-family: monospace;
+            font-size: 0.78rem;
+            color: var(--accent2);
+        }
+        tbody td.muted { color: var(--muted); }
+
+        .no-aircraft {
+            padding: 3rem 2rem;
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.82rem;
+            letter-spacing: 1px;
+        }
+
+        /* ── BOTTOM BAR: Record controls ── */
+        .bottombar {
+            background: #1a1d21;
+            border-top: 1px solid var(--border);
+            padding: 10px 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-shrink: 0;
+        }
+
+        .btn-record {
+            padding: 10px 28px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            border: none;
+            background: var(--accent);
+            color: #fff;
+            transition: background 0.2s, opacity 0.2s;
+            white-space: nowrap;
+        }
+        .btn-record:hover:not(:disabled) { background: #4a7fb4; }
+        .btn-record:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-record.recording {
+            background: var(--rec);
+            animation: recGlow 2s ease-in-out infinite;
+        }
+        .btn-record.recording:hover { background: #c03030; }
+        @keyframes recGlow {
+            0%,100% { box-shadow: 0 0 0 rgba(224,64,64,0); }
+            50%     { box-shadow: 0 0 12px rgba(224,64,64,0.5); }
+        }
+
+        .rec-timer {
+            font-family: monospace;
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            color: var(--text);
+            min-width: 80px;
+            display: none;
+        }
+        .rec-timer.visible { display: block; }
+        .rec-timer.recording { color: var(--rec); }
+
+        .bottombar-info {
+            flex: 1;
+            font-size: 0.78rem;
+            color: var(--muted);
+            letter-spacing: 0.5px;
+        }
+
+        .last-saved {
+            font-size: 0.75rem;
+            color: var(--success);
+            cursor: pointer;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            display: none;
+        }
+        .last-saved.visible { display: inline; }
+
+        /* ── Notification toast ── */
+        .toast {
+            position: fixed;
+            bottom: 70px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #2e3540;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px 20px;
+            font-size: 0.82rem;
+            color: var(--text);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s, transform 0.3s;
+            white-space: nowrap;
+            z-index: 100;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        .toast.success { border-color: var(--success); color: var(--success); }
+        .toast.error   { border-color: var(--danger);  color: var(--danger); }
+        .toast.warning { border-color: var(--warning); color: var(--warning); }
+    </style>
+</head>
+<body>
+
+    <!-- ── TOP BAR ─────────────────────────────────────────────────────── -->
+    <header class="topbar">
+        <div class="topbar-left">
+            <div class="app-logo">158th FW <span>ACMI Recorder</span></div>
+        </div>
+        <div class="sim-status">
+            <div class="status-dot"  id="statusDot"></div>
+            <span class="status-label" id="statusLabel">Disconnected</span>
+        </div>
+    </header>
+
+    <!-- ── CONTENT ─────────────────────────────────────────────────────── -->
+    <div class="content">
+
+        <!-- Left: Config panel -->
+        <aside class="panel-config">
+
+            <div>
+                <div class="panel-section-title">Simulator</div>
+                <button class="btn-connect" id="connectBtn">Connect to MSFS</button>
+            </div>
+
+            <div>
+                <div class="panel-section-title">Mission Settings</div>
+                <div class="form-group" style="margin-bottom:10px">
+                    <label>Mission Name</label>
+                    <input type="text" id="missionName" value="158th FW Mission" maxlength="100" />
+                </div>
+                <div class="form-group" style="margin-bottom:10px">
+                    <label>Your Callsign</label>
+                    <input type="text" id="pilotCallsign" placeholder="Eagle01" maxlength="30" />
+                </div>
+                <div class="form-group">
+                    <label>Mission Date</label>
+                    <input type="date" id="missionDate" />
+                </div>
+            </div>
+
+            <div>
+                <div class="panel-section-title">Recording Info</div>
+                <div style="font-size:0.78rem; color:var(--muted); line-height:1.7;">
+                    Captures all aircraft within <strong style="color:var(--text)">200 km</strong> at <strong style="color:var(--text)">2 Hz</strong>.<br>
+                    Saves as <strong style="color:var(--text)">.acmi</strong> — open directly in Tacview or upload to the ACMI Room.
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- Right: Live aircraft table -->
+        <div class="panel-right">
+            <div class="aircraft-header">
+                <div class="aircraft-header-title">Live Aircraft Feed</div>
+                <div class="aircraft-count-badge" id="aircraftCount">0 aircraft</div>
+            </div>
+            <div class="aircraft-table-wrap">
+                <div class="no-aircraft" id="noAircraft">
+                    Connect to MSFS and start recording to see aircraft.
+                </div>
+                <table id="aircraftTable" style="display:none">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Callsign</th>
+                            <th>Alt (ft)</th>
+                            <th>Hdg °</th>
+                            <th>IAS kts</th>
+                            <th>G</th>
+                            <th>Lat</th>
+                            <th>Lon</th>
+                        </tr>
+                    </thead>
+                    <tbody id="aircraftBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── BOTTOM BAR ──────────────────────────────────────────────────── -->
+    <footer class="bottombar">
+        <button class="btn-record" id="recordBtn" disabled>▶ Start Recording</button>
+        <div class="rec-timer" id="recTimer">00:00:00</div>
+        <div class="bottombar-info" id="bottomInfo">Not recording</div>
+        <span class="last-saved" id="lastSaved" title="Click to show in Explorer"></span>
+    </footer>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="renderer.js"></script>
+</body>
+</html>
