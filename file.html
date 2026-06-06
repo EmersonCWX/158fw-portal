@@ -210,6 +210,7 @@
         /* Utility helpers */
         .fp-hidden-input { display: none; margin-top: 10px; }
         .fp-hidden { display: none; }
+        .fp-invisible { visibility: hidden; pointer-events: none; }
         .fp-uppercase { text-transform: uppercase; }
         .fp-route-header { display: flex; align-items: center; justify-content: space-between; }
         .fp-route-header label { margin-bottom: 0; }
@@ -486,21 +487,21 @@
                                         <button type="button" class="fp-toggle" data-val="nonstd">NONSTD</button>
                                     </div>
                                 </div>
-                                <div class="fp-field fp-hidden" id="formCallsignsField">
+                                <div class="fp-field fp-invisible" id="formCallsignsField">
                                     <label>FORMATION CALLSIGNS</label>
                                     <input type="text" id="formCallsigns" placeholder="E.G., MAPLE21 MAPLE22">
                                 </div>
                             </div>
 
                             <!-- MARSA - always visible -->
-                            <div class="fp-row fp-cols-1 fp-marsa-row" id="marsaRow">
+                            <div class="fp-row fp-cols-1 fp-marsa-row" id="marsaRow" style="display:none">
                                 <div class="fp-field">
                                     <label>MARSA</label>
                                     <div class="fp-marsa-toggle">
-                                        <label class="fp-switch">
-                                            <input type="checkbox" id="marsaCheck" title="MARSA">
-                                            <span class="fp-slider"></span>
-                                        </label>
+                                        <div class="fp-toggle-group" id="marsaToggle">
+                                            <button type="button" class="fp-toggle active" data-val="no">NO</button>
+                                            <button type="button" class="fp-toggle" data-val="yes">YES</button>
+                                        </div>
                                         <span class="fp-marsa-text">Military Authority Assumes Responsibility for Separation of Aircraft</span>
                                     </div>
                                 </div>
@@ -586,7 +587,7 @@
                     toggleBtns.forEach(b => b.classList.remove('active'));
                     this.classList.add('active');
                     const val = this.dataset.val;
-                    formCallsignsField.style.display = (val === 'std' || val === 'nonstd') ? '' : 'none';
+                    formCallsignsField.classList.toggle('fp-invisible', !(val === 'std' || val === 'nonstd'));
                     updateRmk();
                 });
             });
@@ -595,6 +596,18 @@
             document.getElementById('formCallsigns').addEventListener('input', function() {
                 updateRmk();
                 saveForm();
+            });
+
+            // ==========================================
+            // MARSA TOGGLE
+            // ==========================================
+            const marsaBtns = document.querySelectorAll('#marsaToggle .fp-toggle');
+            marsaBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    marsaBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    saveForm();
+                });
             });
 
             // ==========================================
@@ -625,7 +638,7 @@
                 'callsign','flightRules','dateOfFlight','acType','wakeCat','equipment','transponder',
                 'presetRoute','depIcao','offBlock','cruiseSpd','cruiseAlt','route','arrIcao','eet','altIcao','fuelEnd',
                 'pbn','code','rvr','per','sel','nav','dat','reg','com','opr','sur',
-                'orgn','ralt','talt','eetField','rmk','formCallsigns','marsaCheck'
+                'orgn','ralt','talt','eetField','rmk','formCallsigns'
             ];
 
             function saveForm() {
@@ -633,12 +646,14 @@
                 formFields.forEach(id => {
                     const el = document.getElementById(id);
                     if (!el) return;
-                    if (el.type === 'checkbox') data[id] = el.checked;
-                    else data[id] = el.value;
+                    data[id] = el.value;
                 });
                 // Save formation toggle state
                 const activeToggle = document.querySelector('#formationToggle .fp-toggle.active');
                 data._formationType = activeToggle ? activeToggle.dataset.val : 'none';
+                // Save MARSA toggle state
+                const activeMarsaToggle = document.querySelector('#marsaToggle .fp-toggle.active');
+                data._marsaVal = activeMarsaToggle ? activeMarsaToggle.dataset.val : 'no';
                 localStorage.setItem(FP_KEY, JSON.stringify(data));
             }
 
@@ -650,15 +665,20 @@
                     formFields.forEach(id => {
                         const el = document.getElementById(id);
                         if (!el || data[id] === undefined) return;
-                        if (el.type === 'checkbox') el.checked = data[id];
-                        else el.value = data[id];
+                        el.value = data[id];
                     });
                     // Restore formation toggle
                     if (data._formationType) {
                         toggleBtns.forEach(b => {
                             b.classList.toggle('active', b.dataset.val === data._formationType);
                         });
-                        marsaRow.style.display = data._formationType === 'nonstd' ? '' : 'none';
+                        formCallsignsField.classList.toggle('fp-invisible', !(data._formationType === 'std' || data._formationType === 'nonstd'));
+                    }
+                    // Restore MARSA toggle
+                    if (data._marsaVal) {
+                        marsaBtns.forEach(b => {
+                            b.classList.toggle('active', b.dataset.val === data._marsaVal);
+                        });
                     }
                     // Restore unit custom input visibility
                     if (data.unitSelect === 'other') unitCustom.style.display = '';
@@ -681,7 +701,9 @@
                     document.getElementById('flightPlanForm').reset();
                     toggleBtns.forEach(b => b.classList.remove('active'));
                     toggleBtns[0].classList.add('active');
-                    marsaRow.style.display = 'none';
+                    formCallsignsField.classList.add('fp-invisible');
+                    marsaBtns.forEach(b => b.classList.remove('active'));
+                    marsaBtns[0].classList.add('active');
                     localStorage.removeItem(FP_KEY);
                 }
             });
@@ -711,7 +733,8 @@
                 const ft = document.querySelector('#formationToggle .fp-toggle.active');
                 text += `Type: ${ft ? ft.textContent : 'None'}\n`;
                 text += `Callsigns: ${g('formCallsigns')}\n`;
-                if (document.getElementById('marsaCheck').checked) text += 'MARSA: YES\n';
+                const marsaActive = document.querySelector('#marsaToggle .fp-toggle.active');
+                if (marsaActive && marsaActive.dataset.val === 'yes') text += 'MARSA: YES\n';
 
                 navigator.clipboard.writeText(text).then(() => {
                     this.textContent = 'Copied!';
@@ -758,7 +781,8 @@
                 else if (formType === 'nonstd' && !remarks.includes('NONSTD FORM')) remarks += ' NONSTD FORM';
                 const formCs = val('formCallsigns');
                 if (formCs && !remarks.includes(formCs)) remarks += ' ' + formCs;
-                if (document.getElementById('marsaCheck').checked && !remarks.includes('MARSA')) remarks += ' MARSA';
+                const marsaBtn = document.querySelector('#marsaToggle .fp-toggle.active');
+                if (marsaBtn && marsaBtn.dataset.val === 'yes' && !remarks.includes('MARSA')) remarks += ' MARSA';
 
                 remarks = remarks.trim();
 
