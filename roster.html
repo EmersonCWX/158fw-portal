@@ -631,13 +631,8 @@
 
 
     <script>
-        (async function initVatsimIntegration() {
-            const SB_URL    = 'https://gcumgpfyfqtfwbskkngt.supabase.co';
-            const SB_KEY    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdW1ncGZ5ZnF0Zndic2trbmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDczMTAsImV4cCI6MjA4ODM4MzMxMH0.OSY0XEPQp-WsFWuiGrUG5fcLIVMI3c8AxBEv2shFftg';
-            const _sb       = supabase.createClient(SB_URL, SB_KEY);
+        (function initVatsimIntegration() {
             const STATS_URL = 'https://stats.vatsim.net/stats/';
-            const DAYS_90   = 90 * 24 * 60 * 60 * 1000;
-            const cutoff    = new Date(Date.now() - DAYS_90);
             const memberMap = new Map();
 
             // Phase 1 - scan tables, wrap numeric VATSIM IDs in links
@@ -659,92 +654,10 @@
                 });
             });
 
-            if (memberMap.size === 0) return;
-
-            const results = new Map();
-
-            // Load shared last-seen from Supabase (cross-browser persistence).
-            // Any user who has the page open while a member is flying writes the
-            // timestamp here, so every browser benefits - not just the one that
-            // happened to be open at the time.
-            let sbLastSeen = {};
-            try {
-                const { data } = await _sb.from('whiteboard_state')
-                    .select('state').eq('id', 'vatsim_lastseen').maybeSingle();
-                if (data?.state?.cids) sbLastSeen = data.state.cids;
-            } catch(e) {}
-
-            // Phase 2 - check VATSIM live feed for currently online members
-            try {
-                const liveRes = await fetch('https://data.vatsim.net/v3/vatsim-data.json');
-                if (liveRes.ok) {
-                    const live = await liveRes.json();
-                    const onlineCids = new Set();
-                    (live.pilots      || []).forEach(p => onlineCids.add(String(p.cid)));
-                    (live.controllers || []).forEach(c => onlineCids.add(String(c.cid)));
-                    (live.atis        || []).forEach(a => onlineCids.add(String(a.cid)));
-
-                    const now = Date.now();
-                    let updated = false;
-                    for (const cid of memberMap.keys()) {
-                        if (onlineCids.has(cid)) {
-                            results.set(cid, true);
-                            localStorage.setItem('vatsim_lastseen_' + cid, now);
-                            sbLastSeen[cid] = now;
-                            updated = true;
-                        }
-                    }
-                    // Persist to Supabase so every browser sees the fresh timestamp
-                    if (updated) {
-                        _sb.from('whiteboard_state').upsert({
-                            id: 'vatsim_lastseen',
-                            state: { cids: sbLastSeen },
-                            updated_at: new Date().toISOString()
-                        }).catch(() => {});
-                    }
-                }
-            } catch (e) { console.warn('VATSIM live feed unavailable:', e); }
-
-            // Phase 3 - fallback: Supabase shared last-seen -> localStorage -> HTML badge default
-            for (const cid of memberMap.keys()) {
-                if (results.has(cid)) continue;
-
-                // Supabase shared timestamp (cross-browser, written by any visitor)
-                if (sbLastSeen[cid]) {
-                    results.set(cid, Number(sbLastSeen[cid]) >= cutoff.getTime());
-                    continue;
-                }
-
-                // This browser's own localStorage
-                const stored = localStorage.getItem('vatsim_lastseen_' + cid);
-                if (stored) {
-                    results.set(cid, Number(stored) >= cutoff.getTime());
-                    continue;
-                }
-
-                // No data at all - keep the HTML badge as-is (default: Active)
-                const htmlEntries = memberMap.get(cid);
-                const htmlBadge = htmlEntries?.[0]?.statusCell.querySelector('.roster-badge') ?? null;
-                results.set(cid, htmlBadge ? !htmlBadge.classList.contains('badge-inactive') : true);
-            }
-
-            // Phase 4 - update status badges
-            for (const [cid, entries] of memberMap) {
-                const active = results.get(cid) !== false;
-                entries.forEach(({ statusCell }) => {
-                    const badge = statusCell.querySelector('.roster-badge');
-                    if (badge) {
-                        badge.className = 'roster-badge ' + (active ? 'badge-active' : 'badge-inactive');
-                        badge.textContent = active ? 'Active' : 'Inactive';
-                    }
-                });
-            }
-
-            // Update member count
+            // Status badges are set manually in the HTML above
             const countEl = document.querySelector('.roster-count-num');
             if (countEl) countEl.textContent = memberMap.size;
         })();
-    </script>
     </script>
     <script>
         // Public header hamburger (roster doesn't load script.js)
