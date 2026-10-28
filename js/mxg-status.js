@@ -14,6 +14,9 @@ window.MxgStatus = (function () {
         { id: '18-5361' }
     ];
 
+    // Tails held in Phase MX until further notice (overrides the 12-day rotation and off-station status).
+    const FORCED_PHASE = ['18-5340'];
+
     // Xorshift32 seeded PRNG
     function mkRng(seed) {
         let s = (seed ^ 0xDEADBEEF) >>> 0 || 1;
@@ -48,8 +51,8 @@ window.MxgStatus = (function () {
         const phaseCycle = Math.floor(day / 12);
         const phRng = mkRng(phaseCycle * 7919 + 42);
         const phaseCount = phRng() < 0.45 ? 1 : 2;
-        const phasePool = shuffle(TAILS.filter(t => !t.wing).map(t => t.id), phRng);
-        const phaseTails = new Set(phasePool.slice(0, phaseCount));
+        const phasePool = shuffle(TAILS.filter(t => !t.wing && !FORCED_PHASE.includes(t.id)).map(t => t.id), phRng);
+        const phaseTails = new Set([...FORCED_PHASE, ...phasePool.slice(0, phaseCount)]);
 
         const dayRng = mkRng(day * 2053 + 137);
         const activeCount = 12 + Math.floor(dayRng() * 5); // 12–16
@@ -74,5 +77,5 @@ window.MxgStatus = (function () {
         return map;
     }
 
-    return { TAILS, mkRng, shuffle, dayIndex, computeStatus };
+    return { TAILS, FORCED_PHASE, mkRng, shuffle, dayIndex, computeStatus };
 })();

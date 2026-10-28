@@ -415,6 +415,7 @@
                 }
             }
         } catch (_) {}
+        for (const id of window.MxgStatus.FORCED_PHASE) delete offStation[id];
 
         function renderBoard() {
             const grid = document.getElementById('mxg-tail-grid');

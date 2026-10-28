@@ -150,6 +150,12 @@
             font-family: 'Segoe UI', Arial, sans-serif;
         }
 
+        /* Cancelled drill */
+        .cancelled-days {
+            color: #666;
+            margin-right: 10px;
+        }
+
         /* ── Footer note ── */
         .uta-footnote {
             padding: 12px 20px;
@@ -217,6 +223,7 @@
     // ── UTA Schedule Data ─────────────────────────────────────────────────────
     // Edit this array to update the schedule.
     // Set days to null for "NO DRILL SCHEDULED".
+    // Add cancelled: true to show the original days struck through with "CANCELLED".
     const UTA_SCHEDULE = [
         { month: 'April 2026',     days: '03-05 (FRI, SAT, SUN)' },
         { month: 'May 2026',       days: null },
@@ -226,7 +233,7 @@
         { month: 'September 2026', days: '11-13 (FRI, SAT, SUN)' },
         { month: 'October 2026',   days: null },
         { month: 'November 2026',  days: '06-08 (FRI, SAT, SUN)' },
-        { month: 'December 2026',  days: '04-06 (FRI, SAT, SUN)' },
+        { month: 'December 2026',  days: '04-06 (FRI, SAT, SUN)', cancelled: true },
         { month: 'January 2027',   days: '08-10 (FRI, SAT, SUN)' },
         { month: 'February 2027',  days: null },
         { month: 'March 2027',     days: '05-07 (THU, FRI, SAT)' },
@@ -263,7 +270,16 @@
 
         const tdDays = document.createElement('td');
         tdDays.className = 'col-days';
-        if (entry.days) {
+        if (entry.days && entry.cancelled) {
+            const struck = document.createElement('s');
+            struck.className = 'cancelled-days';
+            struck.textContent = entry.days;
+            const span = document.createElement('span');
+            span.className = 'no-drill';
+            span.textContent = 'CANCELLED';
+            tdDays.appendChild(struck);
+            tdDays.appendChild(span);
+        } else if (entry.days) {
             tdDays.textContent = entry.days;
         } else {
             const span = document.createElement('span');

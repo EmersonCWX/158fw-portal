@@ -610,6 +610,7 @@
                     }
                 }
             } catch (_) { /* silently ignore */ }
+            for (const id of window.MxgStatus.FORCED_PHASE) delete offStation[id];
 
             const sel = document.getElementById('missionTail');
             sel.innerHTML = '<option value="">Select Tail</option>';
