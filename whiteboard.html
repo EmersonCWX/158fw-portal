@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -189,7 +189,6 @@ let _myName = null;
 let _remoteViewers = {};
 const PRESENCE_COLORS = ['#5a8fc4','#4caf50','#ffd700','#ff8c00','#e85a4a','#c8a820','#a0aab4','#ffffff'];
 let _myColor = PRESENCE_COLORS[Math.floor(Math.random()*PRESENCE_COLORS.length)];
-let _ignoreRemote = false;
 let _pendingRemoteState = null;
 let tool='draw', penColor='#ffffff', penWidth=2;
 let strokes=[], labels=[], magnets=[], aircraft=[], holds=[], mapMode='off', sidebarOpen=false;
@@ -221,13 +220,13 @@ function redraw(){
 function drawStroke(s){
     let pts=s.points;
     if(s.geoPoints&&mapMode!=='off'&&map){
-        pts=s.geoPoints.map(ll=>{ const p=map.latLngToContainerPoint(L.latLng(ll.lat,ll.lng)); return [p.x,p.y]; });
+        pts=s.geoPoints.map(ll=>{ const p=geoToCP(ll.lat,ll.lng); return [p.x,p.y]; });
     }
     if(!pts||pts.length<2) return;
     ctx.save();
     let lw=s.width;
     if(s.erase&&s.eraseZoom!=null&&s.geoPoints&&mapMode!=='off'&&map){
-        lw=s.width*Math.pow(2,map.getZoom()-s.eraseZoom);
+        lw=s.width*Math.pow(2,viewZoom()-s.eraseZoom);
     }
     ctx.beginPath(); ctx.lineCap='round'; ctx.lineJoin='round'; ctx.lineWidth=lw;
     if(s.erase){ ctx.globalCompositeOperation='destination-out'; ctx.strokeStyle='rgba(0,0,0,1)'; }
@@ -241,7 +240,7 @@ function lbText(lb){ return lb.runs?lb.runs.map(r=>r.text).join(''):(lb.text||''
 
 function drawLabel(lb){
     let x=lb.x, y=lb.y;
-    if(lb.lat!=null&&mapMode!=='off'&&map){ const p=map.latLngToContainerPoint(L.latLng(lb.lat,lb.lng)); x=p.x; y=p.y; }
+    if(lb.lat!=null&&mapMode!=='off'&&map){ const p=geoToCP(lb.lat,lb.lng); x=p.x; y=p.y; }
     ctx.save();
     ctx.globalCompositeOperation='source-over';
     ctx.font='bold '+(lb.size||16)+'px "Segoe UI",Arial,sans-serif';
@@ -298,7 +297,7 @@ function _ptSegDist(px,py,ax,ay,bx,by){
 }
 function _strokePxPts(s){
     if(s.geoPoints&&mapMode!=='off'&&map)
-        return s.geoPoints.map(ll=>{ const p=map.latLngToContainerPoint(L.latLng(ll.lat,ll.lng)); return [p.x,p.y]; });
+        return s.geoPoints.map(ll=>{ const p=geoToCP(ll.lat,ll.lng); return [p.x,p.y]; });
     return s.points;
 }
 function _haversineNM(lat1,lon1,lat2,lon2){
@@ -409,10 +408,10 @@ function pu(e){
         const endXY=e&&(e.changedTouches?evtXY(e):evtXY(e))||curStroke[curStroke.length-1];
         const pts=[curStroke[0],endXY];
         const geo0=xyToLL(pts[0][0],pts[0][1]), geo1=xyToLL(pts[1][0],pts[1][1]);
-        const s={id:'s_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),color:penColor,width:tool==='erase'?30:penWidth,erase:tool==='erase',points:pts};
+        const s={id:_uid('s'),c:Date.now(),color:penColor,width:tool==='erase'?30:penWidth,erase:tool==='erase',points:pts};
         if(tool==='erase'&&mapMode!=='off'&&map) s.eraseZoom=map.getZoom();
         if(geo0&&geo1) s.geoPoints=[{lat:geo0.lat,lng:geo0.lng},{lat:geo1.lat,lng:geo1.lng}];
-        strokes.push(s); save();
+        strokes.push(s); _myCreated.push('strokes:'+s.id); save();
         altStraight=false; curStroke=[]; curStrokeGeo=null; ctrlSmooth=false; _applyPendingRemote(); redraw(); return;
     }
     if(curStroke.length>1){
@@ -421,10 +420,10 @@ function pu(e){
             pts=chaikin(curStroke,3);
             if(geo&&geo.length>1) geo=chaikin(geo.map(g=>[g.lat,g.lng]),3).map(p=>({lat:p[0],lng:p[1]}));
         }
-        const s={id:'s_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),color:penColor,width:tool==='erase'?30:penWidth,erase:tool==='erase',points:pts};
+        const s={id:_uid('s'),c:Date.now(),color:penColor,width:tool==='erase'?30:penWidth,erase:tool==='erase',points:pts};
         if(tool==='erase'&&mapMode!=='off'&&map) s.eraseZoom=map.getZoom();
         if(geo) s.geoPoints=geo;
-        strokes.push(s); save();
+        strokes.push(s); _myCreated.push('strokes:'+s.id); save();
     }
     curStroke=[]; curStrokeGeo=null; ctrlSmooth=false; altStraight=false;
     _applyPendingRemote();
@@ -439,7 +438,7 @@ function placeTxtCursor(e){
     for(let i=labels.length-1;i>=0;i--){
         const lb=labels[i];
         let lx=lb.x, ly=lb.y;
-        if(lb.lat!=null&&mapMode!=='off'&&map){ const p=map.latLngToContainerPoint(L.latLng(lb.lat,lb.lng)); lx=p.x; ly=p.y; }
+        if(lb.lat!=null&&mapMode!=='off'&&map){ const p=geoToCP(lb.lat,lb.lng); lx=p.x; ly=p.y; }
         const sz=lb.size||16, approxW=lbText(lb).length*sz*0.6;
         if(x>=lx-8&&x<=lx+approxW+8&&y>=ly-sz-4&&y<=ly+8){
             editingLabelId=lb.id; txtPos={x:lx,y:ly};
@@ -472,9 +471,9 @@ function commitTxt(){
         }
         save(); redraw();
     } else if(fullText&&txtPos){
-        const lb={id:Date.now(),runs,text:fullText,x:txtPos.x,y:txtPos.y,color:runs[0]?.color||penColor,size:Math.max(12,penWidth*4)};
+        const lb={id:_uid('l'),runs,text:fullText,x:txtPos.x,y:txtPos.y,color:runs[0]?.color||penColor,size:Math.max(12,penWidth*4)};
         const ll=xyToLL(txtPos.x,txtPos.y); if(ll){lb.lat=ll.lat;lb.lng=ll.lng;}
-        labels.push(lb); save(); redraw();
+        labels.push(lb); _myCreated.push('labels:'+lb.id); save(); redraw();
     }
     txtWrap.classList.remove('vis'); txtPos=null; editingLabelId=null;
 }
@@ -514,15 +513,72 @@ const OPENAIP_KEY = '259ad3a9e03d3cb1360a3ab212aa8c48';
 // Geo helpers
 function xyToLL(x,y){ if(mapMode==='off'||!map) return null; return map.containerPointToLatLng(L.point(x,y)); }
 
+// During Leaflet's animated zoom, map.getZoom() already reports the target zoom but the tiles
+// are still CSS-animating from the old view. These helpers interpolate along the same curve so
+// overlay items move/scale in lockstep with the tiles instead of jumping.
+let _zoomAnim=null;
+function _zoomAnimActive(){ return !!(_zoomAnim&&map&&map._animatingZoom); }
+function _cpAt(ll,z,c){ return map.project(ll,z).subtract(map.project(c,z)).add(map.getSize().divideBy(2)); }
+function geoToCP(lat,lng){
+    const ll=L.latLng(lat,lng);
+    if(!_zoomAnimActive()) return map.latLngToContainerPoint(ll);
+    const a=_zoomAnim, p0=_cpAt(ll,a.z0,a.c0), p1=_cpAt(ll,a.z1,a.c1);
+    return L.point(p0.x+(p1.x-p0.x)*a.u, p0.y+(p1.y-p0.y)*a.u);
+}
+function viewZoom(){
+    if(!_zoomAnimActive()) return map.getZoom();
+    const a=_zoomAnim, s=Math.pow(2,a.z1-a.z0);
+    return a.z0+Math.log2(1+(s-1)*a.u);
+}
+// CSS cubic-bezier(0,0,0.25,1), matching Leaflet's .leaflet-zoom-anim transition
+function _zoomEase(t){
+    const bx=x=>3*(1-x)*x*x*0.25+x*x*x, by=x=>3*(1-x)*(1-x)*x+3*(1-x)*x*x+x*x*x;
+    let lo=0,hi=1; for(let i=0;i<20;i++){ const m=(lo+hi)/2; if(bx(m)<t) lo=m; else hi=m; }
+    return by((lo+hi)/2);
+}
+function _refreshOverlay(){ redraw(); updateMagnetPositions(); updateAircraftPositions(); updateHoldPositions(); }
+// Read progress straight from the tile level Leaflet is CSS-animating so we stay frame-exact
+function _zoomProgress(a){
+    if(a.lvl&&a.lvl.el.isConnected){
+        const a0=map.getZoomScale(a.z0,a.lvl.z), a1=map.getZoomScale(a.z1,a.lvl.z);
+        if(Math.abs(a1-a0)>1e-6){
+            const k=new DOMMatrixReadOnly(getComputedStyle(a.lvl.el).transform).a;
+            return Math.max(0,Math.min(1,(k-a0)/(a1-a0)));
+        }
+    }
+    return _zoomEase(Math.min(1,(performance.now()-a.start)/250));
+}
+function _onZoomAnim(e){
+    if(mapMode==='off') return;
+    // zoomanim fires before Leaflet updates its zoom, so getZoom/getCenter are still the start view
+    const starting=!_zoomAnimActive();
+    if(starting){
+        _zoomAnim={z0:map.getZoom(),c0:map.getCenter(),start:performance.now(),u:0,lvl:null};
+        map.eachLayer(l=>{ if(!_zoomAnim.lvl&&l._levels&&l._tileZoom!=null&&l._levels[l._tileZoom]) _zoomAnim.lvl={el:l._levels[l._tileZoom].el,z:l._tileZoom}; });
+    }
+    _zoomAnim.z1=e.zoom; _zoomAnim.c1=e.center;
+    if(!starting) return;
+    const anim=_zoomAnim;
+    const tick=()=>{
+        if(_zoomAnim!==anim) return;
+        if(!_zoomAnimActive()){ _zoomAnim=null; _refreshOverlay(); return; }
+        _zoomAnim.u=_zoomProgress(_zoomAnim);
+        _refreshOverlay();
+        requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+}
+
 function initMap(){
     map=L.map('wb-map',{center:[44.47,-73.15],zoom:10,zoomControl:true,attributionControl:false});
-    lStreet=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{maxZoom:19});
+    lStreet=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxZoom:16});
     lSat   =L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19});
     lAip   =OPENAIP_KEY
         ? L.tileLayer('https://api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png?apiKey='+OPENAIP_KEY,{maxZoom:14,attribution:'OpenAIP'})
         : null;
     map.dragging.disable(); map.scrollWheelZoom.disable();
-    map.on('move zoom',()=>{ redraw(); updateMagnetPositions(); updateAircraftPositions(); updateHoldPositions(); });
+    map.on('zoomanim',_onZoomAnim);
+    map.on('move zoom',()=>{ if(!map._animatingZoom) _zoomAnim=null; _refreshOverlay(); });
 }
 
 function setMap(mode){
@@ -543,6 +599,7 @@ function setMap(mode){
         if(mode==='satop'){ lSat.addTo(map); lAip.addTo(map); }
         el.classList.add('vis'); map.invalidateSize();
     }
+    updateMagnetPositions(); updateAircraftPositions(); updateHoldPositions(); redraw();
     save();
 }
 
@@ -576,7 +633,7 @@ function buildMag(m){
 function placeMag(callsign,rank){
     const w=board.clientWidth, h=board.clientHeight;
     const x=w/2-35+(Math.random()-.5)*140, y=h/2-18+(Math.random()-.5)*100;
-    const id=callsign.replace(/\s+/g,'')+'_'+Date.now();
+    const id=_uid(callsign.replace(/\s+/g,''));
     const m={id,callsign,rank:rank||'',x,y,color:rankColor(rank)};
     const ll=xyToLL(x,y); if(ll){m.lat=ll.lat;m.lng=ll.lng;}
     magnets.push(m); renderMagnets(); save();
@@ -587,7 +644,7 @@ function removeMag(id){ magnets=magnets.filter(m=>m.id!==id); renderMagnets(); s
 function updateMagnetPositions(){
     magnets.forEach(m=>{
         if(m.lat!=null&&mapMode!=='off'&&map){
-            const p=map.latLngToContainerPoint(L.latLng(m.lat,m.lng));
+            const p=geoToCP(m.lat,m.lng);
             m.x=p.x; m.y=p.y;
         }
         const el=document.getElementById('mg-'+m.id);
@@ -622,7 +679,7 @@ function endMag(){
     document.getElementById('mg-'+dragMag.id)?.classList.remove('drag');
     if(!dragMoved) cycleMagColor(dragMag.id);
     else{ const ll=xyToLL(dragMag.x,dragMag.y); if(ll){dragMag.lat=ll.lat;dragMag.lng=ll.lng;} }
-    dragMag=null; save();
+    dragMag=null; save(); _applyPendingRemote();
 }
 document.addEventListener('mouseup', endMag);
 document.addEventListener('touchend', endMag);
@@ -661,7 +718,7 @@ function endSbDrag(e){
     const br=board.getBoundingClientRect();
     const bx=src.clientX-br.left-35, by=src.clientY-br.top-18;
     if(bx>=-35&&by>=-18&&bx<board.clientWidth&&by<board.clientHeight){
-        const id=callsign.replace(/\s+/g,'')+'_'+Date.now();
+        const id=_uid(callsign.replace(/\s+/g,''));
         const mx=Math.max(0,Math.min(board.clientWidth-60,bx)), my=Math.max(0,Math.min(board.clientHeight-30,by));
         const m={id,callsign,rank:rank||'',x:mx,y:my,color:rankColor(rank)};
         const ll=xyToLL(mx,my); if(ll){m.lat=ll.lat;m.lng=ll.lng;}
@@ -713,14 +770,14 @@ function renderAircraft(){ document.querySelectorAll('.ac-token').forEach(el=>el
 
 function acScaledSize(a){
     if(a.refZoom!=null&&mapMode!=='off'&&map){
-        return Math.max(10,Math.min(300,Math.round(a.size*Math.pow(2,map.getZoom()-a.refZoom))));
+        return Math.max(10,Math.min(300,Math.round(a.size*Math.pow(2,viewZoom()-a.refZoom))));
     }
     return a.size||acSize;
 }
 function updateAircraftPositions(){
     aircraft.forEach(a=>{
         if(a.lat!=null&&mapMode!=='off'&&map){
-            const p=map.latLngToContainerPoint(L.latLng(a.lat,a.lng));
+            const p=geoToCP(a.lat,a.lng);
             a.x=p.x; a.y=p.y;
         }
         const el=document.getElementById('act-'+a.id);
@@ -735,7 +792,7 @@ function updateAircraftPositions(){
 // Holding pattern tokens
 function holdScaledSize(h){
     if(h.refZoom!=null&&mapMode!=='off'&&map)
-        return Math.max(40,Math.min(600,Math.round(h.size*Math.pow(2,map.getZoom()-h.refZoom))));
+        return Math.max(40,Math.min(600,Math.round(h.size*Math.pow(2,viewZoom()-h.refZoom))));
     return h.size||holdSize;
 }
 function holdSVG(h,w){
@@ -760,7 +817,7 @@ function renderHolds(){ document.querySelectorAll('.hold-token').forEach(el=>el.
 function updateHoldPositions(){
     holds.forEach(h=>{
         if(h.lat!=null&&mapMode!=='off'&&map){
-            const p=map.latLngToContainerPoint(L.latLng(h.lat,h.lng));
+            const p=geoToCP(h.lat,h.lng);
             h.x=p.x; h.y=p.y;
         }
         const el=document.getElementById('hld-'+h.id);
@@ -775,7 +832,7 @@ function placeHoldCenter(){
     placeHold(board.clientWidth/2, board.clientHeight/2);
 }
 function placeHold(x,y){
-    const id='hld_'+Date.now();
+    const id=_uid('hld');
     const h={id,x,y,color:penColor,angle:0,size:holdSize,turns:'RT',refZoom:(mapMode!=='off'&&map?map.getZoom():null)};
     const ll=xyToLL(x,y); if(ll){h.lat=ll.lat;h.lng=ll.lng;}
     holds.push(h); renderHolds(); save();
@@ -823,12 +880,12 @@ function endHold(){
     document.getElementById('hld-'+dragHold.id)?.classList.remove('drag');
     if(!dragHoldMoved) cycleHoldColor(dragHold.id);
     else{ const ll=xyToLL(dragHold.x,dragHold.y); if(ll){dragHold.lat=ll.lat;dragHold.lng=ll.lng;} }
-    dragHold=null; save();
+    dragHold=null; save(); _applyPendingRemote();
 }
 
 function buildAcToken(a){
     const el=document.createElement('div');
-    el.className='ac-token'; el.id='act-'+a.id;
+    el.className='ac-token'+(selectedAcIds.has(a.id)?' ac-sel':''); el.id='act-'+a.id;
     el.style.left=a.x+'px'; el.style.top=a.y+'px';
     if(a.angle) el.style.transform='rotate('+a.angle+'deg)';
     el.innerHTML='<button class="m-x" onclick="removeAc(\''+a.id+'\')" >x</button><img src="assets/F-35 Stick.png" class="f35-img" draggable="false" style="width:'+acScaledSize(a)+'px;filter:'+acFilter(a.color)+'">';
@@ -839,7 +896,7 @@ function buildAcToken(a){
 }
 
 function placeAc(x,y){
-    const id='ac_'+Date.now();
+    const id=_uid('ac');
     const a={id,x,y,color:'#e85a4a',angle:0,size:acSize,refZoom:(mapMode!=='off'&&map?map.getZoom():null)};
     const ll=xyToLL(x,y); if(ll){a.lat=ll.lat;a.lng=ll.lng;}
     aircraft.push(a); renderAircraft(); save();
@@ -911,7 +968,7 @@ function endAc(){
         setLL(dragAc);
         if(selectedAcIds.has(dragAc.id)) selectedAcIds.forEach(sid=>{ const sa=aircraft.find(a=>a.id===sid); if(sa) setLL(sa); });
     }
-    dragAc=null; groupDragOffsets=null; save();
+    dragAc=null; groupDragOffsets=null; save(); _applyPendingRemote();
 }
 document.addEventListener('mouseup',endAc);
 document.addEventListener('touchend',endAc);
@@ -953,7 +1010,13 @@ document.querySelectorAll('.wb-sw,.wb-w').forEach(el=>{
 });
 
 // Undo / Clear
-function undo(){ if(labels.length) labels.pop(); else if(strokes.length) strokes.pop(); redraw(); save(); }
+function undo(){
+    while(_myCreated.length){
+        const [k,id]=_myCreated.pop().split(/:(.+)/);
+        const arr=_getColl(k), i=arr.findIndex(x=>String(x.id)===id);
+        if(i>=0){ arr.splice(i,1); redraw(); save(); return; }
+    }
+}
 function clearAll(){ if(!confirm('Clear all drawings, labels, aircraft, and holds?')) return; strokes=[]; labels=[]; aircraft=[]; holds=[]; selectedAcIds.clear(); renderAircraft(); renderHolds(); redraw(); save(); }
 
 // Keyboard
@@ -991,7 +1054,7 @@ board.addEventListener('wheel', e=>{
         for(let i=labels.length-1;i>=0;i--){
             const lb=labels[i];
             let lx=lb.x, ly=lb.y;
-            if(lb.lat!=null&&mapMode!=='off'&&map){ const p=map.latLngToContainerPoint(L.latLng(lb.lat,lb.lng)); lx=p.x; ly=p.y; }
+            if(lb.lat!=null&&mapMode!=='off'&&map){ const p=geoToCP(lb.lat,lb.lng); lx=p.x; ly=p.y; }
             const sz=lb.size||16;
             const approxW=lbText(lb).length*sz*0.6;
             if(mx>=lx-8&&mx<=lx+approxW+8&&my>=ly-sz-4&&my<=ly+8){
@@ -1005,7 +1068,7 @@ board.addEventListener('wheel', e=>{
             const a=aircraft.find(a=>a.id===sid); if(!a) return;
             a.size=Math.max(20,Math.min(200,(a.size||acSize)+delta));
             const img=document.querySelector('#act-'+sid+' .f35-img');
-            if(img) img.style.width=a.size+'px';
+            if(img) img.style.width=acScaledSize(a)+'px';
         });
         save();
     }
@@ -1013,9 +1076,8 @@ board.addEventListener('wheel', e=>{
 
 // Save/Load
 function save(){
+    _trackLocalChanges();
     try{ localStorage.setItem(STORE,JSON.stringify(wbStateObj())); } catch(e){}
-    _ignoreRemote=true;
-    clearTimeout(save._irt); save._irt=setTimeout(()=>{ _ignoreRemote=false; },1500);
     scheduleSaveRemote();
 }
 function load(){
@@ -1025,67 +1087,173 @@ function load(){
         if(d.label) document.getElementById('wbLabel').value=d.label;
         if(d.strokes) strokes=d.strokes; if(d.labels) labels=d.labels; if(d.magnets) magnets=d.magnets; if(d.aircraft) aircraft=d.aircraft; if(d.holds) holds=d.holds;
         if(d.acSize) acSize=d.acSize;
+        if(d.deleted) _tomb=d.deleted;
+        if(d.labelT) _metaT=d.labelT;
+        COLLS.forEach(k=>_ensureIds(k,_getColl(k)));
+        _markSynced();
         if(d.mapMode&&d.mapMode!=='off') setTimeout(()=>setMap(d.mapMode),150);
     } catch(e){}
 }
 document.getElementById('wbLabel').addEventListener('input',save);
 
-// ── Collab helpers ────────────────────────────────────────────────
+// ── Collab sync ───────────────────────────────────────────────────
+// Each item carries `t` (last-edit time). Deletions are recorded as tombstones in
+// `deleted` so they propagate instead of being resurrected by other clients.
+// Merging is per-item last-writer-wins, so every client converges to the same board.
+const COLLS=['strokes','labels','magnets','aircraft','holds'];
+const TOMB_TTL=7*24*3600*1000;
+const _bootT=Date.now();
+let _tomb={};         // 'coll:id' -> deletion time
+let _synced={};       // 'coll:id' -> item signature last seen/saved
+let _metaT=0, _lastLabel=null;
+let _hadRemote=false;
+let _myCreated=[];    // 'coll:id' of strokes/labels this user created, for undo
+
+const SER={
+    strokes: s=>({id:s.id,c:s.c??null,t:s.t||0,color:s.color,width:s.width,erase:!!s.erase,eraseZoom:s.eraseZoom??null,points:s.points,geoPoints:s.geoPoints||null}),
+    labels:  l=>({...l}),
+    magnets: m=>({id:m.id,t:m.t||0,callsign:m.callsign,rank:m.rank,x:m.x,y:m.y,color:m.color,lat:m.lat,lng:m.lng}),
+    aircraft:a=>({id:a.id,t:a.t||0,x:a.x,y:a.y,color:a.color,angle:a.angle||0,size:a.size||acSize,refZoom:a.refZoom??null,lat:a.lat,lng:a.lng}),
+    holds:   h=>({id:h.id,t:h.t||0,x:h.x,y:h.y,color:h.color,angle:h.angle||0,size:h.size||holdSize,turns:h.turns||'RT',refZoom:h.refZoom??null,lat:h.lat,lng:h.lng}),
+};
+function _getColl(k){ return k==='strokes'?strokes:k==='labels'?labels:k==='magnets'?magnets:k==='aircraft'?aircraft:holds; }
+function _setColl(k,v){ if(k==='strokes')strokes=v; else if(k==='labels')labels=v; else if(k==='magnets')magnets=v; else if(k==='aircraft')aircraft=v; else holds=v; }
+function _uid(p){ return p+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,7); }
+// Signature ignores `t`, and ignores screen x/y for map-anchored items (those are viewport-specific)
+function _sig(k,it){ const o=SER[k](it); delete o.t; if(o.lat!=null){ delete o.x; delete o.y; } return JSON.stringify(o); }
+// Legacy items without an id get a deterministic content hash so every client assigns the same id
+function _ensureIds(k,arr){
+    (arr||[]).forEach(it=>{
+        if(it.id!=null) return;
+        const s=JSON.stringify(it); let h=5381;
+        for(let i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))|0;
+        it.id=k[0]+'_h'+(h>>>0).toString(36);
+    });
+    return arr||[];
+}
+function _markSynced(){
+    _synced={};
+    COLLS.forEach(k=>_getColl(k).forEach(it=>{ _synced[k+':'+it.id]=_sig(k,it); }));
+    _lastLabel=document.getElementById('wbLabel').value;
+}
+// Stamp edited items with a new `t` and tombstone anything removed since the last sync
+function _trackLocalChanges(){
+    const now=Date.now(), seen=new Set();
+    COLLS.forEach(k=>{
+        _ensureIds(k,_getColl(k)).forEach(it=>{
+            const key=k+':'+it.id, s=_sig(k,it); seen.add(key);
+            if(_synced[key]!==s){ it.t=now; _synced[key]=s; }
+        });
+    });
+    Object.keys(_synced).forEach(key=>{ if(!seen.has(key)){ _tomb[key]=now; delete _synced[key]; } });
+    const lbl=document.getElementById('wbLabel').value;
+    if(lbl!==_lastLabel){ _metaT=now; _lastLabel=lbl; }
+}
 function wbStateObj(){
-    return {label:document.getElementById('wbLabel').value,
-        strokes:strokes.map(s=>({id:s.id||null,color:s.color,width:s.width,erase:!!s.erase,eraseZoom:s.eraseZoom??null,points:s.points,geoPoints:s.geoPoints||null})),
-        labels, magnets:magnets.map(m=>({id:m.id,callsign:m.callsign,rank:m.rank,x:m.x,y:m.y,color:m.color,lat:m.lat,lng:m.lng})),
-        aircraft:aircraft.map(a=>({id:a.id,x:a.x,y:a.y,color:a.color,angle:a.angle||0,size:a.size||acSize,refZoom:a.refZoom??null,lat:a.lat,lng:a.lng})),
-        holds:holds.map(h=>({id:h.id,x:h.x,y:h.y,color:h.color,angle:h.angle||0,size:h.size||holdSize,turns:h.turns||'RT',refZoom:h.refZoom??null,lat:h.lat,lng:h.lng})),
-        acSize, mapMode};
+    const cutoff=Date.now()-TOMB_TTL, deleted={};
+    Object.entries(_tomb).forEach(([k,t])=>{ if(t>cutoff) deleted[k]=t; });
+    _tomb=deleted;
+    const o={label:document.getElementById('wbLabel').value, labelT:_metaT, deleted, acSize, mapMode};
+    COLLS.forEach(k=>{ o[k]=_getColl(k).map(SER[k]); });
+    return o;
 }
-// Merge two arrays by id — keeps remote as source of truth but preserves local-only items not yet synced
-function _mergeById(local,remote){
-    if(!remote) return local;
-    if(!local||!local.length) return remote;
-    const remoteIds=new Set(remote.map(x=>x.id).filter(Boolean));
-    const localPending=local.filter(x=>x.id&&!remoteIds.has(x.id));
-    return [...remote,...localPending];
+// Merge remote state into local. Returns true if local holds data the remote lacks (needs a re-save).
+function _mergeState(d){
+    let localWins=false;
+    const rTomb=d.deleted||{};
+    Object.entries(rTomb).forEach(([k,t])=>{ if(!_tomb[k]||_tomb[k]<t) _tomb[k]=t; });
+    if(Object.keys(_tomb).some(k=>!(k in rTomb))) localWins=true;
+    COLLS.forEach(k=>{
+        const rArr=_ensureIds(k,(d[k]||[]).map(x=>({...x}))), lArr=_getColl(k);
+        const lMap=new Map(lArr.map(i=>[String(i.id),i]));
+        const out=[], used=new Set();
+        rArr.forEach(r=>{
+            const id=String(r.id); if(used.has(id)||_tomb[k+':'+id]) return; used.add(id);
+            const l=lMap.get(id);
+            if(l&&(l.t||0)>(r.t||0)){ out.push(l); localWins=true; } else out.push(r);
+        });
+        lArr.forEach(l=>{
+            const id=String(l.id); if(used.has(id)||_tomb[k+':'+id]) return;
+            // Before the first successful remote load, only keep local-only items edited this session
+            if(!_hadRemote&&(l.t||0)<_bootT) return;
+            used.add(id); out.push(l); localWins=true;
+        });
+        if(k==='strokes') out.sort((a,b)=>(a.c||0)-(b.c||0));  // erase strokes depend on draw order
+        _setColl(k,out);
+    });
+    const lblEl=document.getElementById('wbLabel');
+    if(d.label!=null&&(d.labelT||0)>_metaT&&document.activeElement!==lblEl){ lblEl.value=d.label; _metaT=d.labelT||0; }
+    else if(_metaT>(d.labelT||0)) localWins=true;
+    if(d.acSize) acSize=d.acSize;
+    _hadRemote=true;
+    _markSynced();
+    return localWins;
 }
+function _isBusy(){ return painting||!!dragMag||!!dragAc||!!dragHold; }
 function _applyPendingRemote(){
-    if(_pendingRemoteState){ const p=_pendingRemoteState; _pendingRemoteState=null; applyRemoteState(p); }
+    if(_pendingRemoteState&&!_isBusy()){ const p=_pendingRemoteState; _pendingRemoteState=null; applyRemoteState(p); }
+}
+function _rerenderAll(){
+    const ids=new Set(aircraft.map(a=>a.id));
+    [...selectedAcIds].forEach(id=>{ if(!ids.has(id)) selectedAcIds.delete(id); });
+    renderMagnets(); renderAircraft(); renderHolds();
+    updateMagnetPositions(); updateAircraftPositions(); updateHoldPositions();
+    redraw();
 }
 function applyRemoteState(d){
-    // Buffer updates that arrive while the user is mid-stroke; apply once the stroke is committed
-    if(painting){ _pendingRemoteState=d; return; }
     if(!d) return;
-    if(d.label!=null) document.getElementById('wbLabel').value=d.label;
-    // Ensure every remote stroke has an id so merging works going forward
-    if(d.strokes) strokes=_mergeById(strokes,d.strokes.map(s=>s.id?s:{...s,id:'s_'+Math.random().toString(36).slice(2,9)}));
-    if(d.labels)  labels =_mergeById(labels, d.labels);
-    if(d.magnets) magnets=_mergeById(magnets,d.magnets);
-    if(d.aircraft)aircraft=_mergeById(aircraft,d.aircraft);
-    if(d.holds)   holds  =_mergeById(holds,  d.holds);
-    if(d.acSize)  acSize =d.acSize;
-    renderMagnets(); renderAircraft(); renderHolds(); redraw();
+    // Buffer updates that arrive mid-stroke/drag; apply once the interaction ends
+    if(_isBusy()){ _pendingRemoteState=d; return; }
+    const localWins=_mergeState(d);
+    _rerenderAll();
+    try{ localStorage.setItem(STORE,JSON.stringify(wbStateObj())); } catch(e){}
+    if(localWins) scheduleSaveRemote();
     // Map view (mode/pan/zoom) is intentionally NOT synced — each user controls
     // their own map independently so remote saves can't pull the map elsewhere.
 }
-async function saveRemote(){
-    setSyncDot('syncing');
-    try{
-        const state=wbStateObj();
-        await _sb.from('whiteboard_state').upsert({id:WB_ROW_ID,state,updated_at:new Date().toISOString()});
-        setSyncDot('synced');
-    } catch(e){ setSyncDot('error'); }
+async function _fetchRemote(){
+    const {data,error}=await _sb.from('whiteboard_state').select('state').eq('id',WB_ROW_ID).maybeSingle();
+    if(error) throw error;
+    return data?.state||null;
 }
-let _saveTimer=null;
+let _saving=false, _saveAgain=false;
+async function saveRemote(){
+    if(_saving){ _saveAgain=true; return; }
+    if(_isBusy()){ scheduleSaveRemote(); return; }
+    _saving=true; setSyncDot('syncing');
+    try{
+        // Read-merge-write so we never overwrite edits from others we haven't received yet
+        const remote=await _fetchRemote();
+        if(_isBusy()){ _saving=false; scheduleSaveRemote(); return; }
+        if(remote){ _mergeState(remote); _rerenderAll(); } else _hadRemote=true;
+        const state=wbStateObj();
+        const at=new Date().toISOString();
+        const {error}=await _sb.from('whiteboard_state').upsert({id:WB_ROW_ID,state,updated_at:at});
+        if(error) throw error;
+        try{ localStorage.setItem(STORE,JSON.stringify(state)); } catch(e){}
+        setSyncDot('synced');
+    } catch(e){ console.warn('Whiteboard save failed',e); setSyncDot('error'); }
+    _saving=false;
+    if(_saveAgain){ _saveAgain=false; scheduleSaveRemote(); }
+}
+let _saveTimer=null, _saveFirstAt=0;
 function scheduleSaveRemote(){
+    // Debounce, but cap the total wait so constant activity from others can't starve our save
+    const now=Date.now();
+    if(!_saveTimer) _saveFirstAt=now;
     clearTimeout(_saveTimer);
-    _saveTimer=setTimeout(saveRemote,800);
+    _saveTimer=setTimeout(()=>{ _saveTimer=null; saveRemote(); },Math.max(0,Math.min(800,_saveFirstAt+2000-now)));
 }
 async function loadRemote(){
     try{
-        const {data,error}=await _sb.from('whiteboard_state').select('state').eq('id',WB_ROW_ID).single();
-        if(!error&&data?.state){ applyRemoteState(data.state); setSyncDot('synced'); return true; }
+        const state=await _fetchRemote();
+        if(state){ applyRemoteState(state); setSyncDot('synced'); return true; }
     } catch(e){}
     return false;
 }
+let _refreshTimer=null;
+function scheduleRefresh(){ clearTimeout(_refreshTimer); _refreshTimer=setTimeout(loadRemote,150); }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') scheduleRefresh(); });
 function setSyncDot(s){
     const d=document.getElementById('collab-dot'); if(!d) return;
     d.className='collab-indicator'+(s==='synced'?' synced':s==='syncing'?' syncing':'');
@@ -1096,7 +1264,7 @@ function renderPresence(){
     const viewers=Object.values(_remoteViewers);
     if(viewers.length===0){ el.innerHTML=''; return; }
     el.innerHTML=viewers.map(v=>
-        `<span class="presence-dot" style="background:${v.color}22;border-color:${v.color}88;color:${v.color}" title="${v.name} is viewing">${v.name}</span>`
+        `<span class="presence-dot" style="background:${esc(v.color)}22;border-color:${esc(v.color)}88;color:${esc(v.color)}" title="${esc(v.name)} is viewing">${esc(v.name)}</span>`
     ).join('');
 }
 let _collabChannel=null;
@@ -1109,12 +1277,9 @@ function initCollab(){
 }
 function startCollabChannel(){
     _collabChannel=_sb.channel('whiteboard:'+WB_ROW_ID,{config:{presence:{key:_myPresenceId}}});
-    _collabChannel.on('postgres_changes',{event:'UPDATE',schema:'public',table:'whiteboard_state',filter:'id=eq.'+WB_ROW_ID},
-        payload=>{
-            if(_ignoreRemote) return;
-            applyRemoteState(payload.new?.state);
-            setSyncDot('synced');
-        }
+    // Realtime omits large column values, so treat the event as a ping and fetch the row
+    _collabChannel.on('postgres_changes',{event:'*',schema:'public',table:'whiteboard_state',filter:'id=eq.'+WB_ROW_ID},
+        ()=>scheduleRefresh()
     );
     _collabChannel
         .on('presence',{event:'sync'},()=>{
@@ -1136,7 +1301,11 @@ function startCollabChannel(){
         });
     _collabChannel.subscribe(async status=>{
         if(status==='SUBSCRIBED'){
+            // Catch anything missed before subscribing or while disconnected
+            scheduleRefresh();
             await _collabChannel.track({name:_myName,color:_myColor});
+        } else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){
+            setSyncDot('error');
         }
     });
 }
