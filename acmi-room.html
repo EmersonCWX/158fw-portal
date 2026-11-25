@@ -4,22 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ACMI Room | v158th FW</title>
-    <!-- Members only: member-nav.js redirects anyone not logged in as an active member.
-         The page stays hidden until that check passes; the viewer has its own top bar. -->
+    <!-- Members only: member-nav.js redirects anyone not logged in as an active member
+         and injects the member nav header. The page stays hidden until that check passes. -->
     <style>html.auth-pending body { visibility: hidden; }</style>
-    <script>window.MEMBER_NAV_NO_HEADER = true;</script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/member-nav.js"></script>
+    <script src="js/member-nav.js?v=2"></script>
     <script src="js/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { height: 100%; overflow: hidden; background: #000; font-family: 'Consolas', 'Courier New', monospace; }
+        /* Height of the member nav header injected by member-nav.js; the viewer sits below it */
+        :root { --nav-h: 60px; }
 
         /* ── TOP BAR ─────────────────────────────────────────────────── */
         #topbar {
             position: fixed;
-            top: 0; left: 0; right: 0;
+            top: var(--nav-h); left: 0; right: 0;
             height: 42px;
             background: rgba(10, 12, 16, 0.92);
             border-bottom: 1px solid #1e252e;
@@ -43,7 +44,7 @@
         }
         .topbar-logo img { width: 22px; height: 22px; object-fit: contain; opacity: 0.95; }
         .topbar-logo, .topbar-mission { white-space: nowrap; flex-shrink: 0; }
-        a.topbar-logo { color: inherit; text-decoration: none; }
+        a.topbar-logo, a.topbar-logo:visited { color: #909aaa; text-decoration: none; }
         a.topbar-logo:hover { color: #fff; }
         .topbar-sep { width: 1px; height: 22px; background: #1e252e; }
         .topbar-mission {
@@ -79,7 +80,7 @@
         /* ── CANVAS ──────────────────────────────────────────────────── */
         #viewport {
             position: fixed;
-            top: 42px; left: 0; right: 0; bottom: 80px;
+            top: calc(42px + var(--nav-h)); left: 0; right: 0; bottom: 80px;
         }
         #three-canvas {
             width: 100%;
@@ -90,7 +91,7 @@
         /* ── LEFT PANEL — Aircraft List ───────────────────────────────── */
         #left-panel {
             position: fixed;
-            top: 50px;
+            top: calc(50px + var(--nav-h));
             left: 10px;
             width: 200px;
             background: rgba(8, 12, 18, 0.88);
@@ -102,7 +103,7 @@
             backdrop-filter: blur(4px);
         }
         #acList {
-            max-height: calc(100vh - 140px);
+            max-height: calc(100vh - 140px - var(--nav-h));
             overflow-y: auto;
         }
         #acList::-webkit-scrollbar {
@@ -161,7 +162,7 @@
         /* ── RIGHT PANEL — Telemetry ──────────────────────────────────── */
         #right-panel {
             position: fixed;
-            top: 50px;
+            top: calc(50px + var(--nav-h));
             right: 10px;
             width: 210px;
             background: rgba(8, 12, 18, 0.88);
@@ -379,7 +380,7 @@
         /* ── GRID RANGE LABELS ───────────────────────────────────────── */
         #compass {
             position: fixed;
-            top: 50px;
+            top: calc(50px + var(--nav-h));
             left: 50%;
             transform: translateX(-50%);
             display: flex;
@@ -401,7 +402,7 @@
         /* ── LOADING OVERLAY ─────────────────────────────────────────── */
         #loader {
             position: fixed;
-            inset: 0;
+            top: var(--nav-h); left: 0; right: 0; bottom: 0;
             background: #000;
             display: flex;
             flex-direction: column;

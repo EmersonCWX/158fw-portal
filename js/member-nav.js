@@ -362,12 +362,6 @@
         // Public pages always show their own public header — don't inject the member nav.
         if (window.MEMBER_NAV_PUBLIC_PAGE) return;
 
-        // Full-screen pages with their own top bar: auth guard only, no member header
-        if (window.MEMBER_NAV_NO_HEADER) {
-            _supabase.auth.onAuthStateChange((_event, s) => { if (!s) window.location.replace('index.html'); });
-            return;
-        }
-
         // Inject header
         document.body.insertAdjacentHTML('afterbegin', headerHTML);
         document.body.classList.add('member-page');
