@@ -19710,7 +19710,6 @@ function buildShotDemo() {
 }
 
 let _autoFrame = null;   // cinematic camera used by the demo; any user camera input cancels it
-let _demoFrame = null;   // the demo's camera script, kept so a shot replay can restore it
 const _af0 = { c: new THREE.Vector3() }, _af1 = { c: new THREE.Vector3() };
 
 // Camera state for a keyframe: focus = aircraft index (with radius r) or 'all' (fit everyone)
@@ -19752,7 +19751,6 @@ window.playDemo = async function() {
         { t: tImpact - 1.5, focus: 1,     r: 2.2, phi: 1.12 },
         { t: tEnd,          focus: 1,     r: 2.6, phi: 1.08 },
     ] };
-    _demoFrame = _autoFrame;
 };
 
 // ── PLAYBACK ───────────────────────────────────────────────────────────────
@@ -19866,13 +19864,25 @@ function bvrLatLonToWorld(lat, lon, alt_ft) {
 // ── BVR: LOAD DATA ────────────────────────────────────────────────────────
 const MSL_SEGS = 32;   // vertices along a (possibly lofted) missile path
 
-// Jump back to just before a shot's launch and play it. In the demo this also
-// restores the scripted camera so the replay looks the same as the first run.
+// Point the orbit camera at a missile and follow it through its flight (time keeps
+// running). Ends when the user picks an aircraft, changes camera mode, or loads new shots.
+let _focusShot = null, _focusFrom = new THREE.Vector3(), _focusBlend = 1;
+const _focusP = new THREE.Vector3();
+function focusShot(o) {
+    if (camMode !== 'orbit') setCamMode('orbit');
+    _autoFrame = null;
+    _focusShot = o;
+    _focusFrom.copy(orb.target);
+    _focusBlend = 0;
+    orb.radiusTarget = Math.min(orb.radiusTarget, 4);
+}
+
+// Jump to just before a shot's launch, play it, and focus the camera on the missile
 function seekToShot(o) {
     currentTime = Math.max(0, o.t - 1);
-    if (mission?.isDemo && _demoFrame) _autoFrame = _demoFrame;
     updateTimeUI();
     if (!playing) togglePlay();
+    focusShot(o);
 }
 
 // Missile under the cursor (line or tip), or null
@@ -19904,6 +19914,7 @@ function clearBvr() {
         o.tag?.remove();
     }
     bvrShotObjs = [];
+    _focusShot = null;
     bvrData = null;
     document.getElementById('bvr-marker-wrap').style.display = 'none';
     document.getElementById('bvr-log').style.display = 'none';
@@ -19960,7 +19971,7 @@ function loadBvrData(json) {
         tag.className = 'msl-tag';
         tag.style.color = colorHex(lineColor);
         tag.style.display = 'none';
-        tag.title = 'Replay this shot from launch';
+        tag.title = 'Focus the camera on this missile';
         document.body.appendChild(tag);
 
         const flyT = shot.result.fly_time_sec;
@@ -19975,7 +19986,7 @@ function loadBvrData(json) {
             _tagState: null,
         });
         const o = bvrShotObjs[bvrShotObjs.length - 1];
-        tag.addEventListener('click', () => seekToShot(o));
+        tag.addEventListener('click', () => focusShot(o));
     }
 
     buildBvrTimeline();
@@ -20105,6 +20116,7 @@ function updateBvrShots() {
 // ── SELECT AIRCRAFT ────────────────────────────────────────────────────────
 function selectAC(idx) {
     selectedAC = idx;
+    _focusShot = null;
     document.querySelectorAll('.ac-item').forEach((el, i) => {
         el.classList.toggle('selected', i === idx);
     });
@@ -20258,6 +20270,7 @@ function setCamPosition() {
 
 window.setCamMode = function(mode) {
     _autoFrame = null;
+    _focusShot = null;
     camMode = mode;
     document.getElementById('btn3D').classList.toggle('active', mode === 'orbit');
     document.getElementById('btnTop').classList.toggle('active', mode === 'top');
@@ -20326,10 +20339,10 @@ function bindEvents() {
     });
     window.addEventListener('mouseup', e => {
         orbDragging = false;
-        // A click (not a drag) on a missile replays that shot from launch
+        // A click (not a drag) on a missile puts the camera focus on it
         if (_clickStart && Math.hypot(e.clientX - _clickStart.x, e.clientY - _clickStart.y) < 5 && bvrShotObjs.length) {
             const o = pickShot(e.clientX, e.clientY);
-            if (o) seekToShot(o);
+            if (o) focusShot(o);
         }
         _clickStart = null;
     });
@@ -20717,6 +20730,15 @@ function loop(now) {
             orb.radius = orb.radiusTarget = f0.r + (f1.r - f0.r) * e;
             orb.phi = f0.phi + (f1.phi - f0.phi) * e;
             orb.theta = _autoFrame.theta0 + currentTime * 0.012;
+            setCamPosition();
+        } else if (_focusShot) {
+            // Follow the missile: ease over from the old target, then track the tip exactly.
+            // Before launch it sits on the shooter; after impact it holds on the impact point.
+            const o = _focusShot, flyT = o.shot.result.fly_time_sec;
+            mslPoint(o, Math.max(0, Math.min(1, (currentTime - o.t) / flyT)), _focusP);
+            _focusBlend = Math.min(1, _focusBlend + dt / 0.6);
+            const e = _focusBlend * _focusBlend * (3 - 2 * _focusBlend);
+            orb.target.lerpVectors(_focusFrom, _focusP, e);
             setCamPosition();
         } else if (selAc) {
             orb.target.lerp(selAc.mesh.position, 1 - Math.pow(0.85, dt * 60));
